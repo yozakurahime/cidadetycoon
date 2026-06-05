@@ -3,7 +3,8 @@ local dataFile = 'data/world.json'
 
 local world = {
     props = {},
-    removals = {}
+    removals = {},
+    externalEntities = {}
 }
 
 local function notify(source, message, notifyType)
@@ -34,19 +35,20 @@ end
 local function loadWorld()
     local raw = LoadResourceFile(GetCurrentResourceName(), dataFile)
     if not raw or raw == '' then
-        world = { props = {}, removals = {} }
+        world = { props = {}, removals = {}, externalEntities = {} }
         return
     end
 
     local ok, decoded = pcall(json.decode, raw)
     if not ok or type(decoded) ~= 'table' then
         print(('[%s] Falha ao ler %s, iniciando vazio.'):format(GetCurrentResourceName(), dataFile))
-        world = { props = {}, removals = {} }
+        world = { props = {}, removals = {}, externalEntities = {} }
         return
     end
 
     world.props = type(decoded.props) == 'table' and decoded.props or {}
     world.removals = type(decoded.removals) == 'table' and decoded.removals or {}
+    world.externalEntities = type(decoded.externalEntities) == 'table' and decoded.externalEntities or {}
 end
 
 local function saveWorld()
@@ -109,6 +111,33 @@ local function sanitizePlacement(payload)
         collision = payload.collision ~= false,
         target = payload.target ~= false,
         createdBy = payload.createdBy
+    }
+end
+
+local function sanitizeExternal(payload)
+    if type(payload) ~= 'table' then return nil end
+
+    local entityType = tostring(payload.entityType or '')
+    if entityType ~= 'object' and entityType ~= 'ped' and entityType ~= 'vehicle' then return nil end
+
+    local model = tonumber(payload.model)
+    local originCoords = sanitizeVec3(payload.originCoords)
+    local coords = sanitizeVec3(payload.coords)
+    local rotation = sanitizeVec3(payload.rotation or { x = 0.0, y = 0.0, z = payload.heading or 0.0 })
+    if not model or not originCoords or not coords or not rotation then return nil end
+
+    return {
+        id = payload.id,
+        label = tostring(payload.label or 'Entidade externa'):sub(1, 80),
+        entityType = entityType,
+        model = model,
+        originCoords = originCoords,
+        coords = coords,
+        rotation = rotation,
+        heading = tonumber(payload.heading) or rotation.z or 0.0,
+        radius = math.max(0.5, math.min(tonumber(payload.radius) or config.defaultExternalRadius, 35.0)),
+        frozen = payload.frozen ~= false,
+        collision = payload.collision ~= false
     }
 end
 
@@ -212,6 +241,64 @@ lib.callback.register('cidade_tycoon_worldbuilder:server:deleteRemoval', functio
     TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
 
     return { ok = true, message = 'Remocao apagada. Reinicie a area para o mapa vanilla voltar.' }
+end)
+
+lib.callback.register('cidade_tycoon_worldbuilder:server:addExternalEntity', function(source, payload)
+    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
+
+    local external = sanitizeExternal(payload)
+    if not external then return { ok = false, message = 'Dados invalidos.' } end
+
+    external.id = nextId('ext', world.externalEntities)
+    external.createdBy = GetPlayerName(source) or ('source:%s'):format(source)
+    external.createdAt = os.time()
+
+    table.insert(world.externalEntities, external)
+    saveWorld()
+    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
+
+    return { ok = true, message = 'Posicao externa salva.', id = external.id }
+end)
+
+lib.callback.register('cidade_tycoon_worldbuilder:server:updateExternalEntity', function(source, id, payload)
+    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
+
+    local existing = findById(world.externalEntities, id)
+    if not existing then return { ok = false, message = 'Entidade externa nao encontrada.' } end
+
+    local external = sanitizeExternal(payload)
+    if not external then return { ok = false, message = 'Dados invalidos.' } end
+
+    existing.label = external.label
+    existing.entityType = external.entityType
+    existing.model = external.model
+    existing.originCoords = external.originCoords
+    existing.coords = external.coords
+    existing.rotation = external.rotation
+    existing.heading = external.heading
+    existing.radius = external.radius
+    existing.frozen = external.frozen
+    existing.collision = external.collision
+    existing.updatedBy = GetPlayerName(source) or ('source:%s'):format(source)
+    existing.updatedAt = os.time()
+
+    saveWorld()
+    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
+
+    return { ok = true, message = 'Posicao externa atualizada.' }
+end)
+
+lib.callback.register('cidade_tycoon_worldbuilder:server:deleteExternalEntity', function(source, id)
+    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
+
+    local _, index = findById(world.externalEntities, id)
+    if not index then return { ok = false, message = 'Entidade externa nao encontrada.' } end
+
+    table.remove(world.externalEntities, index)
+    saveWorld()
+    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
+
+    return { ok = true, message = 'Override externo removido.' }
 end)
 
 RegisterCommand('wb_reload', function(source)

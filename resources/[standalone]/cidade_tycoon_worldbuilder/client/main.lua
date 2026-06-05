@@ -1,10 +1,11 @@
 local config = WorldBuilder.Config
 
-local world = { props = {}, removals = {} }
+local world = { props = {}, removals = {}, externalEntities = {} }
 local isBuilder = false
 local spawned = {}
 local targetNames = {}
 local placement = nil
+local externalApplied = {}
 
 local function notify(message, notifyType)
     lib.notify({
@@ -21,6 +22,32 @@ end
 local function rotationToTable(entity)
     local rot = GetEntityRotation(entity, 2)
     return { x = rot.x + 0.0, y = rot.y + 0.0, z = rot.z + 0.0 }
+end
+
+local function entityTypeName(entity)
+    if entity == 0 or not DoesEntityExist(entity) then return nil end
+    local entityType = GetEntityType(entity)
+    if entityType == 1 then return 'ped' end
+    if entityType == 2 then return 'vehicle' end
+    if entityType == 3 then return 'object' end
+    return nil
+end
+
+local function poolForType(entityType)
+    if entityType == 'ped' then return GetGamePool('CPed') end
+    if entityType == 'vehicle' then return GetGamePool('CVehicle') end
+    return GetGamePool('CObject')
+end
+
+local function isEditableExternalEntity(entity)
+    if entity == 0 or not DoesEntityExist(entity) then return false end
+    if entity == PlayerPedId() then return false end
+    if IsEntityAPed(entity) and IsPedAPlayer(entity) then return false end
+    if IsEntityAVehicle(entity) then
+        local driver = GetPedInVehicleSeat(entity, -1)
+        if driver ~= 0 and IsPedAPlayer(driver) then return false end
+    end
+    return entityTypeName(entity) ~= nil
 end
 
 local function requestModel(model)
@@ -131,6 +158,67 @@ local function applyRemovals()
     end
 end
 
+local function findExternal(id)
+    for _, external in ipairs(world.externalEntities or {}) do
+        if external.id == id then return external end
+    end
+end
+
+local function findMatchingExternalEntity(external)
+    local origin = vec3(external.originCoords.x, external.originCoords.y, external.originCoords.z)
+    local target = vec3(external.coords.x, external.coords.y, external.coords.z)
+    local radius = external.radius or config.defaultExternalRadius
+    local best, bestDist
+
+    for _, entity in ipairs(poolForType(external.entityType)) do
+        if DoesEntityExist(entity) and isEditableExternalEntity(entity) and GetEntityModel(entity) == external.model then
+            local coords = GetEntityCoords(entity)
+            local distOrigin = #(coords - origin)
+            local distTarget = #(coords - target)
+            local dist = math.min(distOrigin, distTarget)
+            if (distOrigin <= radius or distTarget <= radius) and (not bestDist or dist < bestDist) then
+                best = entity
+                bestDist = dist
+            end
+        end
+    end
+
+    return best
+end
+
+local function applyExternalOverride(external)
+    local playerCoords = GetEntityCoords(PlayerPedId())
+    local origin = vec3(external.originCoords.x, external.originCoords.y, external.originCoords.z)
+    local target = vec3(external.coords.x, external.coords.y, external.coords.z)
+
+    if #(playerCoords - origin) > config.externalScanDistance and #(playerCoords - target) > config.externalScanDistance then
+        return
+    end
+
+    local entity = findMatchingExternalEntity(external)
+    if not entity then return end
+
+    SetEntityCoordsNoOffset(entity, target.x, target.y, target.z, false, false, false)
+    SetEntityRotation(entity, external.rotation.x or 0.0, external.rotation.y or 0.0, external.rotation.z or external.heading or 0.0, 2, true)
+    SetEntityHeading(entity, external.heading or external.rotation.z or 0.0)
+    FreezeEntityPosition(entity, external.frozen ~= false)
+    SetEntityCollision(entity, external.collision ~= false, true)
+    SetEntityAsMissionEntity(entity, true, true)
+
+    if external.entityType == 'ped' then
+        SetBlockingOfNonTemporaryEvents(entity, true)
+        SetPedCanRagdoll(entity, false)
+    end
+
+    externalApplied[external.id] = entity
+end
+
+local function applyExternalOverrides()
+    for _, external in ipairs(world.externalEntities or {}) do
+        applyExternalOverride(external)
+    end
+end
+
 local function findProp(id)
     for _, prop in ipairs(world.props) do
         if prop.id == id then return prop end
@@ -178,6 +266,25 @@ local function placementPayload(entity, model, label, id)
     }
 end
 
+local function externalPayload()
+    local entity = placement and placement.entity
+    if not entity or not DoesEntityExist(entity) then return nil end
+
+    return {
+        id = placement.existingId,
+        label = placement.label,
+        entityType = placement.entityType,
+        model = placement.modelHash,
+        originCoords = placement.originCoords,
+        coords = vecToTable(GetEntityCoords(entity)),
+        rotation = rotationToTable(entity),
+        heading = GetEntityHeading(entity),
+        radius = placement.radius or config.defaultExternalRadius,
+        frozen = true,
+        collision = true
+    }
+end
+
 local function drawHelpText(lines)
     BeginTextCommandDisplayHelp('STRING')
     AddTextComponentSubstringPlayerName(table.concat(lines, '~n~'))
@@ -185,8 +292,21 @@ local function drawHelpText(lines)
 end
 
 local function stopPlacement(deletePreview)
-    if placement and placement.entity and DoesEntityExist(placement.entity) and deletePreview then
-        DeleteEntity(placement.entity)
+    if placement and placement.entity and DoesEntityExist(placement.entity) then
+        if placement.mode == 'external' and deletePreview and placement.restore then
+            local restore = placement.restore
+            SetEntityCoordsNoOffset(placement.entity, restore.coords.x, restore.coords.y, restore.coords.z, false, false, false)
+            SetEntityRotation(placement.entity, restore.rotation.x, restore.rotation.y, restore.rotation.z, 2, true)
+            SetEntityHeading(placement.entity, restore.heading)
+            FreezeEntityPosition(placement.entity, restore.frozen)
+            SetEntityCollision(placement.entity, restore.collision, true)
+            ResetEntityAlpha(placement.entity)
+        elseif deletePreview then
+            DeleteEntity(placement.entity)
+        else
+            ResetEntityAlpha(placement.entity)
+            SetEntityCollision(placement.entity, true, true)
+        end
     end
     placement = nil
 end
@@ -218,6 +338,7 @@ local function startPlacement(model, label, existing)
     SetModelAsNoLongerNeeded(hash)
 
     placement = {
+        mode = 'prop',
         entity = entity,
         model = model,
         label = label or model,
@@ -233,19 +354,74 @@ local function startPlacement(model, label, existing)
     notify('Modo de construcao ativo. Use ENTER para salvar.', 'inform')
 end
 
+local function startExternalPlacement(entity, existing)
+    if placement then stopPlacement(true) end
+    if not isEditableExternalEntity(entity) then
+        notify('Essa entidade nao pode ser editada.', 'error')
+        return
+    end
+
+    local coords = GetEntityCoords(entity)
+    local rotation = rotationToTable(entity)
+    local heading = GetEntityHeading(entity)
+    local entityType = entityTypeName(entity)
+    local model = GetEntityModel(entity)
+
+    placement = {
+        mode = 'external',
+        entity = entity,
+        entityType = entityType,
+        modelHash = model,
+        label = existing and existing.label or ('%s %s'):format(entityType, model),
+        existingId = existing and existing.id or nil,
+        originCoords = existing and existing.originCoords or vecToTable(coords),
+        radius = existing and existing.radius or config.defaultExternalRadius,
+        distance = 3.0,
+        zOffset = 0.0,
+        heading = existing and (existing.heading or existing.rotation.z) or heading,
+        pitch = existing and (existing.rotation.x or 0.0) or rotation.x,
+        roll = existing and (existing.rotation.y or 0.0) or rotation.y,
+        snapToGround = false,
+        restore = {
+            coords = vecToTable(coords),
+            rotation = rotation,
+            heading = heading,
+            frozen = IsEntityPositionFrozen(entity),
+            collision = true
+        }
+    }
+
+    SetEntityAlpha(entity, 190, false)
+    SetEntityCollision(entity, false, false)
+    FreezeEntityPosition(entity, true)
+    notify('Movendo entidade existente. ENTER salva e persiste.', 'inform')
+end
+
 local function savePlacement()
     if not placement or not DoesEntityExist(placement.entity) then return end
 
-    local payload = placementPayload(placement.entity, placement.model, placement.label, placement.existingId)
+    local payload
     local result
-    if placement.existingId then
-        result = lib.callback.await('cidade_tycoon_worldbuilder:server:updateProp', false, placement.existingId, payload)
+
+    if placement.mode == 'external' then
+        payload = externalPayload()
+        if placement.existingId then
+            result = lib.callback.await('cidade_tycoon_worldbuilder:server:updateExternalEntity', false, placement.existingId, payload)
+        else
+            result = lib.callback.await('cidade_tycoon_worldbuilder:server:addExternalEntity', false, payload)
+        end
     else
-        result = lib.callback.await('cidade_tycoon_worldbuilder:server:addProp', false, payload)
+        payload = placementPayload(placement.entity, placement.model, placement.label, placement.existingId)
+        if placement.existingId then
+            result = lib.callback.await('cidade_tycoon_worldbuilder:server:updateProp', false, placement.existingId, payload)
+        else
+            result = lib.callback.await('cidade_tycoon_worldbuilder:server:addProp', false, payload)
+        end
     end
 
+    local mode = placement.mode
     notify(result.message or 'Salvo.', result.ok and 'success' or 'error')
-    stopPlacement(true)
+    stopPlacement(mode ~= 'external')
 end
 
 CreateThread(function()
@@ -397,6 +573,112 @@ local function editNearest()
     openPropActions(prop.id)
 end
 
+local function moveAimedExternal()
+    local hit, _, entity = cameraRay(35.0)
+    if not hit or not isEditableExternalEntity(entity) then
+        notify('Mire em uma prop, NPC ou veiculo vazio de outro script.', 'error')
+        return
+    end
+
+    local entityType = entityTypeName(entity)
+    local input = lib.inputDialog('Mover entidade existente', {
+        { type = 'input', label = 'Nome no editor', default = ('%s %s'):format(entityType, GetEntityModel(entity)), required = true },
+        { type = 'number', label = 'Raio para encontrar ao reiniciar', default = config.defaultExternalRadius, min = 0.5, max = 35.0 }
+    })
+    if not input then return end
+
+    startExternalPlacement(entity)
+    if placement then
+        placement.label = input[1]
+        placement.radius = tonumber(input[2]) or config.defaultExternalRadius
+    end
+end
+
+local function openExternalActions(externalId)
+    local external = findExternal(externalId)
+    if not external then return end
+
+    lib.registerContext({
+        id = 'cidade_worldbuilder_external_actions',
+        title = external.label or tostring(external.model),
+        options = {
+            {
+                title = 'Mover / Girar entidade',
+                description = 'Precisa estar perto da entidade original ou da posicao salva.',
+                icon = 'arrows-up-down-left-right',
+                onSelect = function()
+                    local entity = findMatchingExternalEntity(external)
+                    if not entity then
+                        notify('Nao encontrei essa entidade por perto agora.', 'error')
+                        return
+                    end
+                    startExternalPlacement(entity, external)
+                end
+            },
+            {
+                title = 'Renomear / ajustar raio',
+                icon = 'tag',
+                onSelect = function()
+                    local input = lib.inputDialog('Editar override', {
+                        { type = 'input', label = 'Nome', default = external.label or tostring(external.model), required = true },
+                        { type = 'number', label = 'Raio', default = external.radius or config.defaultExternalRadius, min = 0.5, max = 35.0 }
+                    })
+                    if not input then return end
+                    external.label = input[1]
+                    external.radius = tonumber(input[2]) or config.defaultExternalRadius
+                    local result = lib.callback.await('cidade_tycoon_worldbuilder:server:updateExternalEntity', false, external.id, external)
+                    notify(result.message, result.ok and 'success' or 'error')
+                end
+            },
+            {
+                title = 'Remover override',
+                description = 'O script original volta a posicionar a entidade normalmente.',
+                icon = 'trash',
+                onSelect = function()
+                    local confirm = lib.alertDialog({
+                        header = 'Remover override?',
+                        content = external.label or tostring(external.model),
+                        centered = true,
+                        cancel = true
+                    })
+                    if confirm ~= 'confirm' then return end
+                    local result = lib.callback.await('cidade_tycoon_worldbuilder:server:deleteExternalEntity', false, external.id)
+                    notify(result.message, result.ok and 'success' or 'error')
+                end
+            }
+        }
+    })
+
+    lib.showContext('cidade_worldbuilder_external_actions')
+end
+
+local function openExternalMenu()
+    local options = {}
+
+    for _, external in ipairs(world.externalEntities or {}) do
+        options[#options + 1] = {
+            title = external.label or tostring(external.model),
+            description = ('%s | raio %.1fm'):format(external.entityType or 'entity', external.radius or 0.0),
+            icon = external.entityType == 'ped' and 'user' or 'cube',
+            onSelect = function()
+                openExternalActions(external.id)
+            end
+        }
+    end
+
+    if #options == 0 then
+        options[1] = { title = 'Nenhuma entidade externa salva', disabled = true }
+    end
+
+    lib.registerContext({
+        id = 'cidade_worldbuilder_external',
+        title = 'Entidades de outros scripts',
+        menu = 'cidade_worldbuilder_main',
+        options = options
+    })
+    lib.showContext('cidade_worldbuilder_external')
+end
+
 local function hideMapObject()
     local hit, endCoords, entity = cameraRay(30.0)
     if not hit or entity == 0 or not DoesEntityExist(entity) then
@@ -491,6 +773,17 @@ local function openMainMenu()
         onSelect = editNearest
     }
     options[#options + 1] = {
+        title = 'Mover prop/NPC existente na mira',
+        description = 'Reposiciona entidades criadas por outros scripts.',
+        icon = 'person-walking-arrow-right',
+        onSelect = moveAimedExternal
+    }
+    options[#options + 1] = {
+        title = 'Gerenciar entidades movidas',
+        icon = 'list-check',
+        onSelect = openExternalMenu
+    }
+    options[#options + 1] = {
         title = 'Ocultar prop original do mapa',
         description = 'Mire em um objeto vanilla antes de selecionar.',
         icon = 'eye-slash',
@@ -518,20 +811,24 @@ local function openMainMenu()
 end
 
 RegisterNetEvent('cidade_tycoon_worldbuilder:client:syncWorld', function(newWorld)
-    world = newWorld or { props = {}, removals = {} }
+    world = newWorld or { props = {}, removals = {}, externalEntities = {} }
+    world.externalEntities = world.externalEntities or {}
     cleanupSpawned()
     despawnFarProps()
     applyRemovals()
+    applyExternalOverrides()
 end)
 
 CreateThread(function()
     Wait(1500)
     local result, allowed = lib.callback.await('cidade_tycoon_worldbuilder:server:getWorld', false)
-    world = result or { props = {}, removals = {} }
+    world = result or { props = {}, removals = {}, externalEntities = {} }
+    world.externalEntities = world.externalEntities or {}
     isBuilder = allowed == true
 
     while true do
         despawnFarProps()
+        applyExternalOverrides()
         Wait(1500)
     end
 end)
@@ -576,6 +873,22 @@ RegisterCommand('hideprop', function()
         return
     end
     hideMapObject()
+end, false)
+
+RegisterCommand('moveentity', function()
+    if not isBuilder then
+        notify('Sem permissao para construir.', 'error')
+        return
+    end
+    moveAimedExternal()
+end, false)
+
+RegisterCommand('entitiesmenu', function()
+    if not isBuilder then
+        notify('Sem permissao para construir.', 'error')
+        return
+    end
+    openExternalMenu()
 end, false)
 
 AddEventHandler('onResourceStop', function(resource)

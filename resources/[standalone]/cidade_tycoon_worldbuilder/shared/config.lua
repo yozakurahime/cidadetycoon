@@ -9,8 +9,10 @@ WorldBuilder.Config = {
     editDistance = 8.0,
     streamDistance = 220.0,
     removalScanDistance = 180.0,
+    externalScanDistance = 220.0,
     removalTickMs = 2500,
     defaultRadius = 3.0,
+    defaultExternalRadius = 6.0,
 
     presets = {
         {
