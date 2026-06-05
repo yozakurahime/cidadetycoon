@@ -371,6 +371,44 @@ local function cameraRay(distance, ignoredEntity)
     return hit == 1, endCoords, entity
 end
 
+local function cameraDirection()
+    local camRot = GetGameplayCamRot(2)
+    local pitch = math.rad(camRot.x)
+    local yaw = math.rad(camRot.z)
+    return vec3(-math.sin(yaw) * math.cos(pitch), math.cos(yaw) * math.cos(pitch), math.sin(pitch))
+end
+
+local function findAimedExternalEntity(maxDistance, maxOffset)
+    local camCoord = GetGameplayCamCoord()
+    local direction = cameraDirection()
+    local best, bestScore
+
+    for _, entityType in ipairs({ 'object', 'ped', 'vehicle' }) do
+        for _, entity in ipairs(poolForType(entityType)) do
+            if DoesEntityExist(entity) and isEditableExternalEntity(entity) then
+                local coords = GetEntityCoords(entity)
+                local relative = coords - camCoord
+                local along = relative.x * direction.x + relative.y * direction.y + relative.z * direction.z
+
+                if along > 0.0 and along <= maxDistance then
+                    local projected = camCoord + direction * along
+                    local offset = #(coords - projected)
+
+                    if offset <= maxOffset then
+                        local score = offset + (along * 0.002)
+                        if not bestScore or score < bestScore then
+                            best = entity
+                            bestScore = score
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return best
+end
+
 local function placementPayload(entity, model, label, id)
     local coords = GetEntityCoords(entity)
     return {
@@ -606,8 +644,17 @@ CreateThread(function()
             end
 
             local hit, endCoords = cameraRay(placement.distance, placement.entity)
-            local coords = hit and endCoords or (GetEntityCoords(PlayerPedId()) + GetEntityForwardVector(PlayerPedId()) * placement.distance)
-            coords = vec3(coords.x, coords.y, coords.z + placement.zOffset)
+            local coords
+
+            if placement.mode == 'external' then
+                coords = GetEntityCoords(placement.entity)
+                if hit then
+                    coords = vec3(endCoords.x, endCoords.y, endCoords.z + placement.zOffset)
+                end
+            else
+                coords = hit and endCoords or (GetEntityCoords(PlayerPedId()) + GetEntityForwardVector(PlayerPedId()) * placement.distance)
+                coords = vec3(coords.x, coords.y, coords.z + placement.zOffset)
+            end
 
             if placement.mode == 'external' then
                 local current = GetEntityCoords(placement.entity)
@@ -644,7 +691,7 @@ CreateThread(function()
                 'Setas cima/baixo: distancia',
                 'Setas esquerda/direita: girar',
                 'PageUp/PageDown: altura',
-                'WASD/Q/E: ajuste fino',
+                'WASD/Q/E: ajuste fino / noclip',
                 'G: grudar no chao',
                 'ENTER: salvar | BACKSPACE: cancelar'
             })
@@ -749,9 +796,13 @@ local function editNearest()
 end
 
 local function moveAimedExternal()
-    local hit, _, entity = cameraRay(35.0)
-    if not hit or not isEditableExternalEntity(entity) then
-        notify('Mire em uma prop, NPC ou veiculo vazio de outro script.', 'error')
+    local _, _, entity = cameraRay(120.0)
+    if not isEditableExternalEntity(entity) then
+        entity = findAimedExternalEntity(120.0, 3.0)
+    end
+
+    if not isEditableExternalEntity(entity) then
+        notify('Mire em uma prop, NPC ou veiculo vazio de outro script. Em noclip, alinhe a camera com a entidade.', 'error')
         return
     end
 
