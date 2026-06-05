@@ -150,7 +150,26 @@ local function spawnHubPeds()
                             end
                         end
 
-                        exports.cidade_tycoon_freelance:TryStartFreelance(hub.id, mode)
+                        if GetResourceState('cidade_tycoon_freelance') ~= 'started' then
+                            lib.notify({
+                                title = 'Cidade Tycoon',
+                                description = 'Sistema de contratos ainda nao esta pronto.',
+                                type = 'error'
+                            })
+                            return
+                        end
+
+                        local ok = pcall(function()
+                            exports['cidade_tycoon_freelance']:TryStartFreelance(hub.id, mode)
+                        end)
+
+                        if not ok then
+                            lib.notify({
+                                title = 'Cidade Tycoon',
+                                description = 'Nao foi possivel abrir os contratos agora.',
+                                type = 'error'
+                            })
+                        end
                     end
                 },
                 {

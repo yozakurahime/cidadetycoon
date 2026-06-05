@@ -3,6 +3,7 @@ print("^5[Tycoon:Client:Freelance]^7 Inicializando script...")
 -- Forward declare functions for early export registration
 local tryStartFreelance
 local startPlayerBulkContractWithValidation
+local ClientRuntimeState
 
 -- Register exports as early as possible
 exports('TryStartFreelance', function(...) return tryStartFreelance(...) end)
@@ -61,7 +62,7 @@ if not sharedConfig then
 end
 local refreshTutorialStateFromServer
 
-local ClientRuntimeState = {
+ClientRuntimeState = {
     contextCache = nil,
     activeMission = nil,
     deliveryBlip = 0,

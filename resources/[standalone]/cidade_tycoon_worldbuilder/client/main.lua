@@ -596,6 +596,10 @@ CreateThread(function()
                 stopPlacement(true)
             end
 
+            if not placement then
+                goto continuePlacement
+            end
+
             if placement.mode == 'external' and not ensureEntityControl(placement.entity) then
                 drawHelpText({ 'World Builder', 'Tentando pegar controle da entidade...' })
                 goto continuePlacement
