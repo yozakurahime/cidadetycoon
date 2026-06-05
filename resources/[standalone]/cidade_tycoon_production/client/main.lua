@@ -175,29 +175,33 @@ CreateThread(function()
                     }
                 })
                 
-                table.insert(spawnedMachines, obj)
+                table.insert(spawnedMachines, {
+                    entity = obj,
+                    text = "~o~Terminal de Producao~w~",
+                })
             end
         end
     end
 end)
 
--- THREAD VISUAL: Labels nas Maquinas
+-- THREAD VISUAL: labels vinculados as entidades reais dos terminais.
 CreateThread(function()
     while true do
         local wait = 1500
         local playerCoords = GetEntityCoords(PlayerPedId())
 
-        for id, warehouse in pairs(logisticsConfig.warehouses) do
-            local coords = warehouse.productionCoords
-            if coords then
+        for _, machine in ipairs(spawnedMachines) do
+            if DoesEntityExist(machine.entity) then
+                local coords = GetEntityCoords(machine.entity)
                 local dist = #(playerCoords - coords)
 
                 if dist < 12.0 then
                     wait = 0
-                    render3DText(vec3(coords.x, coords.y, coords.z + 0.5), "~o~Terminal de Produção~w~")
+                    render3DText(coords, machine.text)
                 end
             end
         end
+
         Wait(wait)
     end
 end)
@@ -218,8 +222,8 @@ end
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    for _, obj in ipairs(spawnedMachines) do
-        if DoesEntityExist(obj) then DeleteEntity(obj) end
+    for _, machine in ipairs(spawnedMachines) do
+        if DoesEntityExist(machine.entity) then DeleteEntity(machine.entity) end
     end
 end)
 

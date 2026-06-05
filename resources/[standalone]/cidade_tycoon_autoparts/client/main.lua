@@ -161,7 +161,7 @@ CreateThread(function()
             -- 3. Recycling Bin (Back)
             createPhysicalInteractionPoint(
                 vec3(base.x, base.y - 2.5, base.z), 
-                "prop_ld_bin_01", 
+                "prop_bin_05a", 
                 'Caçamba de Reciclagem (Sucata)', 
                 'fa-solid fa-recycle', 
                 OpenRecyclingStation,
