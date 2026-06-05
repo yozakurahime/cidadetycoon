@@ -6,6 +6,7 @@ local spawned = {}
 local targetNames = {}
 local placement = nil
 local externalApplied = {}
+local externalOverridePausedUntil = 0
 
 local function notify(message, notifyType)
     lib.notify({
@@ -261,6 +262,7 @@ end
 
 local function applyExternalOverrides()
     if placement and placement.mode == 'external' then return end
+    if GetGameTimer() < externalOverridePausedUntil then return end
 
     for _, external in ipairs(world.externalEntities or {}) do
         applyExternalOverride(external)
@@ -422,6 +424,9 @@ local function startExternalPlacement(entity, existing)
     local heading = GetEntityHeading(entity)
     local entityType = entityTypeName(entity)
     local model = GetEntityModel(entity)
+    local playerCoords = GetEntityCoords(PlayerPedId())
+    local startDistance = math.max(0.6, math.min(config.maxPlacementDistance, #(coords - playerCoords)))
+    externalOverridePausedUntil = GetGameTimer() + 15000
 
     placement = {
         mode = 'external',
@@ -432,7 +437,7 @@ local function startExternalPlacement(entity, existing)
         existingId = existing and existing.id or nil,
         originCoords = existing and existing.originCoords or vecToTable(coords),
         radius = existing and existing.radius or config.defaultExternalRadius,
-        distance = 3.0,
+        distance = startDistance,
         zOffset = 0.0,
         heading = existing and (existing.heading or existing.rotation.z) or heading,
         pitch = existing and (existing.rotation.x or 0.0) or rotation.x,
@@ -450,7 +455,7 @@ local function startExternalPlacement(entity, existing)
     SetEntityAlpha(entity, 190, false)
     SetEntityCollision(entity, false, false)
     FreezeEntityPosition(entity, true)
-    notify('Movendo entidade existente. ENTER salva e persiste.', 'inform')
+    notify(existing and 'Editando posicao salva. ENTER atualiza.' or 'Movendo entidade existente. ENTER salva e persiste.', 'inform')
 end
 
 local function savePlacement()
@@ -477,6 +482,9 @@ local function savePlacement()
 
     local mode = placement.mode
     notify(result.message or 'Salvo.', result.ok and 'success' or 'error')
+    if mode == 'external' then
+        externalOverridePausedUntil = GetGameTimer() + 4000
+    end
     stopPlacement(mode ~= 'external')
 end
 
@@ -491,6 +499,14 @@ CreateThread(function()
             DisableControlAction(0, 140, true)
             DisableControlAction(0, 141, true)
             DisableControlAction(0, 142, true)
+            if placement.mode == 'external' then
+                DisableControlAction(0, 32, true)
+                DisableControlAction(0, 33, true)
+                DisableControlAction(0, 34, true)
+                DisableControlAction(0, 35, true)
+                DisableControlAction(0, 38, true)
+                DisableControlAction(0, 44, true)
+            end
 
             if IsControlPressed(0, 172) then placement.distance = math.min(config.maxPlacementDistance, placement.distance + 0.05) end
             if IsControlPressed(0, 173) then placement.distance = math.max(0.6, placement.distance - 0.05) end
@@ -508,6 +524,9 @@ CreateThread(function()
                 savePlacement()
             elseif IsControlJustPressed(0, 177) then
                 notify('Colocacao cancelada.', 'error')
+                if placement.mode == 'external' then
+                    externalOverridePausedUntil = GetGameTimer() + 2500
+                end
                 stopPlacement(true)
             end
 
@@ -519,6 +538,28 @@ CreateThread(function()
             local hit, endCoords = cameraRay(placement.distance, placement.entity)
             local coords = hit and endCoords or (GetEntityCoords(PlayerPedId()) + GetEntityForwardVector(PlayerPedId()) * placement.distance)
             coords = vec3(coords.x, coords.y, coords.z + placement.zOffset)
+
+            if placement.mode == 'external' then
+                local current = GetEntityCoords(placement.entity)
+                local camRot = GetGameplayCamRot(2)
+                local yaw = math.rad(camRot.z)
+                local forward = vec3(-math.sin(yaw), math.cos(yaw), 0.0)
+                local right = vec3(forward.y, -forward.x, 0.0)
+                local nudge = vec3(0.0, 0.0, 0.0)
+                local step = IsControlPressed(0, 21) and 0.08 or 0.025
+
+                if IsDisabledControlPressed(0, 32) then nudge = nudge + forward * step end
+                if IsDisabledControlPressed(0, 33) then nudge = nudge - forward * step end
+                if IsDisabledControlPressed(0, 34) then nudge = nudge - right * step end
+                if IsDisabledControlPressed(0, 35) then nudge = nudge + right * step end
+                if IsDisabledControlPressed(0, 44) then nudge = nudge + vec3(0.0, 0.0, step) end
+                if IsDisabledControlPressed(0, 38) then nudge = nudge - vec3(0.0, 0.0, step) end
+
+                if #(nudge) > 0.0 then
+                    coords = current + nudge
+                    placement.zOffset = 0.0
+                end
+            end
 
             SetEntityCoordsNoOffset(placement.entity, coords.x, coords.y, coords.z, false, false, false)
             if placement.snapToGround then
@@ -533,6 +574,7 @@ CreateThread(function()
                 'Setas cima/baixo: distancia',
                 'Setas esquerda/direita: girar',
                 'PageUp/PageDown: altura',
+                'WASD/Q/E: ajuste fino',
                 'G: grudar no chao',
                 'ENTER: salvar | BACKSPACE: cancelar'
             })
