@@ -50,6 +50,21 @@ local function isEditableExternalEntity(entity)
     return entityTypeName(entity) ~= nil
 end
 
+local function ensureEntityControl(entity)
+    if entity == 0 or not DoesEntityExist(entity) then return false end
+    if not NetworkGetEntityIsNetworked(entity) then return true end
+    if NetworkHasControlOfEntity(entity) then return true end
+
+    NetworkRequestControlOfEntity(entity)
+    local timeout = GetGameTimer() + 750
+    while not NetworkHasControlOfEntity(entity) and GetGameTimer() < timeout do
+        NetworkRequestControlOfEntity(entity)
+        Wait(0)
+    end
+
+    return NetworkHasControlOfEntity(entity)
+end
+
 local function requestModel(model)
     local hash = type(model) == 'number' and model or joaat(model)
     if not IsModelInCdimage(hash) then return nil end
@@ -197,6 +212,7 @@ local function applyExternalOverride(external)
 
     local entity = findMatchingExternalEntity(external)
     if not entity then return end
+    if not ensureEntityControl(entity) then return end
 
     SetEntityCoordsNoOffset(entity, target.x, target.y, target.z, false, false, false)
     SetEntityRotation(entity, external.rotation.x or 0.0, external.rotation.y or 0.0, external.rotation.z or external.heading or 0.0, 2, true)
@@ -239,15 +255,19 @@ local function nearestPlacedProp()
     return best, bestDist
 end
 
-local function cameraRay(distance)
+local function cameraRay(distance, ignoredEntity)
     local camRot = GetGameplayCamRot(2)
     local camCoord = GetGameplayCamCoord()
     local pitch = math.rad(camRot.x)
     local yaw = math.rad(camRot.z)
     local direction = vec3(-math.sin(yaw) * math.cos(pitch), math.cos(yaw) * math.cos(pitch), math.sin(pitch))
     local destination = camCoord + direction * distance
-    local ray = StartShapeTestRay(camCoord.x, camCoord.y, camCoord.z, destination.x, destination.y, destination.z, -1, PlayerPedId(), 0)
+    local ignore = ignoredEntity or PlayerPedId()
+    local ray = StartShapeTestRay(camCoord.x, camCoord.y, camCoord.z, destination.x, destination.y, destination.z, -1, ignore, 0)
     local _, hit, endCoords, _, entity = GetShapeTestResult(ray)
+    if entity == PlayerPedId() or entity == ignoredEntity then
+        return false, destination, entity
+    end
     return hit == 1, endCoords, entity
 end
 
@@ -360,6 +380,10 @@ local function startExternalPlacement(entity, existing)
         notify('Essa entidade nao pode ser editada.', 'error')
         return
     end
+    if not ensureEntityControl(entity) then
+        notify('Nao consegui controle dessa entidade. Tente chegar mais perto ou reiniciar o resource que criou ela.', 'error')
+        return
+    end
 
     local coords = GetEntityCoords(entity)
     local rotation = rotationToTable(entity)
@@ -455,7 +479,12 @@ CreateThread(function()
                 stopPlacement(true)
             end
 
-            local hit, endCoords = cameraRay(placement.distance)
+            if placement.mode == 'external' and not ensureEntityControl(placement.entity) then
+                drawHelpText({ 'World Builder', 'Tentando pegar controle da entidade...' })
+                goto continuePlacement
+            end
+
+            local hit, endCoords = cameraRay(placement.distance, placement.entity)
             local coords = hit and endCoords or (GetEntityCoords(PlayerPedId()) + GetEntityForwardVector(PlayerPedId()) * placement.distance)
             coords = vec3(coords.x, coords.y, coords.z + placement.zOffset)
 
@@ -475,6 +504,8 @@ CreateThread(function()
                 'G: grudar no chao',
                 'ENTER: salvar | BACKSPACE: cancelar'
             })
+
+            ::continuePlacement::
         end
     end
 end)
