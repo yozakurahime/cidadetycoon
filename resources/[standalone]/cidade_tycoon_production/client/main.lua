@@ -169,6 +169,7 @@ CreateThread(function()
             end
 
             if HasModelLoaded(modelHash) then
+                local defaultHeading = coords.w or 180.0
                 local defaultCoords = vec3(coords.x, coords.y, coords.z - 1.0)
                 local placement = resolveWorldBuilderPlacement(modelHash, defaultCoords)
                 local spawnCoords = placement and placement.coords or defaultCoords
@@ -176,9 +177,9 @@ CreateThread(function()
 
                 if placement and placement.rotation then
                     SetEntityRotation(obj, placement.rotation.x or 0.0, placement.rotation.y or 0.0, placement.rotation.z or placement.heading or 0.0, 2, true)
-                    SetEntityHeading(obj, placement.heading or placement.rotation.z or 180.0)
+                    SetEntityHeading(obj, placement.heading or placement.rotation.z or defaultHeading)
                 else
-                    SetEntityHeading(obj, 180.0)
+                    SetEntityHeading(obj, defaultHeading)
                 end
 
                 FreezeEntityPosition(obj, true)
