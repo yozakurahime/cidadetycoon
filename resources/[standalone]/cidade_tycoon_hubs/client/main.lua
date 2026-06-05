@@ -46,34 +46,41 @@ local function createHubBlips()
 end
 
 local function initHubInteriors()
+    DebugLog("Solicitando IPLs de Interiores...")
+    
+    -- Hub 1: PostOP (Terminal)
+    RequestIpl("v_postop")
+    
     -- Hub 2: Lester's Factory (La Mesa)
-    -- Requesting all possible variations to ensure loading
     RequestIpl("v_lesters")
     RequestIpl("v_lesters_milo_")
-    RequestIpl("v_lesters_milo_work")
-    RequestIpl("v_lesters_milo_office")
     
     -- Removendo portas que bloqueiam interiores vanilla
     local doorModels = {
-        `v_ilev_lester_door`,
-        `v_ilev_lester_door2`,
-        `v_ilev_postop_door`,
-        `v_ilev_postop_door2`
+        GetHashKey("v_ilev_lester_door"),
+        GetHashKey("v_ilev_lester_door2"),
+        GetHashKey("v_ilev_postop_door"),
+        GetHashKey("v_ilev_postop_door2")
     }
 
     CreateThread(function()
         while true do
             local pCoords = GetEntityCoords(PlayerPedId())
             
-            -- Force Interior Refresh when near a Hub
+            -- Force Interior Refresh and Logging
             for _, hub in ipairs(config.hubs) do
-                if #(pCoords - vec3(hub.coords.x, hub.coords.y, hub.coords.z)) < 60.0 then
+                local dist = #(pCoords - vec3(hub.coords.x, hub.coords.y, hub.coords.z))
+                if dist < 100.0 then
                     local interiorId = GetInteriorAtCoords(hub.coords.x, hub.coords.y, hub.coords.z)
                     if interiorId ~= 0 then
                         PinInteriorInMemory(interiorId)
                         if not IsInteriorReady(interiorId) then
                             RefreshInterior(interiorId)
+                            DebugLog(("Interior %d (%s) atualizado."):format(interiorId, hub.name))
                         end
+                    elseif dist < 20.0 then
+                        -- Debug visual se o interior não for encontrado
+                        DrawMarker(1, hub.coords.x, hub.coords.y, hub.coords.z - 1.0, 0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 255, 0, 0, 100, false, true, 2, false, nil, nil, false)
                     end
                 end
             end
@@ -86,7 +93,7 @@ local function initHubInteriors()
                     DeleteEntity(door)
                 end
             end
-            Wait(3000) 
+            Wait(2000) 
         end
     end)
 end

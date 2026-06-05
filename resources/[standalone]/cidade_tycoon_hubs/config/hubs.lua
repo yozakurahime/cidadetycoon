@@ -19,16 +19,16 @@ TycoonHubs.Config = {
         },
         {
             id = 2,
-            name = "La Mesa - Logistica",
-            coords = vec4(716.8, -962.1, 24.9, 180.0), -- Interior Armazém
+            name = "Cypress Flats - Centro Logístico",
+            coords = vec4(832.5, -2105.2, 30.5, 0.0), -- Galpão Sólido Térreo
             pedModel = "s_m_m_dockwork_01",
             scenario = "WORLD_HUMAN_CLIPBOARD",
             title = "Gerente de Operações",
             modes = { land = true },
             spawnCoords = {
-                land = vec4(724.0, -973.0, 24.9, 270.0),
+                land = vec4(838.0, -2095.0, 30.5, 180.0),
             },
-            productionCoords = vec3(712.0, -958.0, 24.9),
+            productionCoords = vec3(835.0, -2110.0, 30.5),
             purchasePrice = 220000
         },
         {

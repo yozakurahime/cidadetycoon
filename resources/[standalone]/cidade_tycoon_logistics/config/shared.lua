@@ -9,9 +9,9 @@ config.warehouses = {
         capacity = 100,
     },
     [2] = {
-        name = 'Sede La Mesa (Lester Factory)',
-        coords = vec4(716.8, -962.1, 24.9, 180.0),
-        productionCoords = vec3(712.0, -958.0, 24.9),
+        name = 'Sede Cypress Flats (Centro)',
+        coords = vec4(832.5, -2105.2, 30.5, 0.0),
+        productionCoords = vec3(835.0, -2110.0, 30.5),
         price = 220000,
         capacity = 50,
     },
