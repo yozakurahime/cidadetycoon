@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Cidade RO - Guia de Comandos</title>
+    <!-- Google Fonts: Inter para tipografia moderna -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome para ícones premium -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="tutorial-overlay" style="display: none;">
+        <div class="tutorial-wrapper">
+            <!-- Modal Principal -->
+            <div class="tutorial-modal">
+                
+                <!-- Cabeçalho -->
+                <div class="modal-header">
+                    <div class="header-logo-title">
+                        <div class="logo-box">
+                            <i class="fa-solid fa-clapperboard logo-icon"></i>
+                        </div>
+                        <div class="header-info">
+                            <h1>Cidade RO</h1>
+                            <p>Painel de Controle & Guia de Criação de Filmes</p>
+                        </div>
+                    </div>
+                    <button class="close-btn" id="btn-close-header">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Corpo do Modal -->
+                <div class="modal-body">
+                    
+                    <!-- Sidebar (Abas) -->
+                    <div class="modal-sidebar">
+                        <button class="tab-btn active" data-tab="cinematics">
+                            <i class="fa-solid fa-video tab-icon color-red"></i>
+                            <span>🎬 Cinemáticas</span>
+                        </button>
+                        <button class="tab-btn" data-tab="bope">
+                            <i class="fa-solid fa-shield-halved tab-icon color-blue"></i>
+                            <span>👮 BOPE & PRF Mods</span>
+                        </button>
+                        <button class="tab-btn" data-tab="controls">
+                            <i class="fa-solid fa-keyboard tab-icon color-yellow"></i>
+                            <span>⌨️ Atalhos Gerais</span>
+                        </button>
+                        <button class="tab-btn" data-tab="set-director">
+                            <i class="fa-solid fa-sun tab-icon color-yellow"></i>
+                            <span>☀️ Direção de Set</span>
+                        </button>
+                        <button class="tab-btn" data-tab="plugins">
+                            <i class="fa-solid fa-puzzle-piece tab-icon color-green"></i>
+                            <span>🔌 Plugins & Addons</span>
+                        </button>
+                    </div>
+
+                    <!-- Conteúdo Principal -->
+                    <div class="modal-content">
+                        
+                        <!-- Painel 1: Cinemáticas -->
+                        <div class="tab-panel active" id="panel-cinematics">
+                            <h2>Gravação & Rockstar Editor</h2>
+                            <p class="panel-intro">Use estes comandos rápidos para gerenciar as suas gravações de clipe diretamente pelo chat e editar posteriormente no Rockstar Editor.</p>
+                            
+                            <div class="command-cards">
+                                <div class="command-card">
+                                    <div class="card-title-row">
+                                        <span class="cmd-badge">/gravar</span>
+                                        <span class="cmd-alias">ou /rec</span>
+                                    </div>
+                                    <p class="card-desc">Inicia a gravação de um clipe ou encerra salvando-o no Rockstar Editor.</p>
+                                    <span class="card-tip"><i class="fa-solid fa-circle-info"></i> Mostra o aviso vermelho piscando na tela enquanto grava.</span>
+                                </div>
+
+                                <div class="command-card">
+                                    <div class="card-title-row">
+                                        <span class="cmd-badge badge-orange">/cancelar</span>
+                                    </div>
+                                    <p class="card-desc">Cancela a gravação em andamento e descarta o clipe atual.</p>
+                                    <span class="card-tip"><i class="fa-solid fa-circle-info"></i> Economiza espaço em disco quando a cena dá errado.</span>
+                                </div>
+
+                                 <div class="command-card">
+                                     <div class="card-title-row">
+                                         <span class="cmd-badge badge-orange">/npcs [0-100]</span>
+                                     </div>
+                                     <p class="card-desc">Controla a densidade do tráfego e pedestres. Use <strong>/npcs 0</strong> para limpar completamente a cidade e desativar novos spawns (Ghosts e Players são preservados).</p>
+                                 </div>
+
+                                 <div class="command-card">
+                                     <div class="card-title-row">
+                                         <span class="cmd-badge badge-yellow">/cineluz [r] [g] [b] [range] [int]</span>
+                                         <span class="cmd-alias">/cineapagarluz</span>
+                                     </div>
+                                     <p class="card-desc">Adiciona ou apaga refletores de luz dinâmica (sincronizada no set). Útil para filmar e destacar cenas durante a noite.</p>
+                                 </div>
+
+                                 <div class="command-card">
+                                     <div class="card-title-row">
+                                         <span class="cmd-badge">/cinecam</span>
+                                         <span class="cmd-alias">/cinecamfov [5-120]</span>
+                                     </div>
+                                     <p class="card-desc">Cria uma câmera de broadcast/tripé que segue e rastreia o veículo mais próximo em tempo real.</p>
+                                 </div>
+
+                                 <div class="command-card">
+                                     <div class="card-title-row">
+                                         <span class="cmd-badge badge-yellow">/editor</span>
+                                     </div>
+                                     <p class="card-desc">Abre o menu nativo do Rockstar Editor para você iniciar suas edições.</p>
+                                     <span class="card-warning"><i class="fa-solid fa-triangle-exclamation"></i> Para evitar travamentos, desconecte do servidor antes de abrir!</span>
+                                 </div>
+                             </div>
+
+                            <div class="info-block">
+                                <h3>💡 Câmera Livre & Exportação sem Limites (Client-Side)</h3>
+                                <p>Para fazer as suas filmagens perfeitas, certifique-se de instalar na pasta <strong><code>plugins</code></strong> do seu FiveM local os arquivos que salvamos na sua área de trabalho:</p>
+                                <ul>
+                                    <li><strong>Extended Video Export (EVE):</strong> Permite exportar clipes em alta definição (4K/8K, 60fps) com Motion Blur real e renderização perfeita.</li>
+                                    <li><strong>No Editor Restrictions:</strong> Remove o limite invisível de distância da câmera livre do editor, permitindo que a câmera voe livremente para qualquer distância.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Painel 2: BOPE & PRF Mods -->
+                        <div class="tab-panel" id="panel-bope">
+                            <h2>👮 Recursos Especiais BOPE-RJ & PRF</h2>
+                            <p class="panel-intro">Configurações para usar os fardamentos e spawnar viaturas e aeronaves do BOPE e da PRF (Polícia Rodoviária Federal).</p>
+
+                            <div class="bope-options">
+                                <!-- Seção BOPE -->
+                                <div class="bope-box">
+                                    <div class="box-icon-title">
+                                        <i class="fa-solid fa-skull text-red"></i>
+                                        <h3>💀 BOPE - Batalhão de Operações Policiais Especiais</h3>
+                                    </div>
+                                    <p><strong>Fardamento Pronto (Replace Ped):</strong></p>
+                                    <ol>
+                                        <li>Abra o <strong>vMenu</strong> (tecla <strong>M</strong>) -> <code>Player Options</code> -> <code>Player Appearance</code> -> <code>Spawn Ped</code> -> <code>Emergency</code>.</li>
+                                        <li>Selecione o modelo: <strong><code>s_m_y_swat_01</code></strong> (substituído pela farda tática do BOPE).</li>
+                                    </ol>
+                                    
+                                    <p><strong>Personagem Multiplayer (EUP):</strong> Configure as partes no seu <code>mp_m_freemode_01</code> (use as setas para encontrar os itens customizados no fim da lista):</p>
+                                    <div class="eup-list">
+                                        <span class="eup-item"><strong>Camisa:</strong> Tops (Comp. 11/jbib)</span>
+                                        <span class="eup-item"><strong>Colete:</strong> Body Armor (Comp. 9)</span>
+                                        <span class="eup-item"><strong>Calça:</strong> Legs (Comp. 4/lowr)</span>
+                                        <span class="eup-item"><strong>Bordado:</strong> Decals (Comp. 10/berd)</span>
+                                        <span class="eup-item"><strong>Capacete:</strong> Hats (Prop 0/p_head)</span>
+                                        <span class="eup-item"><strong>Óculos:</strong> Glasses (Prop 1/p_eyes)</span>
+                                    </div>
+                                    
+                                    <div class="helicopter-box">
+                                        <i class="fa-solid fa-helicopter text-blue"></i>
+                                        <h4>🚁 Helicóptero do BOPE (Esquilo AS350)</h4>
+                                        <p>Spawn via vMenu -> <code>Vehicle Spawner</code> -> <code>Spawn By Model Name</code>:</p>
+                                        <div class="spawn-code">as350</div>
+                                    </div>
+                                </div>
+
+                                <!-- Seção PRF -->
+                                <div class="bope-box">
+                                    <div class="box-icon-title">
+                                        <i class="fa-solid fa-road text-yellow"></i>
+                                        <h3>🚔 PRF - Polícia Rodoviária Federal</h3>
+                                    </div>
+                                    
+                                    <p><strong>Fardamento Pronto (Replace Ped):</strong></p>
+                                    <ol>
+                                        <li>Abra o <strong>vMenu</strong> (tecla <strong>M</strong>) -> <code>Player Options</code> -> <code>Player Appearance</code> -> <code>Spawn Ped</code> -> <code>Emergency</code>.</li>
+                                        <li>Selecione o modelo: <strong><code>s_m_y_sheriff_01</code></strong> (substituído pela farda tática da PRF).</li>
+                                    </ol>
+                                    
+                                    <p><strong>Veículos & Helicóptero da PRF:</strong> Spawn via vMenu -> <code>Vehicle Spawner</code> -> <code>Spawn By Model Name</code>:</p>
+                                    <div class="eup-list" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px;">
+                                        <div class="prf-spawn-item" style="display:flex; flex-direction:column; gap:4px; background:rgba(255,255,255,0.03); padding:8px; border-radius:6px; border-left:2px solid #ffb700;">
+                                            <span><strong>Chevrolet Trailblazer</strong></span>
+                                            <code class="spawn-code" style="width:fit-content; padding:2px 8px;">police</code>
+                                        </div>
+                                        <div class="prf-spawn-item" style="display:flex; flex-direction:column; gap:4px; background:rgba(255,255,255,0.03); padding:8px; border-radius:6px; border-left:2px solid #ffb700;">
+                                            <span><strong>Moto Yamaha XT660</strong></span>
+                                            <code class="spawn-code" style="width:fit-content; padding:2px 8px;">policeb</code>
+                                        </div>
+                                        <div class="prf-spawn-item" style="display:flex; flex-direction:column; gap:4px; background:rgba(255,255,255,0.03); padding:8px; border-radius:6px; border-left:2px solid #ffb700; grid-column: span 2;">
+                                            <span><strong>Helicóptero PRF (Esquilo)</strong></span>
+                                            <code class="spawn-code" style="width:fit-content; padding:2px 8px;">polmav</code>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="helicopter-box" style="border-left: 2px solid #00cc66;">
+                                        <i class="fa-solid fa-map-location-dot text-green"></i>
+                                        <h4>🚧 Bloqueio de Estrada (Blitz da PRF)</h4>
+                                        <p>Um ponto de blitz completo com cones, barreiras, tendas e holofotes foi spawnado na ponte principal da rodovia para suas gravações!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Painel 3: Atalhos Gerais -->
+                        <div class="tab-panel" id="panel-controls">
+                            <h2>Atalhos de Teclado Gerais</h2>
+                            <p class="panel-intro">Principais atalhos configurados no servidor para facilitar a administração, movimentação da câmera e ocultamento de HUD para gravações cinematográficas.</p>
+
+                            <div class="shortcut-list">
+                                <div class="shortcut-item">
+                                    <kbd class="key-badge">M</kbd>
+                                    <div class="shortcut-info">
+                                        <h4>Abrir vMenu</h4>
+                                        <p>Abre o painel administrativo. Nele você altera o clima, hora, adiciona veículos, muda roupas e spawna peds.</p>
+                                    </div>
+                                </div>
+
+                                <div class="shortcut-item">
+                                    <kbd class="key-badge">F2</kbd>
+                                    <div class="shortcut-info">
+                                        <h4>Ativar/Desativar NoClip</h4>
+                                        <p>Ativa o modo voo livre para atravessar paredes e mover o personagem rapidamente pela cena. Use as teclas W/A/S/D e o mouse.</p>
+                                    </div>
+                                </div>
+
+                                <div class="shortcut-item">
+                                    <kbd class="key-badge">T</kbd>
+                                    <div class="shortcut-info">
+                                        <h4>Abrir o Chat do Servidor</h4>
+                                        <p>Abre a janela de chat no canto superior esquerdo para você digitar comandos como <code>/tutorial</code>, <code>/gravar</code>, <code>/cancelar</code>.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="cinematic-tips">
+                                <h3>💡 Dicas importantes para gravar seus filmes:</h3>
+                                <ul>
+                                    <li><strong>Ocultar o HUD/Radar para gravação:</strong> Abra o **vMenu** -> `vMenu Options` -> selecione `Hide HUD` e `Hide Radar`. Isso deixará sua tela limpa sem mapas ou ícones.</li>
+                                    <li><strong>Congelar o Tempo/Clima:</strong> No **vMenu** vá em `Time Options` para congelar o horário atual do dia, ou `Weather Options` para fixar o clima desejado (Sol, Chuva, Neblina, etc.) e evitar que mude no meio do seu vídeo.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Painel 5: Direção de Set (Clima & Tempo) -->
+                        <div class="tab-panel" id="panel-set-director">
+                            <h2>☀️ Controle de Clima & Tempo do Set</h2>
+                            <p class="panel-intro">Ajuste e sincronize o clima e o horário do servidor em tempo real para criar a iluminação e atmosfera perfeitas para suas filmagens.</p>
+
+                            <div class="set-controls-layout">
+                                <!-- Coluna Clima -->
+                                <div class="set-control-box">
+                                    <h3>☁️ Selecione o Clima</h3>
+                                    <div class="weather-grid">
+                                        <button class="weather-btn" data-weather="EXTRASUNNY"><i class="fa-solid fa-sun text-yellow"></i> Ensolarado</button>
+                                        <button class="weather-btn" data-weather="CLEAR"><i class="fa-solid fa-cloud-sun text-blue"></i> Limpo</button>
+                                        <button class="weather-btn" data-weather="CLOUDS"><i class="fa-solid fa-cloud"></i> Nublado</button>
+                                        <button class="weather-btn" data-weather="FOGGY"><i class="fa-solid fa-smog"></i> Neblina</button>
+                                        <button class="weather-btn" data-weather="RAIN"><i class="fa-solid fa-cloud-showers-heavy"></i> Chuva</button>
+                                        <button class="weather-btn" data-weather="THUNDER"><i class="fa-solid fa-cloud-bolt text-red"></i> Tempestade</button>
+                                        <button class="weather-btn" data-weather="XMAS"><i class="fa-solid fa-snowflake"></i> Neve</button>
+                                        <button class="weather-btn" data-weather="NEUTRAL"><i class="fa-solid fa-rainbow"></i> Neutro</button>
+                                    </div>
+                                </div>
+
+                                <!-- Coluna Tempo -->
+                                <div class="set-control-box">
+                                    <h3>⏰ Horário do Dia</h3>
+                                    
+                                    <div class="time-slider-wrapper">
+                                        <div class="time-header">
+                                            <span>Hora Atual: <strong id="time-display">12:00</strong></span>
+                                        </div>
+                                        <input type="range" id="time-slider" min="0" max="23" value="12" class="premium-slider">
+                                    </div>
+
+                                    <div class="time-presets">
+                                        <button class="time-preset-btn" data-hour="8">🌅 Manhã (08:00)</button>
+                                        <button class="time-preset-btn" data-hour="12">☀️ Meio-Dia (12:00)</button>
+                                        <button class="time-preset-btn" data-hour="17">🌇 Tarde (17:00)</button>
+                                        <button class="time-preset-btn" data-hour="22">🌃 Noite (22:00)</button>
+                                        <button class="time-preset-btn" data-hour="0">🌌 Meia-Noite (00:00)</button>
+                                    </div>
+
+                                    <div class="freeze-toggle-row">
+                                        <label class="switch-container">
+                                            <input type="checkbox" id="freeze-time-checkbox">
+                                            <span class="slider-switch"></span>
+                                        </label>
+                                        <span class="switch-label">❄️ Congelar Horário</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Painel 4: Plugins & Addons -->
+                        <div class="tab-panel" id="panel-plugins">
+                            <h2>🔌 Plugins & Addons Cinematográficos</h2>
+                            <p class="panel-intro">Nosso servidor Filmmaker conta com ferramentas exclusivas para as suas gravações e produções. Confira as ferramentas ativas no set!</p>
+
+                            <div class="steps-container">
+                                <div class="step-card">
+                                    <div class="step-num"><i class="fa-solid fa-ghost"></i></div>
+                                    <h3>Multi-Ghost Sync (Dublês)</h3>
+                                    <p>Grave seus trajetos em tempo real com físicas, marcas de pneu e fumaça. Spawne e sincronize múltiplos carros fantasmas correndo juntos usando o menu <strong>F6</strong>.</p>
+                                </div>
+
+                                <div class="step-card">
+                                    <div class="step-num"><i class="fa-solid fa-lightbulb"></i></div>
+                                    <h3>Iluminação Dinâmica</h3>
+                                    <p>Adicione refletores e spots de luz dramáticos no cenário para iluminar suas tomadas noturnas. Comandos: <code>/cineluz</code>, <code>/cineapagarluz</code> e <code>/cinelimparluz</code>.</p>
+                                </div>
+
+                                <div class="step-card">
+                                    <div class="step-num"><i class="fa-solid fa-video"></i></div>
+                                    <h3>Câmera de Perseguição</h3>
+                                    <p>A câmera inteligente acompanha e foca automaticamente no veículo mais próximo. Comandos: <code>/cinecam</code> para ativar/desativar e <code>/cinecamfov [5-120]</code> para ajustar o zoom.</p>
+                                </div>
+
+                                <div class="step-card" style="grid-column: span 3; background: linear-gradient(135deg, rgba(0, 204, 102, 0.05) 0%, rgba(0, 102, 204, 0.05) 100%); border-left: 4px solid #00cc66; padding-left: 24px;">
+                                    <h3>🚀 Novas Expansões Ativas (Filmmaker Studio)</h3>
+                                    <ul style="margin: 10px 0 0 20px; color: #a0a0a0; font-size: 0.9em; line-height: 1.6em; display: flex; flex-direction: column; gap: 6px;">
+                                        <li><strong>Controle de Clima & Horário:</strong> Agora integrado no painel <strong>Direção de Set</strong>! Ajuste o clima e o horário da cidade com o mouse em tempo real.</li>
+                                        <li><strong>Controle de NPCs Ambientais:</strong> Defina a densidade de pedestres e veículos com <code>/npcs [0-100]</code>. Use <code>/npcs 0</code> para limpar e desativar totalmente o tráfego de pedestres e carros.</li>
+                                        <li><strong>Addons Especiais (BOPE & PRF):</strong> Viaturas (Chevrolet Trailblazer / XT660 / Helicóptero Esquilo) e fardamentos prontos para recriar operações táticas de elite.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Rodapé -->
+                <div class="modal-footer">
+                    <p class="footer-tip">Pressione <kbd class="key-footer">ESC</kbd> ou <kbd class="key-footer">BACKSPACE</kbd> para fechar este painel.</p>
+                    <button class="footer-close-btn" id="btn-close-footer">Fechar Painel</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

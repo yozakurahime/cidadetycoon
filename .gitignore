@@ -1,0 +1,9 @@
+cache/
+Downloads/
+.agents/
+.replxx_history
+
+*.log
+*.tmp
+*.bak
+*.old

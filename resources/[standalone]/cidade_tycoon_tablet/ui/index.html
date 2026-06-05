@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TycoonOS - Tablet</title>
+  <!-- Google Fonts para tipografia premium -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Folha de estilos principal -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="glass-app">
+  <div id="app" class="hidden">
+    <!-- Moldura física do tablet (Device Frame) -->
+    <div id="tablet-device">
+      <!-- Câmera frontal no topo central da moldura -->
+      <div class="tablet-camera"></div>
+      
+      <!-- Tela ativa do tablet -->
+      <div id="tablet-screen" class="wallpaper-gradient-1">
+        <!-- Status Bar superior -->
+        <header id="status-bar">
+          <div class="status-left">
+            <!-- Indicador de Sinal Celular (SVG) -->
+            <svg class="status-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2 22h20V2zM18 6v14h2V6zm-4 4v10h2V10zm-4 4v6h2v-6zm-4 4v2h2v-2z"/>
+            </svg>
+            <span class="carrier-name">TycoonNet</span>
+            <!-- Indicador Wi-Fi (SVG) -->
+            <svg class="status-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 21l-12-12c4-4 9-6 12-6s8 2 12 6l-12 12zm0-18c-3 0-6 1-9 3l9 9 9-9c-3-2-6-3-9-3z"/>
+            </svg>
+          </div>
+          
+          <div class="status-center">
+            <span id="status-clock">12:30</span>
+          </div>
+          
+          <div class="status-right">
+            <span class="battery-percent">87%</span>
+            <!-- Indicador Bateria (SVG) -->
+            <svg class="status-icon battery-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17 5H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm1 11H3V8h15v8zm3-6h2v4h-2v-4z"/>
+            </svg>
+          </div>
+        </header>
+        
+        <!-- Área de conteúdo principal das janelas -->
+        <main id="screen-content">
+          
+          <!-- HOME SCREEN VIEW -->
+          <section id="home-view" class="view-panel">
+            <div class="home-widget-clock">
+              <h1 id="home-clock">12:30</h1>
+              <p id="home-date">Quarta-feira, 3 de Junho</p>
+            </div>
+
+            <!-- Tycoon Profile Widget -->
+            <div class="home-profile-card">
+              <div class="profile-header">
+                <div class="profile-info">
+                  <h2 id="home-company-name">Logística Tycoon</h2>
+                  <span id="home-level-tag">NÍVEL 1</span>
+                </div>
+              </div>
+              <div class="xp-bar-container">
+                <div id="home-xp-fill" class="xp-bar-fill"></div>
+              </div>
+              <div class="profile-footer">
+                <span id="home-reputation-text">Reputação: 0</span>
+                <span id="home-xp-text">0 / 2.000 XP</span>
+              </div>
+            </div>
+
+            <div id="home-alerts-container" class="stack" style="margin-top: 15px; padding: 0 20px;">
+              <!-- Alertas críticos gerados aqui -->
+            </div>
+            
+            <div class="app-grid">
+              <!-- App Prefeitura -->
+              <div class="app-icon-wrapper" data-app="cityhall">
+                <div class="app-icon icon-cityhall">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 21h18M3 10h18M5 10V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5M8 14v3M12 14v3M16 14v3"/>
+                  </svg>
+                </div>
+                <span class="app-label">Prefeitura</span>
+              </div>
+              
+              <!-- App Frota -->
+              <div class="app-icon-wrapper" data-app="fleet">
+                <div class="app-icon icon-fleet">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 1 12v4c0 .6.4 1 1 1h2"/>
+                    <circle cx="7" cy="17" r="2"/>
+                    <circle cx="15" cy="17" r="2"/>
+                  </svg>
+                </div>
+                <span class="app-label">Minha Frota</span>
+              </div>
+              
+              <!-- App Logística -->
+              <div class="app-icon-wrapper" data-app="operations">
+                <div class="app-icon icon-operations">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                  </svg>
+                </div>
+                <span class="app-label">Operações</span>
+              </div>
+              
+              <!-- App Finanças -->
+              <div class="app-icon-wrapper" data-app="finance">
+                <div class="app-icon icon-finance">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+                    <line x1="12" y1="4" x2="12" y2="20"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                  </svg>
+                </div>
+                <span class="app-label">Finanças</span>
+              </div>
+              
+              <!-- App Empresa (Logística Corporativa) -->
+              <div class="app-icon-wrapper" data-app="business">
+                <div class="app-icon icon-business" style="background: linear-gradient(135deg, #FF9800, #F44336);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                </div>
+                <span class="app-label">Empresa</span>
+              </div>
+
+              <!-- App Empregos (Mural) -->
+              <div class="app-icon-wrapper" data-app="jobs">
+                <div class="app-icon icon-jobs" style="background: linear-gradient(135deg, #4CAF50, #009688);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                    <rect x="2" y="7" width="20" height="12" rx="2"/>
+                    <line x1="12" y1="11" x2="12" y2="11"/>
+                  </svg>
+                </div>
+                <span class="app-label">Empregos</span>
+              </div>
+              
+              <!-- App Configurações -->
+              <div class="app-icon-wrapper" data-app="settings">
+                <div class="app-icon icon-settings">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
+                </div>
+                <span class="app-label">Ajustes</span>
+              </div>
+            </div>
+          </section>
+          
+          <!-- APP: PREFEITURA -->
+          <section id="app-cityhall" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Prefeitura</h1>
+                <p>Governança e Rankings de Cidade Tycoon</p>
+              </div>
+            </header>
+            
+            <div class="app-body scrollable">
+              <!-- Abas Internas -->
+              <div class="app-tabs">
+                <button class="app-tab active" data-tab-target="announcements">Avisos Oficiais</button>
+                <button class="app-tab" data-tab-target="leaderboard">Ranking Tycoons</button>
+                <button class="app-tab" data-tab-target="licenses">Habilitações & Licenças</button>
+              </div>
+              
+              <div class="app-content-container">
+                <!-- Aba Avisos -->
+                <div id="tab-announcements" class="tab-pane active">
+                  <div class="announcements-stack" id="cityhall-announcements-list">
+                    <!-- Gerado dinamicamente -->
+                  </div>
+                </div>
+                <!-- Aba Leaderboard -->
+                <div id="tab-leaderboard" class="tab-pane">
+                  <div class="leaderboard-card-container">
+                    <div class="leaderboard-section">
+                      <h3>Top 10 Acumulado</h3>
+                      <div class="leaderboard-table-header">
+                        <span>#</span><span>Motorista</span><span>Score</span>
+                      </div>
+                      <div class="leaderboard-table" id="cityhall-leaderboard-richest">
+                        <!-- Gerado dinamicamente -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Aba Licenças -->
+                <div id="tab-licenses" class="tab-pane">
+                  <div class="licenses-grid" id="cityhall-licenses-list">
+                    <!-- Gerado dinamicamente -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          
+          <!-- APP: FROTA -->
+          <section id="app-fleet" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Minha Frota</h1>
+                <p>Diagnóstico mecânico e telemetria</p>
+              </div>
+            </header>
+            
+            <div class="app-body">
+              <div class="fleet-layout">
+                <!-- Barra Lateral com Lista de Veículos -->
+                <aside class="fleet-sidebar scrollable" id="fleet-vehicle-list">
+                  <!-- Gerado dinamicamente -->
+                </aside>
+                
+                <!-- Área de Detalhes Mecânicos do Veículo Selecionado -->
+                <main class="fleet-detail scrollable" id="fleet-vehicle-detail">
+                  <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 1 12v4c0 .6.4 1 1 1h2"/>
+                      <circle cx="7" cy="17" r="2"/>
+                      <circle cx="15" cy="17" r="2"/>
+                    </svg>
+                    <p>Selecione um veículo da sua frota para ver o diagnóstico completo.</p>
+                  </div>
+                </main>
+              </div>
+            </div>
+          </section>
+          
+          <!-- APP: OPERAÇÕES -->
+          <section id="app-operations" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Operações</h1>
+                <p>Contrato logístico ativo e onboarding</p>
+              </div>
+            </header>
+            
+            <div class="app-body scrollable">
+              <div class="operations-grid">
+                <!-- Coluna Principal: Status de Entrega -->
+                <div class="operations-main stack">
+                  <div class="os-card" id="operations-active-job">
+                    <!-- Gerado dinamicamente -->
+                  </div>
+
+                  <div class="os-card">
+                    <div class="card-header">
+                      <h3>Sedes Logísticas (Hubs)</h3>
+                    </div>
+                    <div class="hubs-list" id="operations-hubs-list">
+                      <!-- Gerado dinamicamente -->
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Coluna Lateral: Guia de Onboarding (Tutorial) -->
+                <div class="operations-sidebar">
+                  <div class="os-card tutorial-card">
+                    <div class="card-header">
+                      <h3>Guia do Iniciante</h3>
+                      <span class="tutorial-badge">Tutoriais</span>
+                    </div>
+                    <div class="card-body" id="operations-tutorial-step">
+                      <!-- Gerado dinamicamente -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          
+          <!-- APP: FINANÇAS -->
+          <section id="app-finance" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Finanças</h1>
+                <p>Status financeiro da sua operação</p>
+              </div>
+            </header>
+            
+            <div class="app-body scrollable">
+              <!-- Cards de Saldos -->
+              <div class="finance-balances">
+                <div class="balance-card bank-balance">
+                  <div class="balance-header">
+                    <span>Saldo Bancário</span>
+                    <button id="toggle-streamer-mode" class="icon-btn">
+                      <!-- Ícone de Olho -->
+                      <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <h2 id="finance-bank-value">$ --,--</h2>
+                </div>
+                <div class="balance-card cash-balance">
+                  <div class="balance-header">
+                    <span>Dinheiro em Mão</span>
+                  </div>
+                  <h2 id="finance-cash-value">$ --,--</h2>
+                </div>
+              </div>
+              
+              <!-- Histórico de Transações Recentes -->
+              <div class="finance-history">
+                <h3>Transações Recentes</h3>
+                <div class="history-list" id="finance-history-list">
+                  <!-- Gerado dinamicamente -->
+                </div>
+              </div>
+
+              <!-- Financiamentos Ativos -->
+              <div class="finance-history" style="margin-top: 20px;">
+                <h3>Meus Financiamentos</h3>
+                <div class="history-list" id="finance-financings-list">
+                  <!-- Gerado dinamicamente -->
+                </div>
+              </div>
+            </div>
+          </section>
+          
+          <!-- APP: EMPRESA (BUSINESS) -->
+          <section id="app-business" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Logística Corporativa</h1>
+                <p>Gestão de frota, funcionários e produção</p>
+              </div>
+            </header>
+            
+            <div class="app-body scrollable">
+              <div id="business-setup-view" class="hidden">
+                <div class="os-card">
+                  <div class="card-header"><h3>Fundar Nova Empresa</h3></div>
+                  <div class="card-body">
+                    <p>Você ainda não possui um registro de empresa logística. Adquira um galpão para começar.</p>
+                    <div class="warehouse-grid" id="business-warehouse-list">
+                      <!-- Gerado dinamicamente -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="business-main-view" class="hidden">
+                <div class="business-stats-grid">
+                  <div class="balance-card">
+                    <span>Cofre da Empresa</span>
+                    <h2 id="business-vault-value">$ --,--</h2>
+                  </div>
+                  <div class="balance-card">
+                    <span>Nível Corporativo</span>
+                    <h2 id="business-level-value">T --</h2>
+                  </div>
+                </div>
+
+                <div class="tab-container" style="margin-top: 20px;">
+                  <div class="tab-header">
+                    <button class="tab-btn active" data-tab="biz-fleet">Frota</button>
+                    <button class="tab-btn" data-tab="biz-staff">Equipe</button>
+                    <button class="tab-btn" data-tab="biz-prod">Produção</button>
+                  </div>
+                  
+                  <div class="tab-content">
+                    <div id="biz-fleet" class="tab-pane active">
+                      <div class="fleet-list" id="business-fleet-list"></div>
+                    </div>
+                    <div id="biz-staff" class="tab-pane">
+                      <div class="staff-list" id="business-staff-list"></div>
+                    </div>
+                    <div id="biz-prod" class="tab-pane">
+                      <div class="production-view" id="business-production-view"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- APP: EMPREGOS (JOBS) -->
+          <section id="app-jobs" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Mural de Empregos</h1>
+                <p>Contratos publicados por empresas logísticas</p>
+              </div>
+            </header>
+            
+            <div class="app-body scrollable">
+              <div class="jobs-list stack" id="jobs-board-list">
+                <!-- Gerado dinamicamente -->
+              </div>
+            </div>
+          </section>
+
+          <!-- APP: AJUSTES (CONFIGURAÇÕES) -->
+          <section id="app-settings" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Ajustes</h1>
+                <p>Personalize o seu TycoonOS</p>
+              </div>
+            </header>
+            
+            <div class="app-body scrollable">
+              <div class="settings-grid">
+                <!-- Wallpaper Selection -->
+                <div class="settings-section">
+                  <h3>Papel de Parede</h3>
+                  <div class="wallpaper-selector">
+                    <div class="wallpaper-option w-opt-1 active" data-wallpaper="1">
+                      <div class="w-preview wallpaper-gradient-1"></div>
+                      <span>Sunset Silk</span>
+                    </div>
+                    <div class="wallpaper-option w-opt-2" data-wallpaper="2">
+                      <div class="w-preview wallpaper-gradient-2"></div>
+                      <span>Cyber Midnight</span>
+                    </div>
+                    <div class="wallpaper-option w-opt-3" data-wallpaper="3">
+                      <div class="w-preview wallpaper-gradient-3"></div>
+                      <span>Forest Aurora</span>
+                    </div>
+                    <div class="wallpaper-option w-opt-4" data-wallpaper="4">
+                      <div class="w-preview wallpaper-gradient-4"></div>
+                      <span>Volcanic Ash</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Audio and OS Settings -->
+                <div class="settings-section">
+                  <h3>Sons do Sistema</h3>
+                  <div class="settings-control-row">
+                    <span>Cliques Capacitivos</span>
+                    <label class="switch">
+                      <input type="checkbox" id="settings-audio-toggle" checked>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <div class="settings-control-row">
+                    <span>Volume do Touch</span>
+                    <input type="range" id="settings-audio-volume" min="0" max="100" value="50" class="range-slider">
+                  </div>
+                </div>
+                
+                <!-- System information -->
+                <div class="settings-section">
+                  <h3>Informações do Sistema</h3>
+                  <div class="settings-info-card">
+                    <div class="info-row"><span>Dispositivo:</span><span>TycoonTab v4 Pro</span></div>
+                    <div class="info-row"><span>Sistema Operacional:</span><span>TycoonOS 1.0.0</span></div>
+                    <div class="info-row"><span>Rede de Dados:</span><span>Conectado (5G LTE)</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          
+        </main>
+        
+        <!-- Dock inferior para navegação global -->
+        <nav id="dock">
+          <div class="dock-item active" data-target="home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <div class="dock-divider"></div>
+          <div class="dock-item" data-target="cityhall">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 21h18M3 10h18M5 10V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5M8 14v3M12 14v3M16 14v3"/>
+            </svg>
+          </div>
+          <div class="dock-item" data-target="fleet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 1 12v4c0 .6.4 1 1 1h2"/>
+              <circle cx="7" cy="17" r="2"/>
+              <circle cx="15" cy="17" r="2"/>
+            </svg>
+          </div>
+          <div class="dock-item" data-target="operations">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            </svg>
+          </div>
+          <div class="dock-item" data-target="finance">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="4" width="20" height="16" rx="2" ry="2"/>
+              <line x1="12" y1="4" x2="12" y2="20"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+            </svg>
+          </div>
+          <div class="dock-item" data-target="business">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+          </div>
+        </nav>
+        
+        <!-- Push Notification Banner (Toast) superior -->
+        <div id="os-toast">
+          <div class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </div>
+          <div class="toast-body">
+            <h4 class="toast-title">Notificação</h4>
+            <p class="toast-message">Mensagem do sistema.</p>
+          </div>
+        </div>
+        
+        <!-- Modal de Confirmação OS-level -->
+        <div id="os-modal-wrapper" class="hidden">
+          <div id="os-modal">
+            <div class="modal-header">
+              <h3 id="modal-title">Confirmar Ação</h3>
+            </div>
+            <div class="modal-body">
+              <p id="modal-message">Você deseja realmente prosseguir com esta ação?</p>
+            </div>
+            <div class="modal-footer">
+              <button id="modal-cancel-btn" class="modal-btn">Cancelar</button>
+              <button id="modal-confirm-btn" class="modal-btn modal-btn-danger">Confirmar</button>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+  
+  <script src="app.js?v=1.0.2"></script>
+</body>
+</html>

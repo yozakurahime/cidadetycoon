@@ -1,0 +1,143 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Cinematic Studio</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<main id="panel" class="hidden">
+		<header>
+			<div>
+				<p class="label">CIDADE TYCOON</p>
+				<h1>Cinematic Studio</h1>
+			</div>
+			<button class="ghost" data-action="closePanel">Modo camera <span>F6</span></button>
+		</header>
+
+		<section class="replay">
+			<div class="timeline-title">
+				<h2>Replay 3D da cena</h2>
+				<span id="replay-info">Nenhuma cena gravada</span>
+			</div>
+			<p class="hint">Antes de editar: saia do Studio, use <b>/take start</b>, atue normalmente e finalize com <b>/take stop</b>.</p>
+			<p class="hint commands"><b>/cineanim</b> acenar, celular, prancheta, dancar, sentar, parar<br><b>/cineanimlib</b> dicionario animacao [loop]<br><b>/cinefx</b> explosao, fogo, fumaca, flash | <b>/cineptfx</b> faisca, fumaca, fogo, poeira<br><b>/cinesom</b> corte, impacto, missao, entrada no ponto mirado</p>
+			<input id="replay-seek" type="range" min="0" max="0" value="0" step="50">
+			<div class="replay-time">
+				<span id="replay-current">00:00.0</span>
+				<span id="replay-duration">00:00.0</span>
+			</div>
+			<div class="edit-range">
+				<div><small>IN</small><strong id="replay-in">00:00.0</strong></div>
+				<div><small>OUT</small><strong id="replay-out">00:00.0</strong></div>
+				<label>Velocidade
+					<select id="playback-rate">
+						<option value="0.25">0.25x</option>
+						<option value="0.5">0.5x</option>
+						<option value="1" selected>1.0x</option>
+						<option value="2">2.0x</option>
+					</select>
+				</label>
+				<label class="loop"><input id="replay-loop" type="checkbox"> Loop</label>
+			</div>
+			<div class="actions replay-actions">
+				<button class="primary" data-action="replayRestart">Do inicio</button>
+				<button data-action="replayPlay">Play</button>
+				<button data-action="replayPause">Pausar</button>
+				<button data-action="replaySetIn">Marcar IN</button>
+				<button data-action="replaySetOut">Marcar OUT</button>
+				<button data-action="replayResetRange">Limpar corte</button>
+				<button data-action="replaySave">Salvar cena</button>
+				<button data-action="replayLoad">Carregar cena</button>
+				<button class="danger" data-action="replayClear">Apagar cena</button>
+			</div>
+			<div id="replay-events" class="event-list empty">Nenhum evento marcado na cena.</div>
+		</section>
+
+		<section class="subjects">
+			<div class="timeline-title">
+				<h2>Alvo da camera</h2>
+				<span id="target-label">Livre</span>
+			</div>
+			<div class="subject-picker">
+				<select id="subject-select">
+					<option value="">Camera livre</option>
+				</select>
+				<button data-action="clearSubject">Soltar alvo</button>
+			</div>
+			<div class="shot-presets">
+				<button data-preset="close">Close</button>
+				<button data-preset="medium">Medio</button>
+				<button data-preset="wide">Aberto</button>
+				<button data-preset="profile">Perfil</button>
+				<button data-preset="reverse">Reverso</button>
+			</div>
+			<p class="hint">Escolha um ator, veiculo ou objeto gravado, crie o enquadramento e adicione a keyframe. A camera acompanha o alvo durante a reproducao.</p>
+		</section>
+
+		<section class="controls">
+			<label>FOV <strong id="fov-value">50</strong>
+				<input id="fov" data-setting="fov" type="range" min="10" max="100" step="1">
+			</label>
+			<label>Velocidade <strong id="speed-value">8</strong>
+				<input id="speed" data-setting="speed" type="range" min="0.2" max="40" step="0.2">
+			</label>
+			<label>Duracao do trecho <strong id="duration-value">3000 ms</strong>
+				<input id="duration" data-setting="duration" type="range" min="100" max="15000" step="100">
+			</label>
+			<label>Transicao
+				<select id="easing" data-setting="easing">
+					<option value="smooth">Suave</option>
+					<option value="linear">Linear</option>
+					<option value="cut">Corte seco</option>
+				</select>
+			</label>
+		</section>
+
+		<section class="switches">
+			<label><input id="letterbox" data-setting="letterbox" type="checkbox"> Barras de cinema</label>
+			<label><input id="dof" data-setting="dof" type="checkbox"> Profundidade de campo</label>
+		</section>
+
+		<section id="dof-controls" class="controls compact">
+			<label>Foco perto <strong id="dofNear-value">1.0</strong>
+				<input id="dofNear" data-setting="dofNear" type="range" min="0.1" max="30" step="0.1">
+			</label>
+			<label>Foco longe <strong id="dofFar-value">12.0</strong>
+				<input id="dofFar" data-setting="dofFar" type="range" min="0.1" max="150" step="0.1">
+			</label>
+			<label>Forca DOF <strong id="dofStrength-value">0.6</strong>
+				<input id="dofStrength" data-setting="dofStrength" type="range" min="0" max="1" step="0.05">
+			</label>
+		</section>
+
+		<section class="actions">
+			<button class="primary" data-action="addFrame">Adicionar keyframe</button>
+			<button class="primary" data-action="play">Renderizar cameras + cena</button>
+			<button data-action="exportFrame">Exportar frame PNG</button>
+			<button data-action="stop">Parar</button>
+			<button data-action="save">Salvar</button>
+			<button data-action="load">Carregar</button>
+			<button class="danger" data-action="clearFrames">Limpar</button>
+		</section>
+
+		<section class="timeline">
+			<div class="timeline-title">
+				<h2>Timeline</h2>
+				<span id="frame-count">0 keyframes</span>
+			</div>
+			<div id="frames" class="frames empty">Posicione a camera e adicione o primeiro keyframe.</div>
+		</section>
+
+		<footer>
+			<span>Camera: WASD, Q/E, mouse, scroll, Shift/Ctrl</span>
+			<span>Captura NVIDIA: <b>ALT+F9</b></span>
+			<button class="danger" data-action="exit">Sair do Studio</button>
+		</footer>
+	</main>
+	<script src="app.js"></script>
+</body>
+</html>
+
+

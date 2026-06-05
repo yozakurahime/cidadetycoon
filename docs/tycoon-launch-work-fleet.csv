@@ -1,0 +1,42 @@
+model,label,launch_group,branch,tier,capacity,launch_price,acquisition,launch_enabled,notes
+cruiser,Cruiser,starter,land,t0,1,0,starter,yes,Bike inicial gratuita fora da concessionaria
+honcrx91,Honda CRX SiR 1991,core_work,land,t1,4,28000,cash|finance|rental,yes,Carro popular de entrega
+srt4,Dodge Neon SRT-4,core_work,land,t1,4,34000,cash|finance|rental,yes,Carro popular de entrega
+17civict,2017 Honda Civic Touring,core_work,land,t1,4,42000,cash|finance|rental,yes,Carro popular de entrega
+cam8tun,2018 Toyota Camry XSE,core_work,land,t1,4,48000,cash|finance|rental,yes,Carro popular de entrega
+gs350,Lexus GS 350,core_work,land,t1,4,58000,cash|finance|rental,yes,Carro popular de entrega
+mk2100,Toyota Mark II JZX100,core_work,land,t1,4,60000,cash|finance|rental,yes,Carro popular de entrega
+tltypes,Acura TL Type-S,core_work,land,t1,4,68000,cash|finance|rental,yes,Carro popular de entrega
+is350mod,2014 Lexus IS 350,core_work,land,t1,4,72000,cash|finance|rental,yes,Carro popular de entrega
+s8d2,1998 Audi S8 (D2/PFL),core_work,land,t1,4,82000,cash|finance|rental,yes,Carro popular de entrega
+16charger,2016 Dodge Charger,core_work,land,t1,4,88000,cash|finance|rental,yes,Carro popular de entrega
+aaq4,2017 Audi A4 Quattro ABT,core_work,land,t1,4,90000,cash|finance|rental,yes,Carro popular de entrega
+tmodel,2018 Tesla Model 3,core_work,land,t1,4,96000,cash|finance|rental,yes,Carro popular de entrega
+09tahoe,2009 Chevrolet Tahoe,core_work,land,t2,6,62000,cash|finance|rental,yes,Utilitario leve
+Safari97,1997 Nissan Patrol Super Y60,core_work,land,t2,6,74000,cash|finance|rental,yes,Utilitario leve
+bison,Vapid Bison Cargo,core_work,land,t2,6,78000,cash|finance|rental,yes,Utilitario leve
+ram2500,2015 Dodge RAM 2500,core_work,land,t2,8,92000,cash|finance|rental,yes,Utilitario leve
+v250,Mercedes-Benz V-class 250,core_work,land,t2,8,96000,cash|finance|rental,yes,Utilitario leve
+f150,2012 Ford F150 SVT Raptor R,core_work,land,t2,8,102000,cash|finance|rental,yes,Utilitario leve
+15tahoe,2015 Chevrolet Tahoe,core_work,land,t2,8,108000,cash|finance|rental,yes,Utilitario leve
+nissantitan17,2017 Nissan Titan Warrior,core_work,land,t2,8,128000,cash|finance|rental,yes,Utilitario leve
+raptor2017,2017 Ford Raptor,core_work,land,t2,8,132000,cash|finance|rental,yes,Utilitario leve
+wildtrak,2021 Ford Bronco Wildtrak,core_work,land,t2,8,145000,cash|finance|rental,yes,Utilitario leve
+xc90,Volvo XC90 T8,core_work,land,t3,8,138000,cash|finance,yes,Utilitario premium
+tahoe21,2021 Chevrolet Tahoe RST,core_work,land,t3,8,148000,cash|finance,yes,Utilitario premium
+vxr,2016 Toyota Land Cruiser VXR,core_work,land,t3,10,168000,cash|finance,yes,Utilitario premium
+trx,2017 Dodge RAM 1500 Rebel TRX,core_work,land,t3,10,182000,cash|finance,yes,Utilitario premium
+teslax,2016 Tesla Model X P90D,core_work,land,t3,8,198000,cash|finance,yes,Utilitario premium
+q820,2020 Audi Q8 50TDI,core_work,land,t3,8,205000,cash|finance,yes,Utilitario premium
+cesc21,2021 Cadillac Escalade,core_work,land,t3,10,215000,cash|finance,yes,Utilitario premium
+mule,Maibatsu Mule,core_work,land,t4,12,265000,cash|finance|rental,yes,Caminhao medio
+pounder,MTL Pounder,core_work,land,t5,16,520000,cash|finance,yes,Pesado
+barracks,HVY Barracks,core_work,land,t5,20,780000,cash|finance,yes,Pesado
+dinghy,Nagasaki Dinghy,core_work,water,w1,2,155000,cash|finance,no,Liberar por licenca futura
+suntrap,Shitzu Suntrap,core_work,water,w2,3,245000,cash|finance,no,Liberar por licenca futura
+marquis,Dinka Marquis,core_work,water,w3,6,340000,cash|finance,no,Liberar por licenca futura
+tug,Buckingham Tug,core_work,water,w5,12,780000,cash|finance,no,Liberar por licenca futura
+maverick,Maverick,core_work,air,a1,2,420000,cash|finance,no,Liberar por licenca futura
+frogger,Frogger,core_work,air,a2,3,560000,cash|finance,no,Liberar por licenca futura
+swift,Swift,core_work,air,a3,4,850000,cash|finance,no,Liberar por licenca futura
+cargobob,Cargobob,core_work,air,a5,8,1350000,cash|finance,no,Liberar por licenca futura

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filmmaker Suite NUI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Áudio Oculto para Sincronização de Claquete -->
+    <audio id="clack-sound" src="clack.mp3" preload="auto"></audio>
+
+    <!-- Guias Cinemáticas de Enquadramento -->
+    <div id="guides-overlay" class="guides-overlay hidden">
+        <!-- Grade da Regra dos Terços -->
+        <div id="rule-of-thirds" class="rule-of-thirds hidden">
+            <div class="line v1"></div>
+            <div class="line v2"></div>
+            <div class="line h1"></div>
+            <div class="line h2"></div>
+        </div>
+
+        <!-- Tarjas de Cinema (Letterbox) -->
+        <div id="letterbox" class="letterbox hidden">
+            <div class="bar top-bar"></div>
+            <div class="bar bottom-bar"></div>
+        </div>
+
+        <!-- Indicador de Gravação (REC) -->
+        <div id="rec-indicator" class="rec-indicator hidden">
+            <span class="dot"></span>
+            <span class="text">REC</span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

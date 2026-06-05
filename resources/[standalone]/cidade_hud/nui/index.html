@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Cidade Tycoon - HUD</title>
+	<!-- Modern Fonts -->
+	<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<main id="overlay" class="overlay">
+		<!-- Safe Zone wrapper for top elements to support Ultrawide -->
+		<div class="hud-safe-zone">
+			<header class="scene-header">
+				<div class="brand">
+					<span class="brand-mark">CT</span>
+					<div>
+						<strong>CIDADE TYCOON</strong>
+						<small>ROLEPLAY STUDIO</small>
+					</div>
+				</div>
+
+				<div class="scene-meta">
+					<div class="location">
+						<small>LOCALIZACAO</small>
+						<strong id="street">LOS SANTOS</strong>
+					</div>
+					<div id="voice" class="voice" aria-label="voz">
+						<span class="mic">MIC</span>
+						<div class="range"><i></i><i></i><i></i></div>
+					</div>
+					<div class="clock">
+						<small id="date">-- / --</small>
+						<strong id="time">--:--</strong>
+					</div>
+				</div>
+			</header>
+
+			<div id="radio" class="radio hidden">
+				<span>RADIO</span>
+				<strong id="radio-frequency">--</strong>
+			</div>
+		</div>
+
+		<!-- Bottom Unified Dashboard (Center Aligned) -->
+		<div class="dashboard-wrapper">
+			<section class="bottom-ui">
+				<!-- Tycoon Status (Left) -->
+				<div id="tycoon" class="tycoon-panel hidden">
+					<div class="tycoon-meta">
+						<div class="identity-name">
+							<small>PERSONAGEM</small>
+							<strong id="player-name">Carregando</strong>
+						</div>
+						<div class="passport-badge">PASS <span id="passport">--</span></div>
+						<div class="level-badge">LVL <span id="tycoon-level">1</span></div>
+					</div>
+					<div class="xp-progress">
+						<div class="progress-bar-container"><div id="xp-fill" class="progress-bar"></div></div>
+					</div>
+					<div id="active-mission" class="mission-status hidden">
+						<div class="mission-data">
+							<span>CARGA <strong id="cargo-integrity">100</strong>%</span>
+							<span>ENTREGA <strong id="mission-progress">0/1</strong></span>
+						</div>
+					</div>
+				</div>
+
+				<!-- Vitals (Always Visible) -->
+				<div class="vitals-panel">
+					<div class="vital health">
+						<div class="vital-label"><small>VIDA</small><strong id="health-value">100</strong></div>
+						<div class="bar-track"><span id="health"></span></div>
+					</div>
+					<div id="armour-card" class="vital armour">
+						<div class="vital-label"><small>COLETE</small><strong id="armour-value">0</strong></div>
+						<div class="bar-track"><span id="armour"></span></div>
+					</div>
+					<div class="vital stamina">
+						<div class="vital-label"><small>STAMINA</small><strong id="stamina-value">100</strong></div>
+						<div class="bar-track"><span id="stamina"></span></div>
+					</div>
+					
+					<!-- Legacy survival metrics (hidden by default) -->
+					<div class="vital hunger hidden">
+						<div class="vital-label"><small>ENERGIA</small><strong id="hunger-value">100</strong></div>
+						<div class="bar-track"><span id="hunger"></span></div>
+					</div>
+					<div class="vital thirst hidden">
+						<div class="vital-label"><small>HIDRATACAO</small><strong id="thirst-value">100</strong></div>
+						<div class="bar-track"><span id="thirst"></span></div>
+					</div>
+					<div class="vital stress hidden">
+						<div class="vital-label"><small>STRESS</small><strong id="stress-value">0</strong></div>
+						<div class="bar-track"><span id="stress"></span></div>
+					</div>
+				</div>
+
+				<!-- Vehicle Diagnostics (Visible in Car) -->
+				<div id="vehicle" class="vehicle-panel hidden">
+					<div class="speedometer-section">
+						<div class="speed-number">
+							<strong id="speed">000</strong>
+							<small>KM/H</small>
+						</div>
+						<div class="gear-badge">
+							<small>MARCHA</small>
+							<strong id="gear">N</strong>
+						</div>
+					</div>
+					
+					<div class="vehicle-info-section">
+						<div class="fuel">
+							<div class="fuel-label">
+								<small>COMBUSTIVEL</small>
+								<strong id="fuel-value">100%</strong>
+							</div>
+							<div class="bar-track"><span id="fuel"></span></div>
+						</div>
+						
+						<div class="vehicle-flags">
+							<span id="belt" class="flag">CINTO</span>
+							<span id="lock" class="flag">TRAVA</span>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+
+		<!-- Action Progress Bar -->
+		<section id="progress" class="progress hidden">
+			<div class="progress-heading">
+				<span id="progress-label">PROCESSANDO</span>
+				<small>EM ANDAMENTO</small>
+			</div>
+			<div class="progress-track"><span id="progress-fill"></span></div>
+		</section>
+	</main>
+	<script src="script.js"></script>
+</body>
+</html>
