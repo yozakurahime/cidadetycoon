@@ -189,11 +189,12 @@ local function spawnHubPeds()
                             return
                         end
 
-                        local ok = pcall(function()
+                        local ok, err = pcall(function()
                             exports['cidade_tycoon_freelance']:TryStartFreelance(hub.id, mode)
                         end)
 
                         if not ok then
+                            DebugError('Falha ao abrir freelance: %s', tostring(err))
                             lib.notify({
                                 title = 'Cidade Tycoon',
                                 description = 'Nao foi possivel abrir os contratos agora.',

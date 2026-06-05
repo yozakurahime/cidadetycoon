@@ -4,22 +4,44 @@ print("^5[Tycoon:Client:Freelance]^7 Inicializando script...")
 local tryStartFreelance
 local startPlayerBulkContractWithValidation
 local ClientRuntimeState
+local notifyClient
 
 -- Register exports as early as possible
-exports('TryStartFreelance', function(...) return tryStartFreelance(...) end)
+exports('TryStartFreelance', function(...)
+    local args = { ... }
+
+    if tryStartFreelance then
+        return tryStartFreelance(table.unpack(args))
+    end
+
+    CreateThread(function()
+        local timeout = GetGameTimer() + 5000
+        while not tryStartFreelance and GetGameTimer() < timeout do
+            Wait(100)
+        end
+
+        if tryStartFreelance then
+            tryStartFreelance(table.unpack(args))
+        else
+            notifyClient('Sistema de contratos ainda esta carregando.', 'error')
+        end
+    end)
+end)
 exports('StartPlayerBulkContractWithValidation', function(...) return startPlayerBulkContractWithValidation(...) end)
 exports('GetActiveMissionContext', function()
+    local state = ClientRuntimeState or {}
     return {
-        hasActiveMission = ClientRuntimeState.activeMission ~= nil,
-        activeMission = ClientRuntimeState.activeMission
+        hasActiveMission = state.activeMission ~= nil,
+        activeMission = state.activeMission
     }
 end)
 
 -- Alias para o HUD (compatibilidade)
 exports('GetCompanyAndFreelanceContextForSource', function()
+    local state = ClientRuntimeState or {}
     return {
-        hasActiveMission = ClientRuntimeState.activeMission ~= nil,
-        activeMission = ClientRuntimeState.activeMission
+        hasActiveMission = state.activeMission ~= nil,
+        activeMission = state.activeMission
     }
 end)
 
@@ -120,7 +142,7 @@ local function stopCarryingBox()
     boxProp = nil
 end
 
-local function notifyClient(message, notificationType)
+notifyClient = function(message, notificationType)
     if GetResourceState('qbx_core') == 'started' then
         exports.qbx_core:Notify(message, notificationType or 'inform')
         return
