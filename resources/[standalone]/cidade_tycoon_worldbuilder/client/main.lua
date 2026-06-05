@@ -201,7 +201,37 @@ local function findMatchingExternalEntity(external)
     return best
 end
 
+local function findExternalForEntity(entity)
+    if not isEditableExternalEntity(entity) then return nil end
+
+    local entityType = entityTypeName(entity)
+    local model = GetEntityModel(entity)
+    local coords = GetEntityCoords(entity)
+
+    for _, external in ipairs(world.externalEntities or {}) do
+        if external.entityType == entityType and external.model == model then
+            local origin = vec3(external.originCoords.x, external.originCoords.y, external.originCoords.z)
+            local target = vec3(external.coords.x, external.coords.y, external.coords.z)
+            local radius = external.radius or config.defaultExternalRadius
+
+            if #(coords - origin) <= radius or #(coords - target) <= radius then
+                return external
+            end
+        end
+    end
+
+    return nil
+end
+
 local function applyExternalOverride(external)
+    if placement and placement.mode == 'external' then
+        if placement.existingId == external.id then return end
+        if placement.entity and DoesEntityExist(placement.entity) then
+            local editingExternal = findExternalForEntity(placement.entity)
+            if editingExternal and editingExternal.id == external.id then return end
+        end
+    end
+
     local playerCoords = GetEntityCoords(PlayerPedId())
     local origin = vec3(external.originCoords.x, external.originCoords.y, external.originCoords.z)
     local target = vec3(external.coords.x, external.coords.y, external.coords.z)
@@ -230,6 +260,8 @@ local function applyExternalOverride(external)
 end
 
 local function applyExternalOverrides()
+    if placement and placement.mode == 'external' then return end
+
     for _, external in ipairs(world.externalEntities or {}) do
         applyExternalOverride(external)
     end
@@ -612,13 +644,14 @@ local function moveAimedExternal()
     end
 
     local entityType = entityTypeName(entity)
+    local existing = findExternalForEntity(entity)
     local input = lib.inputDialog('Mover entidade existente', {
-        { type = 'input', label = 'Nome no editor', default = ('%s %s'):format(entityType, GetEntityModel(entity)), required = true },
-        { type = 'number', label = 'Raio para encontrar ao reiniciar', default = config.defaultExternalRadius, min = 0.5, max = 35.0 }
+        { type = 'input', label = 'Nome no editor', default = existing and existing.label or ('%s %s'):format(entityType, GetEntityModel(entity)), required = true },
+        { type = 'number', label = 'Raio para encontrar ao reiniciar', default = existing and existing.radius or config.defaultExternalRadius, min = 0.5, max = 35.0 }
     })
     if not input then return end
 
-    startExternalPlacement(entity)
+    startExternalPlacement(entity, existing)
     if placement then
         placement.label = input[1]
         placement.radius = tonumber(input[2]) or config.defaultExternalRadius
@@ -847,7 +880,9 @@ RegisterNetEvent('cidade_tycoon_worldbuilder:client:syncWorld', function(newWorl
     cleanupSpawned()
     despawnFarProps()
     applyRemovals()
-    applyExternalOverrides()
+    if not placement or placement.mode ~= 'external' then
+        applyExternalOverrides()
+    end
 end)
 
 CreateThread(function()
