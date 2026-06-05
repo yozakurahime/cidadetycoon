@@ -1,6 +1,7 @@
 local config = require 'config.hubs'
 
 local spawnedPeds = {}
+local spawnedPedLabels = {}
 local hubBlips = {}
 
 local function DebugLog(text, ...)
@@ -13,6 +14,20 @@ end
 
 local function DebugSuccess(text, ...)
     print(string.format("^2[Tycoon-Success:Hubs]^7 %s", string.format(text, ...)))
+end
+
+local function render3DText(coords, text)
+    local onScreen, x, y = GetScreenCoordFromWorldCoord(coords.x, coords.y, coords.z + 1.2)
+    if not onScreen then return end
+
+    SetTextScale(0.32, 0.32)
+    SetTextFont(4)
+    SetTextProportional(1)
+    SetTextColour(255, 255, 255, 180)
+    SetTextEntry('STRING')
+    SetTextCentre(1)
+    AddTextComponentString(text)
+    DrawText(x, y)
 end
 
 local function createHubBlips()
@@ -188,6 +203,10 @@ local function spawnHubPeds()
                 }
             })
             table.insert(spawnedPeds, ped)
+            table.insert(spawnedPedLabels, {
+                entity = ped,
+                text = hub.floatingText or '~o~Contratos Freelance~w~',
+            })
             DebugSuccess("Spawnado NPC Hub: " .. hub.name)
             SetModelAsNoLongerNeeded(model)
         else
@@ -268,6 +287,27 @@ end
 CreateThread(function()
     createHubBlips()
     spawnHubPeds()
+end)
+
+CreateThread(function()
+    while true do
+        local wait = 1500
+        local playerCoords = GetEntityCoords(PlayerPedId())
+
+        for _, label in ipairs(spawnedPedLabels) do
+            if DoesEntityExist(label.entity) then
+                local coords = GetEntityCoords(label.entity)
+                local dist = #(playerCoords - coords)
+
+                if dist < 15.0 then
+                    wait = 0
+                    render3DText(coords, label.text)
+                end
+            end
+        end
+
+        Wait(wait)
+    end
 end)
 
 CreateThread(function()
