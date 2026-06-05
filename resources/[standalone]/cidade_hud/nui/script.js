@@ -131,7 +131,6 @@
 			const hideFomeSede = item.fomeSede === false;
 			document.querySelector(".vital.hunger").classList.toggle("hidden", hideFomeSede);
 			document.querySelector(".vital.thirst").classList.toggle("hidden", hideFomeSede);
-			document.querySelector(".vital.stress").classList.toggle("hidden", hideFomeSede);
 		}
 		if (item.exibCombustivel !== undefined) {
 			const hideFuel = item.exibCombustivel === false;

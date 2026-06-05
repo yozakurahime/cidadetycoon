@@ -2,6 +2,8 @@ local statusInterval = require 'config.client'.statusIntervalSeconds
 local playerState = LocalPlayer.state
 
 CreateThread(function()
+    if statusInterval <= 0 then return end
+
     local timeout = 1000 * statusInterval
     while true do
         Wait(timeout)

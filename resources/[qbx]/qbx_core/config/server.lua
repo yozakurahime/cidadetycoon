@@ -12,8 +12,8 @@ return {
     },
 
     player = {
-        hungerRate = 4.2, -- Rate at which hunger goes down.
-        thirstRate = 3.8, -- Rate at which thirst goes down.
+        hungerRate = 0.0, -- Rate at which hunger goes down. Disabled for Cidade Tycoon.
+        thirstRate = 0.0, -- Rate at which thirst goes down. Disabled for Cidade Tycoon.
 
         ---@enum BloodType
         bloodTypes = {

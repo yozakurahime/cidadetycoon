@@ -1,6 +1,8 @@
 local config = require 'config.server'
 
 local function removeHungerAndThirst(src, player)
+    if config.player.hungerRate <= 0 and config.player.thirstRate <= 0 then return end
+
     local playerState = Player(src).state
     if not playerState.isLoggedIn then return end
     local newHunger = playerState.hunger - config.player.hungerRate
