@@ -96,7 +96,7 @@ function OpenRecyclingStation()
 end
 
 -- SPAWN PHYSICAL PROPS AND ATTACH TARGETS
-local function createPhysicalInteractionPoint(coords, modelName, label, icon, onSelectFunc)
+local function createPhysicalInteractionPoint(coords, modelName, label, icon, onSelectFunc, floatingText)
     local modelHash = type(modelName) == 'string' and GetHashKey(modelName) or modelName
     
     RequestModel(modelHash)
@@ -125,7 +125,10 @@ local function createPhysicalInteractionPoint(coords, modelName, label, icon, on
         }
     })
     
-    table.insert(spawnedProps, obj)
+    table.insert(spawnedProps, {
+        entity = obj,
+        text = floatingText or label,
+    })
     return obj
 end
 
@@ -141,7 +144,8 @@ CreateThread(function()
                 "prop_table_03", 
                 'Prateleira: Componentes Pesados', 
                 'fa-solid fa-engine', 
-                OpenMechanicalShelf
+                OpenMechanicalShelf,
+                "~y~Componentes Pesados~w~"
             )
 
             -- 2. Maintenance Shelf (Right)
@@ -150,7 +154,8 @@ CreateThread(function()
                 "prop_table_03b", 
                 'Prateleira: Itens de Manutenção', 
                 'fa-solid fa-wrench', 
-                OpenMaintenanceShelf
+                OpenMaintenanceShelf,
+                "~b~Itens de Manutencao~w~"
             )
 
             -- 3. Recycling Bin (Back)
@@ -159,31 +164,31 @@ CreateThread(function()
                 "prop_ld_bin_01", 
                 'Caçamba de Reciclagem (Sucata)', 
                 'fa-solid fa-recycle', 
-                OpenRecyclingStation
+                OpenRecyclingStation,
+                "~g~Reciclagem de Sucata~w~"
             )
         end
     end
 end)
 
--- THREAD VISUAL: Marcadores e Labels nas Prateleiras
+-- THREAD VISUAL: labels vinculados as entidades reais das prateleiras.
 CreateThread(function()
     while true do
         local wait = 1500
         local playerCoords = GetEntityCoords(PlayerPedId())
 
-        for id, warehouse in pairs(logisticsConfig.warehouses) do
-            local base = warehouse.productionCoords
-            if base then
-                local dist = #(playerCoords - base)
+        for _, prop in ipairs(spawnedProps) do
+            if DoesEntityExist(prop.entity) then
+                local coords = GetEntityCoords(prop.entity)
+                local dist = #(playerCoords - coords)
 
                 if dist < 15.0 then
                     wait = 0
-                    render3DText(vec3(base.x - 2.5, base.y, base.z + 0.5), "~y~Componentes Pesados~w~")
-                    render3DText(vec3(base.x + 2.5, base.y, base.z + 0.5), "~b~Itens de Manutenção~w~")
-                    render3DText(vec3(base.x, base.y - 2.5, base.z + 0.5), "~g~Reciclagem de Sucata~w~")
+                    render3DText(coords, prop.text)
                 end
             end
         end
+
         Wait(wait)
     end
 end)
@@ -204,8 +209,8 @@ end
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    for _, obj in ipairs(spawnedProps) do
-        if DoesEntityExist(obj) then DeleteEntity(obj) end
+    for _, prop in ipairs(spawnedProps) do
+        if DoesEntityExist(prop.entity) then DeleteEntity(prop.entity) end
     end
 end)
 
