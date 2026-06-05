@@ -136,7 +136,7 @@ CreateThread(function()
     Wait(3000)
     
     for id, warehouse in pairs(logisticsConfig.warehouses) do
-        local base = warehouse.productionCoords
+        local base = warehouse.autopartsCoords or warehouse.productionCoords
         if base then
             -- 1. Mechanical Shelf (Left)
             createPhysicalInteractionPoint(
