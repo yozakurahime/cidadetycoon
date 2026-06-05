@@ -3,6 +3,8 @@ local config = require 'config.hubs'
 local spawnedPeds = {}
 local spawnedPedLabels = {}
 local hubBlips = {}
+local interiorsThreadStarted = false
+local interiorRefreshState = {}
 
 local function DebugLog(text, ...)
     print(string.format("^3[Tycoon:Hubs]^7 %s", string.format(text, ...)))
@@ -78,6 +80,9 @@ local function initHubInteriors()
         GetHashKey("v_ilev_postop_door2")
     }
 
+    if interiorsThreadStarted then return end
+    interiorsThreadStarted = true
+
     CreateThread(function()
         while true do
             local pCoords = GetEntityCoords(PlayerPedId())
@@ -90,8 +95,18 @@ local function initHubInteriors()
                     if interiorId ~= 0 then
                         PinInteriorInMemory(interiorId)
                         if not IsInteriorReady(interiorId) then
-                            RefreshInterior(interiorId)
-                            DebugLog(("Interior %d (%s) atualizado."):format(interiorId, hub.name))
+                            local state = interiorRefreshState[interiorId] or { attempts = 0, nextAt = 0 }
+                            local now = GetGameTimer()
+
+                            if state.attempts < 3 and now >= state.nextAt then
+                                RefreshInterior(interiorId)
+                                state.attempts = state.attempts + 1
+                                state.nextAt = now + 30000
+                                interiorRefreshState[interiorId] = state
+                                DebugLog(("Interior %d (%s) solicitado para atualizar. Tentativa %d/3."):format(interiorId, hub.name, state.attempts))
+                            end
+                        else
+                            interiorRefreshState[interiorId] = nil
                         end
                     elseif dist < 20.0 then
                         -- Debug visual se o interior não for encontrado
