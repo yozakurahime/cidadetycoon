@@ -10,6 +10,17 @@ local function notifyProduction(message, type)
     })
 end
 
+local function resolveWorldBuilderPlacement(modelHash, coords)
+    if GetResourceState('cidade_tycoon_worldbuilder') ~= 'started' then return nil end
+
+    local ok, placement = pcall(function()
+        return exports['cidade_tycoon_worldbuilder']:ResolveExternalPlacement(modelHash, coords, 'object')
+    end)
+
+    if ok then return placement end
+    return nil
+end
+
 -- MAIN PRODUCTION MENU
 function OpenProductionManager()
     local dashboard = lib.callback.await('cidade_tycoon_logistics:server:getBusinessDashboard', false)
@@ -158,8 +169,18 @@ CreateThread(function()
             end
 
             if HasModelLoaded(modelHash) then
-                local obj = CreateObject(modelHash, coords.x, coords.y, coords.z - 1.0, false, false, false)
-                SetEntityHeading(obj, 180.0)
+                local defaultCoords = vec3(coords.x, coords.y, coords.z - 1.0)
+                local placement = resolveWorldBuilderPlacement(modelHash, defaultCoords)
+                local spawnCoords = placement and placement.coords or defaultCoords
+                local obj = CreateObject(modelHash, spawnCoords.x, spawnCoords.y, spawnCoords.z, false, false, false)
+
+                if placement and placement.rotation then
+                    SetEntityRotation(obj, placement.rotation.x or 0.0, placement.rotation.y or 0.0, placement.rotation.z or placement.heading or 0.0, 2, true)
+                    SetEntityHeading(obj, placement.heading or placement.rotation.z or 180.0)
+                else
+                    SetEntityHeading(obj, 180.0)
+                end
+
                 FreezeEntityPosition(obj, true)
                 SetEntityInvincible(obj, true)
                 

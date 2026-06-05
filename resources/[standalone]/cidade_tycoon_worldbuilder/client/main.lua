@@ -241,6 +241,31 @@ local function findExternalForEntity(entity)
     return nil
 end
 
+local function resolveExternalPlacement(model, originCoords, entityType)
+    local origin = vec3(originCoords.x, originCoords.y, originCoords.z)
+    entityType = entityType or 'object'
+
+    for _, external in ipairs(world.externalEntities or {}) do
+        if external.entityType == entityType and external.model == model then
+            local savedOrigin = vec3(external.originCoords.x, external.originCoords.y, external.originCoords.z)
+            local radius = math.max(external.radius or config.defaultExternalRadius, 25.0)
+
+            if #(origin - savedOrigin) <= radius then
+                return {
+                    id = external.id,
+                    coords = external.coords,
+                    rotation = external.rotation,
+                    heading = external.heading,
+                    frozen = external.frozen,
+                    collision = external.collision,
+                }
+            end
+        end
+    end
+end
+
+exports('ResolveExternalPlacement', resolveExternalPlacement)
+
 local function applyExternalOverride(external)
     if placement and placement.mode == 'external' then
         if placement.existingId == external.id then return end
