@@ -7,6 +7,7 @@ local targetNames = {}
 local placement = nil
 local externalApplied = {}
 local externalOverridePausedUntil = 0
+local externalFallbacks = {}
 
 local function notify(message, notifyType)
     lib.notify({
@@ -98,6 +99,20 @@ local function cleanupSpawned()
     end
 end
 
+local function cleanupExternalFallback(id)
+    local entity = externalFallbacks[id]
+    if entity and DoesEntityExist(entity) then
+        DeleteEntity(entity)
+    end
+    externalFallbacks[id] = nil
+end
+
+local function cleanupExternalFallbacks()
+    for id in pairs(externalFallbacks) do
+        cleanupExternalFallback(id)
+    end
+end
+
 local function addTarget(entity, prop)
     if not prop.target or GetResourceState('ox_target') ~= 'started' then return end
 
@@ -131,11 +146,13 @@ local function spawnProp(prop)
     end
 
     local coords = prop.coords
+    RequestCollisionAtCoord(coords.x, coords.y, coords.z)
     local entity = CreateObjectNoOffset(hash, coords.x, coords.y, coords.z, false, false, false)
     SetEntityRotation(entity, prop.rotation.x or 0.0, prop.rotation.y or 0.0, prop.rotation.z or prop.heading or 0.0, 2, true)
     SetEntityHeading(entity, prop.heading or prop.rotation.z or 0.0)
     FreezeEntityPosition(entity, prop.frozen ~= false)
     SetEntityCollision(entity, prop.collision ~= false, true)
+    SetEntityLoadCollisionFlag(entity, true)
     SetEntityAsMissionEntity(entity, true, true)
     SetModelAsNoLongerNeeded(hash)
 
@@ -183,7 +200,7 @@ end
 local function findMatchingExternalEntity(external)
     local origin = vec3(external.originCoords.x, external.originCoords.y, external.originCoords.z)
     local target = vec3(external.coords.x, external.coords.y, external.coords.z)
-    local radius = external.radius or config.defaultExternalRadius
+    local radius = math.max(external.radius or config.defaultExternalRadius, 25.0)
     local best, bestDist
 
     for _, entity in ipairs(poolForType(external.entityType)) do
@@ -213,7 +230,7 @@ local function findExternalForEntity(entity)
         if external.entityType == entityType and external.model == model then
             local origin = vec3(external.originCoords.x, external.originCoords.y, external.originCoords.z)
             local target = vec3(external.coords.x, external.coords.y, external.coords.z)
-            local radius = external.radius or config.defaultExternalRadius
+            local radius = math.max(external.radius or config.defaultExternalRadius, 25.0)
 
             if #(coords - origin) <= radius or #(coords - target) <= radius then
                 return external
@@ -238,11 +255,35 @@ local function applyExternalOverride(external)
     local target = vec3(external.coords.x, external.coords.y, external.coords.z)
 
     if #(playerCoords - origin) > config.externalScanDistance and #(playerCoords - target) > config.externalScanDistance then
+        cleanupExternalFallback(external.id)
         return
     end
 
     local entity = findMatchingExternalEntity(external)
-    if not entity then return end
+    if not entity then
+        if external.entityType == 'object' then
+            local fallback = externalFallbacks[external.id]
+            if fallback and DoesEntityExist(fallback) then return end
+
+            local hash = requestModel(external.model)
+            if not hash then return end
+
+            RequestCollisionAtCoord(target.x, target.y, target.z)
+            fallback = CreateObjectNoOffset(hash, target.x, target.y, target.z, false, false, false)
+            SetEntityRotation(fallback, external.rotation.x or 0.0, external.rotation.y or 0.0, external.rotation.z or external.heading or 0.0, 2, true)
+            SetEntityHeading(fallback, external.heading or external.rotation.z or 0.0)
+            FreezeEntityPosition(fallback, external.frozen ~= false)
+            SetEntityCollision(fallback, external.collision ~= false, true)
+            SetEntityLoadCollisionFlag(fallback, true)
+            SetEntityAsMissionEntity(fallback, true, true)
+            SetEntityAlpha(fallback, 235, false)
+            SetModelAsNoLongerNeeded(hash)
+            externalFallbacks[external.id] = fallback
+        end
+        return
+    end
+
+    cleanupExternalFallback(external.id)
     if not ensureEntityControl(entity) then return end
 
     SetEntityCoordsNoOffset(entity, target.x, target.y, target.z, false, false, false)
@@ -920,6 +961,7 @@ RegisterNetEvent('cidade_tycoon_worldbuilder:client:syncWorld', function(newWorl
     world = newWorld or { props = {}, removals = {}, externalEntities = {} }
     world.externalEntities = world.externalEntities or {}
     cleanupSpawned()
+    cleanupExternalFallbacks()
     despawnFarProps()
     applyRemovals()
     if not placement or placement.mode ~= 'external' then
@@ -1003,4 +1045,5 @@ AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     stopPlacement(true)
     cleanupSpawned()
+    cleanupExternalFallbacks()
 end)
