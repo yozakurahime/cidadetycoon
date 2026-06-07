@@ -384,7 +384,7 @@ lib.callback.register('cidade_garagem_eye:server:getGarageVehicles', function(so
         local vehicle = vehicles[i]
         if shouldListVehicle(vehicle, garageName, garage) then
             -- Tycoon Enrichment: Matrix Data
-            local tycoonData = exports.cidade_tycoon_core:GetVehicleData(vehicle.vehicle)
+            local tycoonData = exports.cidade_tycoon_core:GetVehicleData(vehicle.modelName or vehicle.vehicle)
             if tycoonData then
                 vehicle.tycoon = {
                     tier = tycoonData.tier,

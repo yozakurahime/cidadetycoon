@@ -18,7 +18,7 @@ Config = {}
 -- ─────────────────────────────────────────────
 --  FRAMEWORK
 -- ─────────────────────────────────────────────
-Config.Framework = 'qbox'   -- 'esx' | 'qb' | 'qbox' | 'auto'
+Config.Framework = 'qb'   -- 'esx' | 'qb' | 'qbox' | 'auto'
 
 Config.RunAutoSQL = true    -- true: automatically runs the SQL file | false: manual SQL installation required
 

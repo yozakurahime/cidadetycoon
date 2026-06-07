@@ -111,6 +111,8 @@
 		missionPanel.classList.remove("hidden");
 		text("cargo-integrity", Math.floor(item.cargoHealth || 100));
 		text("mission-progress", `${item.totalDelivered || 0}/${item.totalRequired || 1}`);
+		text("mission-objective", item.phase === "delivery" ? "IR PARA ENTREGA" : "BUSCAR CARGA");
+		text("mission-vehicle-load", `${item.inTrunk || 0}/${item.capacity || 0}`);
 		
 		const integrityEl = $("cargo-integrity");
 		const health = item.cargoHealth || 100;

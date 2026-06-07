@@ -24,6 +24,9 @@ shared_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/framework.lua',
+    'server/chat_cooldown.lua',
+    'server/debug.lua',
+    'server/diag.lua',
     'server/profile.lua',
     'server/skills.lua',
     'server/vehicles.lua',

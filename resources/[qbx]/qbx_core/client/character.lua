@@ -389,6 +389,21 @@ local function chooseCharacter()
     Wait(1500)
     ShutdownLoadingScreen()
     ShutdownLoadingScreenNui()
+    
+    -- AUTO-LOGIN FOR SINGLE CHARACTER (Tycoon Rule)
+    if amount == 1 and characters[1] then
+        DoScreenFadeOut(10)
+        local character = characters[1]
+        lib.callback.await('qbx_core:server:loadCharacter', false, character.citizenid)
+        
+        if GetResourceState('cidade_tycoon_spawn'):find('start') then
+            TriggerEvent('qb-spawn:client:setupSpawns', character.citizenid)
+        else
+            spawnLastLocation()
+        end
+        return -- Exit function early
+    end
+
     setupPreviewCam()
 
     local options = {}

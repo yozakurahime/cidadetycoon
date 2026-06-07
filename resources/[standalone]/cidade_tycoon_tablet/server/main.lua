@@ -1,180 +1,98 @@
-local CORE = 'cidade_tycoon_core'
-local FREELANCE = 'cidade_tycoon_freelance'
-local MAINTENANCE = 'cidade_tycoon_maintenance'
-
-local function getFrameworkPlayer(source)
-    return exports.cidade_tycoon_core:GetFrameworkPlayer(source)
+local function DebugLog(text, ...)
+    print(string.format("^2[Tycoon:Server:Tablet]^7 %s", string.format(text, ...)))
 end
 
-local function getCitizenId(player)
-    return exports.cidade_tycoon_core:GetCitizenId(player)
-end
+-- ==========================================
+-- OPTIMIZED AGGREGATED DASHBOARD (Arbiter Design)
+-- ==========================================
 
-local function notifyPlayer(source, message, notificationType)
-    if GetResourceState('qbx_core') == 'started' then
-        exports.qbx_core:Notify(source, message, notificationType or 'inform')
-        return
-    end
-    TriggerClientEvent('QBCore:Notify', source, message, notificationType or 'primary')
-end
-
--- Ensure player has a physical tablet
-local function ensureStarterTablet(source)
-    if GetResourceState('ox_inventory') == 'started' then
-        local itemCount = exports.ox_inventory:Search(source, 'count', 'tablet') or 0
-        if itemCount == 0 then
-            exports.ox_inventory:AddItem(source, 'tablet', 1)
-        end
-        return true
-    end
-    -- Fallback for qb-inventory or similar could go here
-    return true
-end
-
--- AGGREGATED DASHBOARD (The Core of the Tablet)
 local function getDashboardForSource(source)
-    print(("^5[Tycoon:Tablet]^7 Gerando dashboard para jogador %d..."):format(source))
-    local profile = exports.cidade_tycoon_core:GetPlayerProfile(source)
-    if not profile then 
-        print("^1[Tycoon:Tablet]^7 Falha ao obter perfil do jogador.")
-        return nil 
-    end
-
-    local player = getFrameworkPlayer(source)
-    
-    -- 1. Profile Data (Core)
-    local payload = {
-        citizenid = profile.citizenid,
-        companyName = profile.companyName,
-        level = profile.level,
-        experience = profile.experience,
-        maxExperience = profile.maxExperience or (profile.level * 2000),
-        reputation = profile.reputation or 0,
-        reputationProduction = profile.reputationProduction or 0,
-        reputationFiscal = profile.reputationFiscal or 0,
-        hybridScore = profile.hybridScore or 0,
-        licenses = profile.licenses,
-        tutorial = profile.tutorial,
-        money = {
-            bank = player and player.Functions.GetMoney('bank') or 0,
-            cash = player and player.Functions.GetMoney('cash') or 0,
-        }
-    }
-
-    print(("^5[Tycoon:Tablet]^7 Dinheiro recuperado: Banco $%d, Mao $%d"):format(payload.money.bank, payload.money.cash))
-
-    -- 2. Maintenance / Upgrades (Maintenance Module)
-    if GetResourceState(MAINTENANCE) == 'started' then
-        pcall(function()
-            local maintenanceData = exports.cidade_tycoon_maintenance:GetUpgradeDashboardForSource(source)
-            if maintenanceData then
-                payload.upgrades = maintenanceData.upgrades
-                payload.effects = maintenanceData.effects
-            end
-        end)
-    end
-
-    -- 3. Active Mission Status (Freelance Module)
-    if GetResourceState(FREELANCE) == 'started' then
-        pcall(function()
-            local freelanceContext = exports.cidade_tycoon_freelance:GetCompanyAndFreelanceContextForSource(source)
-            if freelanceContext and freelanceContext.hasActiveMission then
-                local m = freelanceContext.activeMission
-                payload.hasActiveMission = true
-                payload.activeMission = {
-                    missionId = m.missionId,
-                    mode = m.mode,
-                    contractType = m.contractType,
-                    vehicleModel = m.vehicleModel,
-                    totalRequired = m.totalRequired,
-                    totalDelivered = m.totalDelivered,
-                    inTrunk = m.inTrunk,
-                    capacity = m.capacity,
-                    cargoHealth = m.cargoHealth,
-                    reward = freelanceContext.estimatedReward or 0
-                }
-            end
-        end)
-    end
-
-    -- 4. Financings (Market Module)
-    if GetResourceState('cidade_tycoon_market') == 'started' then
-        pcall(function()
-            payload.financings = exports.cidade_tycoon_market:GetPlayerFinancings(source)
-        end)
-    end
-
-    -- 5. Transaction History
+    local profile = nil
     pcall(function()
-        payload.history = exports.cidade_tycoon_core:GetPlayerTransactions(source, 15)
+        profile = exports.cidade_tycoon_core:GetPlayerProfile(source)
     end)
+    if not profile then return nil end
 
-    -- 6. Business Data (Logistics & Production)
-    if GetResourceState('cidade_tycoon_logistics') == 'started' then
-        pcall(function()
-            local bizData = exports.cidade_tycoon_logistics:GetBusinessDashboardForSource(source)
-            if bizData then
-                payload.hasCompany = bizData.hasCompany
-                payload.company = bizData.company
-                payload.employees = bizData.employees
-                payload.fleet = bizData.fleet
-                payload.activeDeliveries = bizData.activeDeliveries
-                payload.productionLines = bizData.productionLines
-                payload.warehouses = bizData.warehouses
-            end
-        end)
-    end
+    local citizenId = profile.citizenid
 
-    -- 7. Available Jobs (Job Board)
-    if GetResourceState('cidade_tycoon_logistics') == 'started' then
-        pcall(function()
-            payload.availableJobs = exports.cidade_tycoon_logistics:GetAvailableJobsForSource(source)
-        end)
-    end
-
-    -- 6. Hubs Data
-    if GetResourceState('cidade_tycoon_hubs') == 'started' then
-        pcall(function()
-            payload.hubs = exports.cidade_tycoon_hubs:GetAllHubs()
-        end)
-    end
-
-    -- 7. Fleet Health & Alerts
-    payload.alerts = {}
+    -- Tutorial Auto-Advance Checks (Wrapped in pcall to prevent coordinates/OneSync runtime crashes)
     pcall(function()
-        local fleetStatus = MySQL.query.await([[
-            SELECT s.*, v.vehicle 
-            FROM tycoon_vehicle_status s
-            JOIN player_vehicles v ON s.plate = v.plate
-            WHERE v.citizenid = ?
-        ]], { profile.citizenid })
-
-        if fleetStatus then
-            for _, veh in ipairs(fleetStatus) do
-                local criticalParts = {}
-                if veh.engine_health < 25 then table.insert(criticalParts, 'Motor') end
-                if veh.tires_health < 25 then table.insert(criticalParts, 'Pneus') end
-                if veh.brakes_health < 25 then table.insert(criticalParts, 'Freios') end
-
-                if #criticalParts > 0 then
-                    table.insert(payload.alerts, {
-                        type = 'warning',
-                        title = ('Alerta de Manutenção: %s'):format(veh.vehicle:upper()),
-                        message = ('Componentes críticos (%s). Siga para uma oficina.'):format(table.concat(criticalParts, ', '))
-                    })
+        if profile.tutorial and profile.tutorial.active then
+            if profile.tutorial.currentStep == 'welcome' then
+                profile.tutorial.currentStep = 'go_to_garage'
+                exports.cidade_tycoon_core:UpdateTutorialStep(source, 'go_to_garage')
+            elseif profile.tutorial.currentStep == 'go_to_hub' then
+                local ped = GetPlayerPed(source)
+                if ped and ped > 0 then
+                    local coords = GetEntityCoords(ped)
+                    if coords and coords ~= vec3(0.0, 0.0, 0.0) then
+                        local dist = #(coords - vec3(1197.2, -3250.6, 7.1))
+                        if dist < 50.0 then
+                            profile.tutorial.currentStep = 'accept_tutorial_contract'
+                            exports.cidade_tycoon_core:UpdateTutorialStep(source, 'accept_tutorial_contract')
+                        end
+                    end
                 end
             end
         end
     end)
 
-    -- 8. Vehicle Data with Maintenance Integration
-    payload.garage = { vehicles = {} }
+    local payload = {}
+
+    -- Debug: log de dados do perfil inicial
+    print(("[Tycoon:Tablet:Debug] Carregando dashboard para Source: %s, CitizenId: %s"):format(tostring(source), tostring(citizenId)))
+
+    -- 2. Profile Base Data
+    payload.name = profile.companyName
+    payload.level = profile.level
+    payload.experience = profile.experience
+    payload.maxExperience = profile.maxExperience
+    payload.licenses = profile.licenses
+
+    -- 3. Money Data (Structure expected by frontend: { bank, cash })
+    payload.money = { bank = 0, cash = 0 }
     pcall(function()
-        local vehicles = MySQL.query.await('SELECT id, vehicle, plate, garage, state FROM player_vehicles WHERE citizenid = ?', { profile.citizenid })
+        payload.money.bank = exports.cidade_tycoon_core:GetMoneyBalance(source, 'bank') or 0
+        payload.money.cash = exports.cidade_tycoon_core:GetMoneyBalance(source, 'cash') or 0
+    end)
+    print(("[Tycoon:Tablet:Debug] Saldo resolvido - Banco: %s, Carteira: %s"):format(tostring(payload.money.bank), tostring(payload.money.cash)))
+
+    -- 4. Fetch Business Data (Logistics)
+    local bizData = nil
+    if GetResourceState('cidade_tycoon_logistics') == 'started' then
+        local success, result = pcall(function()
+            return exports.cidade_tycoon_logistics:GetBusinessDashboardForSource(source)
+        end)
+        if success then
+            bizData = result
+        end
+    end
+    payload.company = bizData and {
+        hasCompany = bizData.hasCompany,
+        name = bizData.company and bizData.company.name,
+        vault = bizData.company and bizData.company.vaultBalance,
+        employeesCount = # (bizData.employees or {}),
+        activeRoutes = # (bizData.activeDeliveries or {})
+    } or { hasCompany = false }
+    payload.hasCompany = bizData and bizData.hasCompany or false
+    payload.warehouses = bizData and bizData.warehouses or {}
+
+    -- 5. Fetch Garage Fleet (vehicles property inside garage)
+    payload.garage = { vehicles = {} }
+    local success, err = pcall(function()
+        local vehicles = MySQL.query.await('SELECT id, vehicle, plate, garage, state FROM player_vehicles WHERE citizenid = ?', { citizenId })
+        print(("[Tycoon:Tablet:Debug] Veiculos encontrados no banco de dados para %s: %s"):format(tostring(citizenId), tostring(vehicles and #vehicles or 0)))
         if vehicles then
             for _, veh in ipairs(vehicles) do
                 -- Tycoon Matrix Enrichment
-                local tycoonData = exports.cidade_tycoon_core:GetVehicleData(veh.vehicle)
+                local tycoonData = nil
+                local ok, err2 = pcall(function()
+                    tycoonData = exports.cidade_tycoon_core:GetVehicleData(veh.vehicle)
+                end)
+                if not ok then
+                    print(("^1[Tycoon:Tablet:Error] Falha ao chamar GetVehicleData para %s: %s^7"):format(tostring(veh.vehicle), tostring(err2)))
+                end
+
                 if tycoonData then
                     veh.label = tycoonData.label
                     veh.category = tycoonData.category
@@ -182,13 +100,23 @@ local function getDashboardForSource(source)
                     veh.branch = tycoonData.branch
                     veh.capacity = tycoonData.capacity
                     veh.layer = tycoonData.layer
+                else
+                    print(("[Tycoon:Tablet:Warning] Nao foi possivel obter Matrix Data para o veiculo %s"):format(tostring(veh.vehicle)))
                 end
 
-                local status = MySQL.single.await('SELECT * FROM tycoon_vehicle_status WHERE plate = ?', { veh.plate })
+                local status = nil
+                local ok3, err3 = pcall(function()
+                    status = MySQL.single.await('SELECT * FROM tycoon_vehicle_status WHERE plate = ?', { veh.plate })
+                end)
+                if not ok3 then
+                    print(("^1[Tycoon:Tablet:Error] Falha ao consultar tycoon_vehicle_status para placa %s: %s^7"):format(tostring(veh.plate), tostring(err3)))
+                end
+
                 if status then
+                    -- Compute overall condition
+                    status.overall_condition = math.floor(((status.engine_health or 100) + (status.tires_health or 100)) / 2)
                     veh.maintenance = status
                 else
-                    -- Default maintenance state if not found
                     veh.maintenance = {
                         overall_condition = 100,
                         odometer_km = 0,
@@ -200,57 +128,110 @@ local function getDashboardForSource(source)
                 end
             end
             payload.garage.vehicles = vehicles
-            print(("^5[Tycoon:Tablet]^7 %d veiculos recuperados para a frota."):format(#vehicles))
         end
+    end)
+    if not success then
+        print(("^1[Tycoon:Tablet:Error] Falha geral no bloco de carregamento de veiculos: %s^7"):format(tostring(err)))
+    end
+
+    -- 6. Hubs
+    payload.hubs = exports.cidade_tycoon_hubs:GetAllHubs()
+
+    -- 7. Get Freelance Mission Context
+    local freelanceCtx = { hasActiveMission = false, activeMission = nil }
+    if GetResourceState('cidade_tycoon_freelance') == 'started' then
+        local success, result = pcall(function()
+            return exports.cidade_tycoon_freelance:GetCompanyAndFreelanceContextForSource(source)
+        end)
+        if success and result then
+            freelanceCtx = result
+        end
+    end
+    payload.hasActiveMission = freelanceCtx.hasActiveMission
+    payload.activeMission = freelanceCtx.activeMission
+
+    -- 8. Tutorial
+    payload.tutorial = profile.tutorial and {
+        currentStep = profile.tutorial.currentStep,
+        active = profile.tutorial.active,
+        assignedGarage = 'Garagem Tycoon Inicial',
+        assignedHubName = 'PostOP Hub (LS)'
+    } or { active = false }
+
+    -- 9. Available Jobs (Job board passthrough)
+    payload.availableJobs = {}
+    pcall(function()
+        payload.availableJobs = MySQL.query.await('SELECT j.*, c.company_name FROM tycoon_job_board j JOIN tycoon_companies c ON j.company_id = c.id ORDER BY j.created_at DESC LIMIT 10') or {}
     end)
 
     return payload
 end
 
 lib.callback.register('cidade_tycoon_tablet:server:getDashboard', getDashboardForSource)
+
+lib.callback.register('cidade_tycoon_tablet:server:advanceTutorialStep', function(source, stepName, payload)
+    local success = exports.cidade_tycoon_core:UpdateTutorialStep(source, stepName, payload)
+    return { ok = success }
+end)
+
+-- ==========================================
+-- EXPORTS
+-- ==========================================
+
 exports('GetDashboardForSource', getDashboardForSource)
 
--- Waypoint Management
-RegisterNetEvent('cidade_tycoon_tablet:server:setWaypoint', function(coords)
-    local src = source
-    TriggerClientEvent('cidade_tycoon_tablet:client:setWaypoint', src, coords)
+exports('EnsureStarterTabletForSource', function(source)
+    return exports.cidade_tycoon_core:EnsureStarterItem(source, 'tablet', 1)
 end)
 
--- Passthrough for Tutorial and Freelance Actions
-lib.callback.register('cidade_tycoon_tablet:server:advanceTutorialStep', function(source, nextStepKey, options)
-    return exports.cidade_tycoon_freelance:AdvanceTutorialStepForSource(source, nextStepKey, options or {})
-end)
+-- ==========================================
+-- ITEM REGISTRATION (Modern Qbox/Ox)
+-- ==========================================
 
-lib.callback.register('cidade_tycoon_tablet:server:tablet_accept_job', function(source, jobId)
-    local profile = exports.cidade_tycoon_core:GetPlayerProfile(source)
-    if not profile then return { ok = false, message = 'Perfil nao encontrado.' } end
-    
-    -- In standard job mural flow, hubId is the owner's hub
-    local job = MySQL.single.await('SELECT warehouse_id FROM tycoon_companies c JOIN tycoon_job_board j ON j.company_id = c.id WHERE j.id = ?', { jobId })
-    if not job then return { ok = false, message = 'Contrato nao encontrado.' } end
-
-    return exports.cidade_tycoon_freelance:StartPlayerBulkContractForSource(source, job.warehouse_id, jobId)
-end)
-
-lib.callback.register('cidade_tycoon_tablet:server:cancelFreelanceWithFine', function(source)
-    return exports.cidade_tycoon_freelance:CancelFreelanceWithFineForSource(source)
-end)
-
--- Item and Command Logic
-RegisterNetEvent('qbx_core:server:onPlayerLoaded', function(source)
-    ensureStarterTablet(source)
-end)
-
-if GetResourceState('qbx_core') == 'started' then
-    exports.qbx_core:CreateUseableItem('tablet', function(source)
+local function registerTabletItem()
+    exports.cidade_tycoon_core:CreateUseableItem('tablet', function(source)
         TriggerClientEvent('cidade_tycoon_tablet:client:openTablet', source)
     end)
+    DebugLog("Item 'tablet' registrado como utilizável.")
 end
 
+AddEventHandler('onResourceStart', function(res)
+    if res == 'ox_inventory' or res == GetCurrentResourceName() then
+        Wait(1500)
+        registerTabletItem()
+    end
+end)
+
+-- Command for admins/debug
 RegisterCommand('tablet', function(source)
     if source <= 0 then return end
-    ensureStarterTablet(source)
     TriggerClientEvent('cidade_tycoon_tablet:client:openTablet', source)
-end, false)
+end, true)
 
-exports('EnsureStarterTabletForSource', ensureStarterTablet)
+RegisterCommand('tablet_payload', function(source)
+    if source <= 0 then return end
+    local dashboard = getDashboardForSource(source)
+    if dashboard then
+        print("^2[Tycoon:Tablet:Debug] --- INICIO PAYLOAD DO TABLET ---^7")
+        print("Nome:", dashboard.name)
+        print("Level:", dashboard.level)
+        print("Exp:", dashboard.experience)
+        print("Total de Veiculos na Frota:", (dashboard.garage and dashboard.garage.vehicles and #dashboard.garage.vehicles or 0))
+        if dashboard.garage and dashboard.garage.vehicles then
+            for i, v in ipairs(dashboard.garage.vehicles) do
+                print(("- [%d] Placa: %s | Modelo: %s | Garagem: %s | Estado: %s | Label: %s"):format(
+                    i, tostring(v.plate), tostring(v.vehicle), tostring(v.garage), tostring(v.state), tostring(v.label)
+                ))
+            end
+        end
+        print("^2[Tycoon:Tablet:Debug] --- FIM PAYLOAD DO TABLET ---^7")
+        exports.cidade_tycoon_core:NotifyPlayer(source, 'Payload dumpado no console do servidor.', 'inform')
+    else
+        print("^1[Tycoon:Tablet:Debug] Perfil do jogador nao encontrado ou nulo.^7")
+    end
+end, true)
+
+AddEventHandler('qbx_core:server:onPlayerLoaded', function(source)
+    -- Ensure player has the tool
+    exports.cidade_tycoon_core:EnsureStarterItem(source, 'tablet', 1)
+end)

@@ -1,6 +1,6 @@
 # Cidade Tycoon World Builder
 
-Editor persistente de props para montar hubs, lojas e decoracoes usando modelos nativos do GTA V.
+Editor persistente de props para montar hubs, lojas e decoracoes usando modelos nativos do GTA V. O servidor valida todas as mutacoes, sincroniza os clientes incrementalmente e mantem backup do ultimo arquivo valido.
 
 ## Comandos
 
@@ -29,6 +29,8 @@ Tudo fica salvo em:
 data/world.json
 ```
 
+Antes de cada gravacao, o arquivo valido atual e copiado para `data/world.json.bkp`. Se o arquivo principal estiver corrompido durante a inicializacao, o resource restaura automaticamente o backup.
+
 `props` guarda os objetos criados pelo editor. `removals` guarda objetos vanilla do mapa que devem ser deletados localmente quando o jogador chega perto. `externalEntities` guarda reposicionamentos de props, NPCs ou veiculos vazios criados por outros scripts.
 
 ## Editar entidades de outros scripts
@@ -47,7 +49,7 @@ Quando o jogador chega perto, o resource procura uma entidade com o mesmo modelo
 
 ## Permissao
 
-O servidor valida a ACE:
+O servidor valida exclusivamente a ACE configurada em `shared/config.lua`:
 
 ```txt
 cidade_tycoon.worldbuilder

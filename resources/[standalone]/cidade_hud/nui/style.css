@@ -391,7 +391,9 @@ body.preview {
 
 .mission-data {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: space-between;
+	gap: 4px 10px;
 	font-size: 8px;
 	font-weight: 700;
 	color: var(--muted);

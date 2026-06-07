@@ -48,7 +48,16 @@ lib.callback.register('cidade_tycoon_maintenance:server:processVehicleWearSample
     if not status then return { ok = false } end
 
     local kmDriven = payload.distanceKm or 0.0
+    local impactScore = payload.impactScore or 0.0
+    local harshBrakes = payload.harshBrakes or 0
+    
+    -- Security Validation: Prevent negative values from malicious clients
+    if kmDriven < 0 then kmDriven = 0.0 end
+    if impactScore < 0 then impactScore = 0.0 end
+    if harshBrakes < 0 then harshBrakes = 0 end
+
     local factor = 1.0
+
 
     -- 1. Base Class Multiplier
     local classMult = getMaintenanceClassMultiplier(plate)

@@ -1,105 +1,96 @@
-local sharedConfig = require 'config.shared'
-
-local ActiveNPCDrivers = {} -- [deliveryId] = { pedNetId, vehicleNetId, ownerSource }
+local config = require 'shared.config'
+local activeRoutes = {} -- [deliveryId] = routeData (Memory-first simulation)
+local lastDBFlush = 0
 
 local function DebugLog(text, ...)
     print(string.format("^4[Tycoon:Logistics:NPC]^7 %s", string.format(text, ...)))
 end
 
--- NPC Delivery Logic
-lib.callback.register('cidade_tycoon_logistics:server:startNPCDelivery', function(source, employeeId, plate, routeType)
-    local company = exports.cidade_tycoon_logistics:GetCompanyData(source)
-    if not company then return { ok = false, message = 'Empresa nao encontrada.' } end
+-- ==========================================
+-- NPC SIMULATION ENGINE (Guardian Rule #1)
+-- ==========================================
 
-    -- Verify Employee and Vehicle availability
-    local employee = MySQL.single.await('SELECT * FROM tycoon_company_employees WHERE id = ? AND company_id = ? AND status = "available"', { employeeId, company.id })
-    if not employee then return { ok = false, message = 'Funcionario indisponivel.' } end
+local function processNPCSimulation()
+    local now = GetGameTimer()
+    local delta = config.SimulationTick / 1000 -- Seconds elapsed
+    local finishedDeliveries = {}
 
-    local vehicle = MySQL.single.await('SELECT * FROM tycoon_company_fleet WHERE vehicle_plate = ? AND company_id = ? AND status = "idle"', { plate, company.id })
-    if not vehicle then return { ok = false, message = 'Veiculo indisponivel.' } end
+    for id, route in pairs(activeRoutes) do
+        -- Update progress based on speedMult trait
+        local speed = 0.01 * (route.speedMult or 1.0) -- Base 1% per tick approx
+        route.progress = route.progress + speed
 
-    -- Define Route (Placeholder)
-    local routeData = {
-        origin = sharedConfig.warehouses[company.warehouseId].coords,
-        destination = vec3(100.0, 100.0, 30.0), -- Should be dynamic
-        distance = 5000.0,
-        type = routeType or 'land'
-    }
-
-    -- Insert Delivery Record
-    local deliveryId = MySQL.insert.await([[
-        INSERT INTO tycoon_npc_deliveries (company_id, employee_id, vehicle_plate, route_data, eta)
-        VALUES (?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE))
-    ]], { company.id, employeeId, plate, json.encode(routeData) })
-
-    if deliveryId then
-        -- Set Status to Busy
-        MySQL.update.await('UPDATE tycoon_company_employees SET status = "working" WHERE id = ?', { employeeId })
-        MySQL.update.await('UPDATE tycoon_company_fleet SET status = "active", assigned_npc_id = ? WHERE vehicle_plate = ?', { employeeId, plate })
-
-        DebugLog("Iniciada entrega NPC #%d para empresa %s", deliveryId, company.name)
+        -- Telemetry: Only sync to interested players (Rule #2)
+        -- This would be handled via a targeted event to players with Tablet open
         
-        -- Trigger client spawn if player is at warehouse
-        TriggerClientEvent('cidade_tycoon_logistics:client:spawnNPCDriver', source, {
-            deliveryId = deliveryId,
-            employeeName = employee.name,
-            plate = plate,
-            route = routeData
-        })
-
-        return { ok = true, message = 'Motorista NPC saiu para entrega!' }
+        if route.progress >= 100.0 then
+            table.insert(finishedDeliveries, id)
+        end
     end
 
-    return { ok = false, message = 'Erro ao iniciar contrato NPC.' }
-end)
+    -- Process Completions
+    for _, id in ipairs(finishedDeliveries) do
+        local route = activeRoutes[id]
+        activeRoutes[id] = nil
+        
+        -- Server-authoritative payout
+        MySQL.update([[
+            UPDATE tycoon_npc_deliveries SET status = 'completed', progress = 100.0 WHERE id = ?
+        ]], { id })
 
-RegisterNetEvent('cidade_tycoon_logistics:server:reportPhysicalNPC', function(deliveryId, pedNetId, vehicleNetId)
-    local src = source
-    ActiveNPCDrivers[deliveryId] = {
-        pedNetId = pedNetId,
-        vehicleNetId = vehicleNetId,
-        ownerSource = src
-    }
-end)
+        local profit = math.floor(route.reward * 0.7) -- 30% operational cost
+        exports.cidade_tycoon_logistics:AddCompanyFunds(route.companyId, profit, 'Entrega NPC concluída: ' .. route.driverName)
+        DebugLog("Entrega NPC %d finalizada. Lucro: $%d", id, profit)
+    end
 
--- Process Virtual Progress (Run every minute)
-local function processVirtualNPCDeliveries()
-    local deliveries = MySQL.query.await('SELECT * FROM tycoon_npc_deliveries WHERE status = "in_progress"')
-    for _, delivery in ipairs(deliveries) do
-        -- If no player is nearby (simulated by not being in ActiveNPCDrivers)
-        if not ActiveNPCDrivers[delivery.id] then
-            local newProgress = (delivery.progress or 0) + 0.1 -- 10% progress per tick
-            if newProgress >= 1.0 then
-                -- Complete Delivery
-                completeNPCDelivery(delivery.id)
-            else
-                MySQL.update.await('UPDATE tycoon_npc_deliveries SET progress = ? WHERE id = ?', { newProgress, delivery.id })
+    -- Batch DB Flush (Rule #1)
+    if now - lastDBFlush > config.DBFlushInterval then
+        lastDBFlush = now
+        if next(activeRoutes) then
+            -- Bulk update progress to DB to survive crashes
+            for id, data in pairs(activeRoutes) do
+                MySQL.update("UPDATE tycoon_npc_deliveries SET progress = ? WHERE id = ?", { data.progress, id })
             end
         end
     end
 end
 
-function completeNPCDelivery(deliveryId)
-    local delivery = MySQL.single.await('SELECT * FROM tycoon_npc_deliveries WHERE id = ?', { deliveryId })
-    if not delivery or delivery.status ~= 'in_progress' then return end
+CreateThread(function()
+    -- Load active routes from DB on start
+    local rows = MySQL.query.await("SELECT d.*, e.name as driverName FROM tycoon_npc_deliveries d JOIN tycoon_company_employees e ON d.employee_id = e.id WHERE d.status = 'in_progress'")
+    for _, row in ipairs(rows) do
+        activeRoutes[row.id] = {
+            id = row.id,
+            companyId = row.company_id,
+            progress = row.progress or 0.0,
+            reward = row.reward or 0,
+            driverName = row.driverName,
+            speedMult = 1.0 -- Traits would be loaded here
+        }
+    end
+    DebugLog("Motor de Simulação carregado com %d rotas ativas.", #rows)
 
-    local reward = 2500 -- Base profit for NPC work
-    
-    -- Update Company Funds
-    exports.cidade_tycoon_logistics:AddCompanyFunds(delivery.company_id, reward, 'Entrega NPC concluída')
+    while true do
+        Wait(config.SimulationTick)
+        processNPCSimulation()
+    end
+end)
 
-    -- Cleanup
-    MySQL.update.await('UPDATE tycoon_npc_deliveries SET status = "completed", progress = 1.0 WHERE id = ?', { deliveryId })
-    MySQL.update.await('UPDATE tycoon_company_employees SET status = "available" WHERE id = ?', { delivery.employee_id })
-    MySQL.update.await('UPDATE tycoon_company_fleet SET status = "idle", assigned_npc_id = NULL WHERE vehicle_plate = ?', { delivery.vehicle_plate })
-
-    DebugLog("Entrega NPC #%d concluída. Lucro: $%d", deliveryId, reward)
-end
-
--- Task management logic
+-- ==========================================
+-- JOB BOARD CLEANUP (Rule #5)
+-- ==========================================
 CreateThread(function()
     while true do
-        Wait(60000) -- Every 1 minute
-        processVirtualNPCDeliveries()
+        -- Delete only 'posted' (unclaimed) jobs older than 48h
+        local result = MySQL.update.await([[
+            DELETE FROM tycoon_job_board 
+            WHERE status = 'posted' 
+            AND created_at < DATE_SUB(NOW(), INTERVAL ? HOUR)
+        ]], { config.JobBoard.expireHours })
+        
+        if result > 0 then
+            DebugLog("Limpeza de Mural: %d vagas expiradas removidas.", result)
+        end
+        Wait(3600000) -- Check every hour
     end
 end)

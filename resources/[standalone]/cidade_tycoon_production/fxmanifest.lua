@@ -2,7 +2,7 @@ fx_version 'cerulean'
 game 'gta5'
 
 name 'cidade_tycoon_production'
-author 'Codex + Cidade Tycoon'
+author 'Cidade Tycoon'
 description 'Modulo de Produção Industrial e Processamento de Cargas da Cidade Tycoon'
 version '1.0.0'
 

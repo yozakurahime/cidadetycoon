@@ -19,7 +19,7 @@ local function setupProductionDatabase()
             id INT NOT NULL AUTO_INCREMENT,
             company_id INT NOT NULL,
             item_key VARCHAR(50) NOT NULL,
-            amount INT DEFAULT 0,
+            amount BIGINT DEFAULT 0,
             PRIMARY KEY (id),
             UNIQUE KEY uniq_warehouse_item (company_id, item_key),
             INDEX (company_id)

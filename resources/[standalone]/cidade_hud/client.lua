@@ -110,10 +110,15 @@ CreateThread(function()
                 gear = "R"
             end
 
+            local fuel = GetVehicleFuelLevel(vehicle)
+            if DecorExistOn(vehicle, "bzfuel_level") then
+                fuel = DecorGetFloat(vehicle, "bzfuel_level")
+            end
+
             sendChanged("vehicle", {
                 only = "updateSpeed",
                 speed = speed,
-                fuel = clamp(GetVehicleFuelLevel(vehicle)),
+                fuel = clamp(fuel),
                 gear = gear,
                 locked = GetVehicleDoorLockStatus(vehicle),
                 cinto = LocalPlayer.state.seatbelt == true,
@@ -179,7 +184,10 @@ RegisterNetEvent('cidade_tycoon_tablet:client:updateFreelanceHUD', function(data
         active = data.active,
         cargoHealth = data.cargoHealth or 100,
         totalDelivered = data.totalDelivered or 0,
-        totalRequired = data.totalRequired or 1
+        totalRequired = data.totalRequired or 1,
+        phase = data.phase or data.objective,
+        inTrunk = data.inTrunk or 0,
+        capacity = data.capacity or 0
     })
 end)
 
@@ -191,50 +199,55 @@ RegisterNetEvent('cidade_tycoon_tablet:client:hideFreelanceHUD', function()
     })
 end)
 
-CreateThread(function()
-    while true do
-        local profile = LocalPlayer.state.tycoonProfile
-        local identity = getPlayerIdentity()
-        if profile then
-            SendNUIMessage({
-                action = "updateTycoon",
-                playerName = identity.playerName,
-                passport = identity.passport,
-                companyName = profile.companyName or "Logística Tycoon",
-                level = profile.level or 1,
-                experience = profile.experience or 0,
-                maxExperience = (profile.level or 1) * 2000 -- Baseado no config do core
-            })
+local function updateTycoonUI(profile)
+    local identity = getPlayerIdentity()
+    if profile then
+        SendNUIMessage({
+            action = "updateTycoon",
+            playerName = identity.playerName,
+            passport = identity.passport,
+            companyName = profile.companyName or "Logística Tycoon",
+            level = profile.level or 1,
+            experience = profile.experience or 0,
+            maxExperience = (profile.level or 1) * 2000
+        })
 
-            -- Se não recebemos evento recente, tenta fallback via state bag
-            if not currentMissionData then
-                local mission = profile.activeMission -- Agora sincronizado via Core/StateBag
-                
-                if mission then
-                    SendNUIMessage({
-                        action = "updateMission",
-                        active = true,
-                        cargoHealth = mission.cargoHealth or 100,
-                        totalDelivered = mission.totalDelivered or 0,
-                        totalRequired = mission.totalRequired or 1
-                    })
-                else
-                    SendNUIMessage({
-                        action = "updateMission",
-                        active = false
-                    })
-                end
+        if not currentMissionData then
+            local mission = profile.activeMission
+            if mission then
+                SendNUIMessage({
+                    action = "updateMission",
+                    active = true,
+                    cargoHealth = mission.cargoHealth or 100,
+                    totalDelivered = mission.totalDelivered or 0,
+                    totalRequired = mission.totalRequired or 1,
+                    phase = mission.phase or mission.objective,
+                    inTrunk = mission.inTrunk or 0,
+                    capacity = mission.capacity or 0
+                })
+            else
+                SendNUIMessage({ action = "updateMission", active = false })
             end
-        else
-            SendNUIMessage({
-                action = "updateTycoon",
-                playerName = identity.playerName,
-                passport = identity.passport,
-                level = false
-            })
         end
-        Wait(2000)
+    else
+        SendNUIMessage({
+            action = "updateTycoon",
+            playerName = identity.playerName,
+            passport = identity.passport,
+            level = false
+        })
     end
+end
+
+-- Reactive State Bag Listener (Zero-Loop Pattern)
+AddStateBagChangeHandler('tycoonProfile', ('player:%s'):format(GetPlayerServerId(PlayerId())), function(bagName, key, value, _unused, replicated)
+    updateTycoonUI(value)
+end)
+
+-- Initial Sync
+CreateThread(function()
+    Wait(2000)
+    updateTycoonUI(LocalPlayer.state.tycoonProfile)
 end)
 
 RegisterCommand("cr", function(_, args)

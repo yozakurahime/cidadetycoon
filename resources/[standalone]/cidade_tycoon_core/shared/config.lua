@@ -1,45 +1,41 @@
-TycoonCore = TycoonCore or {}
+Config = {}
 
-TycoonCore.Config = {
-    skillDefaults = {
-        skill_fragile = 0,
-        skill_heavy = 0,
-        skill_hazardous = 0,
-        skill_long_distance = 0,
-        skill_logistics = 0,
-    },
+-- ==========================================
+-- SYSTEM CONFIGURATION
+-- ==========================================
+Config.MaxLevel = 100
+Config.ExperiencePerLevel = 1500
+Config.DefaultCompany = 'Transportes Tycoon'
 
-    upgradeDefaults = {
-        fleet_tier = 0,
-        capacity_boost = 0,
-        efficiency_tuning = 0,
-        vehicle_performance = 0,
-        vehicle_handling = 0,
-        cargo_capacity = 0,
-    },
+Config.LogBufferCap = 1000
+Config.LogFlushInterval = 10000 -- 10 seconds
 
-    recoveryFeeConfig = {
-        baseFee = 500,
-        tierMultipliers = {
-            [0] = 1.0,  -- $500 (Bikes/Starters)
-            [1] = 1.5,  -- $750 (Cars/Light)
-            [2] = 2.5,  -- $1250 (Mid/SUV)
-            [3] = 4.0,  -- $2000 (Premium/Work T3)
-            [4] = 7.0,  -- $3500 (Trucks T4)
-            [5] = 12.0, -- $6000 (Heavy Trucks T5/Status Super)
-            [6] = 25.0, -- $12500 (Hypercars)
-        }
-    },
+-- Allowed prefixes for core exports
+Config.AuthorizedResourcePrefix = 'cidade_'
 
-    licenseDefinitions = {
-        { key = 'logistica_basica', label = 'Licença Logística Básica', requiredReputation = 0, cost = 8000 },
-        { key = 'truck', label = 'Habilitação Categoria C (Caminhões)', requiredReputation = 120, cost = 18000 },
-        { key = 'heli', label = 'Licença de Piloto de Helicóptero', requiredReputation = 240, cost = 28000 },
-        { key = 'pilot', label = 'Licença de Piloto Comercial', requiredReputation = 400, cost = 42000 },
-    },
+-- ==========================================
+-- CORE DEFINITIONS
+-- ==========================================
 
-    experiencePerLevel = 1500,
-    maxLevel = 100,
+Config.LicenseDefinitions = {
+    { key = 'driver', label = 'Habilitação Categoria B (Leve)', cost = 0, requiredReputation = 0 },
+    { key = 'truck', label = 'Habilitação Categoria C (Caminhões)', cost = 15000, requiredReputation = 200 },
+    { key = 'heli', label = 'Habilitação Categoria H (Helicópteros)', cost = 150000, requiredReputation = 800 },
+    { key = 'pilot', label = 'Habilitação Categoria P (Aviões)', cost = 500000, requiredReputation = 1500 }
 }
 
-return TycoonCore.Config
+Config.SkillDefaults = {
+    skill_logistics = 0,
+    skill_long_distance = 0,
+    skill_fragile = 0,
+    skill_valuable = 0,
+    skill_hazardous = 0
+}
+
+Config.UpgradeDefaults = {
+    warehouse_slots = 0,
+    fleet_size = 2,
+    mechanic_efficiency = 0
+}
+
+return Config

@@ -1,0 +1,410 @@
+{
+  "props": [
+    {
+      "createdAt": 1780670931,
+      "id": "prop_1780670931_9649",
+      "createdBy": "Zaari",
+      "rotation": {
+        "z": 52.21622848510742,
+        "y": 0,
+        "x": 0
+      },
+      "target": true,
+      "heading": 52.21622848510742,
+      "frozen": true,
+      "label": "Palete com caixas",
+      "collision": true,
+      "coords": {
+        "z": 30.17204666137695,
+        "y": -2002.950927734375,
+        "x": 1091.5191650390625
+      },
+      "model": "prop_boxpile_07d"
+    },
+    {
+      "createdAt": 1780672165,
+      "id": "prop_1780672165_2844",
+      "createdBy": "Zaari",
+      "rotation": {
+        "z": 144.0672149658203,
+        "y": 0,
+        "x": 0
+      },
+      "target": true,
+      "heading": 144.0672149658203,
+      "frozen": true,
+      "label": "Caixa grande",
+      "collision": true,
+      "coords": {
+        "z": 30.42746543884277,
+        "y": -2004.3233642578127,
+        "x": 1089.5048828125
+      },
+      "model": "prop_box_wood05a"
+    }
+  ],
+  "externalEntities": [
+    {
+      "createdAt": 1780672648,
+      "label": "object 386059801",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "rotation": {
+        "z": 144.99998474121097,
+        "y": 0,
+        "x": 0
+      },
+      "heading": 144.99998474121097,
+      "id": "ext_1780672648_9192",
+      "updatedAt": 1780677159,
+      "model": 386059801,
+      "frozen": true,
+      "updatedBy": "Zaari",
+      "radius": 6,
+      "collision": true,
+      "coords": {
+        "z": 30.41483116149902,
+        "y": -1971.6005859375,
+        "x": 1079.555419921875
+      },
+      "originCoords": {
+        "z": 30.40017890930175,
+        "y": -1995,
+        "x": 1089.5
+      }
+    },
+    {
+      "createdAt": 1780672729,
+      "label": "object -1674314660",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "rotation": {
+        "z": 144.00003051757812,
+        "y": 0,
+        "x": 0
+      },
+      "heading": 144.00003051757812,
+      "id": "ext_1780672729_5002",
+      "updatedAt": 1780677263,
+      "model": -1674314660,
+      "frozen": true,
+      "updatedBy": "Zaari",
+      "radius": 6,
+      "collision": true,
+      "coords": {
+        "z": 30.01465225219726,
+        "y": -1969.8656005859375,
+        "x": 1076.8851318359375
+      },
+      "originCoords": {
+        "z": 30,
+        "y": -1995,
+        "x": 1092
+      }
+    },
+    {
+      "createdAt": 1780672780,
+      "label": "object -380698483",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "rotation": {
+        "z": 52.99999237060547,
+        "y": 0,
+        "x": 0
+      },
+      "heading": 52.99999237060547,
+      "id": "ext_1780672780_5899",
+      "updatedAt": 1780677226,
+      "model": -380698483,
+      "frozen": true,
+      "updatedBy": "Zaari",
+      "radius": 6,
+      "collision": true,
+      "coords": {
+        "z": 30.41405296325683,
+        "y": -1970.6683349609375,
+        "x": 1078.20849609375
+      },
+      "originCoords": {
+        "z": 30.39940071105957,
+        "y": -1995,
+        "x": 1094.5
+      }
+    },
+    {
+      "createdAt": 1780674266,
+      "label": "object 1329570871",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "rotation": {
+        "z": 0,
+        "y": 0,
+        "x": 0
+      },
+      "heading": 0,
+      "id": "ext_1780674266_6569",
+      "updatedAt": 1780677098,
+      "model": 1329570871,
+      "frozen": true,
+      "updatedBy": "Zaari",
+      "radius": 6,
+      "collision": true,
+      "coords": {
+        "z": 30.05186653137207,
+        "y": -1972.317626953125,
+        "x": 1080.7906494140625
+      },
+      "originCoords": {
+        "z": 30.0372142791748,
+        "y": -1997.5,
+        "x": 1092
+      }
+    },
+    {
+      "createdAt": 1780676699,
+      "label": "ped 349680864",
+      "createdBy": "Zaari",
+      "entityType": "ped",
+      "rotation": {
+        "z": 9.0000410079956,
+        "y": 0,
+        "x": 0
+      },
+      "heading": 9.0000410079956,
+      "id": "ext_1780676699_9662",
+      "updatedAt": 1780677064,
+      "model": 349680864,
+      "frozen": true,
+      "updatedBy": "Zaari",
+      "radius": 6,
+      "collision": true,
+      "coords": {
+        "z": 31.01466178894043,
+        "y": -1973.3841552734375,
+        "x": 1082.5894775390625
+      },
+      "originCoords": {
+        "z": 31,
+        "y": -2001,
+        "x": 1087.5
+      }
+    },
+    {
+      "coords": {
+        "z": 34.59621429443359,
+        "y": -1268.364013671875,
+        "x": 1193.5980224609375
+      },
+      "label": "object 386059801",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "heading": 3.00000023841857,
+      "rotation": {
+        "z": 3.00000023841857,
+        "y": 0,
+        "x": 0
+      },
+      "id": "ext_1780677663_6306",
+      "frozen": true,
+      "createdAt": 1780677663,
+      "radius": 6,
+      "collision": true,
+      "originCoords": {
+        "z": 34.60018157958984,
+        "y": -1270,
+        "x": 1192.5
+      },
+      "model": 386059801
+    },
+    {
+      "coords": {
+        "z": 35.22623825073242,
+        "y": -1273.599609375,
+        "x": 1196.9979248046875
+      },
+      "label": "ped 1498487404",
+      "createdBy": "Zaari",
+      "entityType": "ped",
+      "heading": 322,
+      "rotation": {
+        "z": -37.99999618530273,
+        "y": 0,
+        "x": 0
+      },
+      "id": "ext_1780677720_1319",
+      "frozen": true,
+      "createdAt": 1780677720,
+      "radius": 6,
+      "collision": true,
+      "originCoords": {
+        "z": 35.20000076293945,
+        "y": -1275,
+        "x": 1200
+      },
+      "model": 1498487404
+    },
+    {
+      "coords": {
+        "z": 34.14989471435547,
+        "y": -1267.7003173828125,
+        "x": 1191.280517578125
+      },
+      "label": "object 1165008631",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "heading": 344.4289855957031,
+      "rotation": {
+        "z": -15.57101726531982,
+        "y": 0,
+        "x": 0
+      },
+      "id": "ext_1780677740_0355",
+      "frozen": true,
+      "createdAt": 1780677740,
+      "radius": 6,
+      "collision": true,
+      "originCoords": {
+        "z": 34.20280075073242,
+        "y": -1265.432373046875,
+        "x": 1193.8948974609375
+      },
+      "model": 1165008631
+    },
+    {
+      "coords": {
+        "z": 5.86068105697631,
+        "y": -3211.701904296875,
+        "x": 153.05728149414065
+      },
+      "label": "ped 349680864",
+      "createdBy": "Zaari",
+      "entityType": "ped",
+      "heading": 270,
+      "rotation": {
+        "z": -90,
+        "y": 0,
+        "x": 0
+      },
+      "id": "ext_1780678037_4890",
+      "frozen": true,
+      "createdAt": 1780678037,
+      "radius": 6,
+      "collision": true,
+      "originCoords": {
+        "z": 5.90000009536743,
+        "y": -3211.699951171875,
+        "x": 153.89999389648438
+      },
+      "model": 349680864
+    },
+    {
+      "coords": {
+        "z": 6.14738655090332,
+        "y": -3255.46435546875,
+        "x": 1196.9866943359375
+      },
+      "id": "ext_1780680239_1535",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "heading": 0,
+      "rotation": {
+        "z": 0,
+        "y": 0,
+        "x": 0
+      },
+      "label": "object 1329570871",
+      "frozen": true,
+      "originCoords": {
+        "z": 6.03721380233764,
+        "y": -3249,
+        "x": 1176
+      },
+      "radius": 6,
+      "collision": true,
+      "createdAt": 1780680239,
+      "model": 1329570871
+    },
+    {
+      "coords": {
+        "z": 6.50957298278808,
+        "y": -3254.65771484375,
+        "x": 1193.9100341796875
+      },
+      "id": "ext_1780680283_0417",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "heading": 0,
+      "rotation": {
+        "z": 0,
+        "y": 0,
+        "x": 0
+      },
+      "label": "object -380698483",
+      "frozen": true,
+      "originCoords": {
+        "z": 6.39940023422241,
+        "y": -3246.5,
+        "x": 1178.5
+      },
+      "radius": 6,
+      "collision": true,
+      "createdAt": 1780680283,
+      "model": -380698483
+    },
+    {
+      "coords": {
+        "z": 6.51035261154174,
+        "y": -3252.8154296875,
+        "x": 1193.9326171875
+      },
+      "id": "ext_1780680312_3411",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "heading": 271,
+      "rotation": {
+        "z": -89,
+        "y": 0,
+        "x": 0
+      },
+      "label": "object 386059801",
+      "frozen": true,
+      "originCoords": {
+        "z": 6.40017986297607,
+        "y": -3246.5,
+        "x": 1173.5
+      },
+      "radius": 6,
+      "collision": true,
+      "createdAt": 1780680312,
+      "model": 386059801
+    },
+    {
+      "coords": {
+        "z": 10.14318084716796,
+        "y": -3257.66650390625,
+        "x": 1209.3857421875
+      },
+      "label": "object -994492850",
+      "createdBy": "Zaari",
+      "entityType": "object",
+      "heading": 170.13919067382812,
+      "createdAt": 1780681860,
+      "id": "ext_1780681860_2677",
+      "frozen": true,
+      "rotation": {
+        "z": 170.13919067382812,
+        "y": 0,
+        "x": 0
+      },
+      "radius": 6,
+      "collision": true,
+      "originCoords": {
+        "z": 4.52784013748168,
+        "y": -3235.252197265625,
+        "x": 1215.6734619140625
+      },
+      "model": -994492850
+    }
+  ],
+  "removals": []
+}

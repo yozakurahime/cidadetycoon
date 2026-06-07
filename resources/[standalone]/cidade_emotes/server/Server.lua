@@ -241,12 +241,12 @@ local function ExtractEmoteProps(format)
             if propValue and not exportedValues[propValue] then
                 file:write(xt .. propValue .. xt .. c ..'\n')
                 exportedValues[propValue] = true
-                total += 1
+                total = total + 1
             end
             if secondPropValue and not exportedValues[secondPropValue] then
                 file:write(xt .. secondPropValue .. c ..'\n')
                 exportedValues[secondPropValue] = true
-                total += 1
+                total = total + 1
             end
         end
     end

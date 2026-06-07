@@ -1,4 +1,4 @@
-local config = require 'config.hubs'
+local config = TycoonHubs.Config
 
 local function getHubData(hubId)
     for _, hub in ipairs(config.hubs) do

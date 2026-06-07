@@ -1,150 +1,76 @@
-local EventClientState = {
-    isActive = false,
-    eventId = nil,
-    checkpoint = nil,
-    deliveryRadius = 10.0,
-    checkpointBlip = 0,
-    isPromptVisible = false,
-    nextDeliveryAttemptAt = 0,
-}
+local sharedConfig = require 'config/shared'
+local activePoints = {}
 
-local function hidePromptIfVisible()
-    if EventClientState.isPromptVisible then
-        lib.hideTextUI()
-        EventClientState.isPromptVisible = false
+local function notifyRacing(msg, type)
+    lib.notify({ title = 'Eventos Tycoon', description = msg, type = type or 'inform' })
+end
+
+-- ==========================================
+-- PASSIVE ZONE PROTECTION (Guardian Rule)
+-- ==========================================
+local function togglePassiveProtection(active)
+    local ped = PlayerPedId()
+    if active then
+        NetworkSetFriendlyFireOption(false)
+        SetCanPedEquipAllWeapons(ped, false)
+        notifyRacing('Você entrou na ZONA DE PAZ (Entrega Protegida). Armas bloqueadas.', 'inform')
+    else
+        NetworkSetFriendlyFireOption(true)
+        SetCanPedEquipAllWeapons(ped, true)
+        notifyRacing('Você saiu da ZONA DE PAZ.', 'inform')
     end
 end
 
-local function removeCheckpointBlip()
-    if EventClientState.checkpointBlip and EventClientState.checkpointBlip ~= 0 and DoesBlipExist(EventClientState.checkpointBlip) then
-        RemoveBlip(EventClientState.checkpointBlip)
-    end
-    EventClientState.checkpointBlip = 0
-end
+-- ==========================================
+-- GLOBAL EVENT HANDLER
+-- ==========================================
 
-local function cleanupEventState()
-    hidePromptIfVisible()
-    removeCheckpointBlip()
-    ClearAllBlipRoutes()
-
-    EventClientState.isActive = false
-    EventClientState.eventId = nil
-    EventClientState.checkpoint = nil
-    EventClientState.deliveryRadius = 10.0
-    EventClientState.nextDeliveryAttemptAt = 0
-end
-
-local function createCheckpointBlip(checkpoint)
-    removeCheckpointBlip()
-
-    local blipHandle = AddBlipForCoord(checkpoint.x, checkpoint.y, checkpoint.z)
-    SetBlipSprite(blipHandle, 67)
-    SetBlipScale(blipHandle, 1.0)
-    SetBlipColour(blipHandle, 2)
-    SetBlipAsShortRange(blipHandle, false)
-    SetBlipRoute(blipHandle, true)
-    SetBlipRouteColour(blipHandle, 2)
-
-    BeginTextCommandSetBlipName('STRING')
-    AddTextComponentString('Carga de Alta Prioridade')
-    EndTextCommandSetBlipName(blipHandle)
-
-    EventClientState.checkpointBlip = blipHandle
-end
-
-RegisterNetEvent('cidade_tycoon_racing:client:startGlobalEvent', function(payload)
-    if not payload or not payload.eventId or not payload.checkpoint then return end
-
-    cleanupEventState()
-
-    EventClientState.isActive = true
-    EventClientState.eventId = payload.eventId
-    EventClientState.checkpoint = payload.checkpoint
-    EventClientState.deliveryRadius = payload.deliveryRadius or 10.0
-
-    createCheckpointBlip(EventClientState.checkpoint)
-    lib.notify({
-        title = 'Evento Global Tycoon',
-        description = 'Carga de Alta Prioridade disponível! Siga o GPS.',
-        type = 'success'
+RegisterNetEvent('cidade_tycoon_racing:client:startGlobalEvent', function(data)
+    -- data: eventId, checkpoint, radius, label
+    local point = lib.points.new({
+        coords = vec3(data.checkpoint.x, data.checkpoint.y, data.checkpoint.z),
+        distance = sharedConfig.Events.passiveRadius + 50.0
     })
-end)
 
-RegisterNetEvent('cidade_tycoon_racing:client:stopGlobalEvent', function(payload)
-    local winnerSource = payload and payload.winnerSource or nil
-    local winnerName = payload and payload.winnerName or nil
+    local blip = AddBlipForCoord(data.checkpoint.x, data.checkpoint.y, data.checkpoint.z)
+    SetBlipSprite(blip, 478)
+    SetBlipColour(blip, 5)
+    SetBlipRoute(blip, true)
+    SetBlipDisplay(blip, 2)
+    SetBlipAsShortRange(blip, false)
 
-    if winnerSource then
-        if winnerSource == GetPlayerServerId(PlayerId()) then
-            local rewardValue = payload.winnerReward or 0
-            lib.notify({ title = 'Vitória!', description = ('Você venceu a corrida global e recebeu $%d!'):format(rewardValue), type = 'success' })
-        else
-            lib.notify({ title = 'Fim de Evento', description = ('Vencedor: %s'):format(winnerName or 'Desconhecido'), type = 'inform' })
-        end
+    function point:onEnter()
+        togglePassiveProtection(true)
     end
 
-    cleanupEventState()
-end)
-
-local function updateEventHUD(dist)
-    if not EventClientState.isActive then 
-        lib.hideTextUI()
-        return 
+    function point:onExit()
+        togglePassiveProtection(false)
     end
 
-    local rewardValue = EventSystemConfiguration.baseBonusReward
-    local statusText = string.format("**CARGA DE ALTA PRIORIDADE**\nDistância: %.0fm\nRecompensa Base: $%d", dist, rewardValue)
-    
-    lib.showTextUI(statusText, {
-        position = "right-center",
-        icon = 'truck-fast',
-        style = {
-            borderRadius = 4,
-            backgroundColor = '#131313',
-            color = '#6df28f'
-        }
-    })
-end
-
-CreateThread(function()
-    while true do
-        local waitMilliseconds = 1000
-
-        if EventClientState.isActive and EventClientState.checkpoint then
-            local playerPed = PlayerPedId()
-            local playerCoordinates = GetEntityCoords(playerPed)
-            local dist = #(playerCoordinates - EventClientState.checkpoint)
-
-            updateEventHUD(dist)
-
-            if dist < 150.0 then
-                waitMilliseconds = 0
-                if dist < EventClientState.deliveryRadius then
-                    DrawMarker(1, EventClientState.checkpoint.x, EventClientState.checkpoint.y, EventClientState.checkpoint.z - 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.5, 2.5, 1.0, 50, 220, 90, 140, false, true, 2, false, nil, nil, false)
-
-                    if not EventClientState.isPromptVisible then
-                        lib.showTextUI('Pressione [E] para entregar a Carga de Alta Prioridade', { position = "right-center" })
-                        EventClientState.isPromptVisible = true
-                    end
-
-                    if IsControlJustPressed(0, 38) then
-                        local now = GetGameTimer()
-                        if now >= EventClientState.nextDeliveryAttemptAt then
-                            EventClientState.nextDeliveryAttemptAt = now + 1200
-                            TriggerServerEvent('cidade_tycoon_racing:server:attemptPriorityDelivery', EventClientState.eventId)
-                        end
-                    end
-                else
-                    hidePromptIfVisible()
+    function point:nearby()
+        if self.currentDistance < 25.0 then
+            DrawMarker(1, self.coords.x, self.coords.y, self.coords.z - 1.0, 0, 0, 0, 0, 0, 0, 4.0, 4.0, 1.5, 241, 229, 66, 180, false, true, 2, false)
+            if self.currentDistance < 4.0 then
+                lib.showTextUI('[E] Entregar Carga de Prioridade')
+                if IsControlJustPressed(0, 38) then
+                    TriggerServerEvent('cidade_tycoon_racing:server:attemptPriorityDelivery', data.eventId)
                 end
             else
-                waitMilliseconds = 500
-                hidePromptIfVisible()
+                lib.hideTextUI()
             end
-        else
-            hidePromptIfVisible()
         end
+    end
 
-        Wait(waitMilliseconds)
+    activePoints[data.eventId] = { point = point, blip = blip }
+    notifyRacing('CARGA DE ALTA PRIORIDADE DETECTADA: ' .. data.label, 'warning')
+end)
+
+RegisterNetEvent('cidade_tycoon_racing:client:stopGlobalEvent', function(data)
+    if activePoints[data.eventId] then
+        activePoints[data.eventId].point:remove()
+        RemoveBlip(activePoints[data.eventId].blip)
+        activePoints[data.eventId] = nil
+        togglePassiveProtection(false)
+        lib.hideTextUI()
     end
 end)

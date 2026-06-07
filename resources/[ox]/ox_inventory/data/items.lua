@@ -767,4 +767,26 @@ return {
         label = 'Sucata de Borracha',
         weight = 1500,
     },
+
+    ['tycoon_cargo'] = {
+        label = 'Carga Logística',
+        weight = 1000,
+        stack = true,
+        close = true,
+    },
+
+    ['raw_metal'] = {
+        label = 'Metal Bruto',
+        weight = 1000,
+    },
+
+    ['raw_electronics'] = {
+        label = 'Componentes Eletrônicos',
+        weight = 200,
+    },
+
+    ['raw_rubber'] = {
+        label = 'Borracha Bruta',
+        weight = 1500,
+    },
 }

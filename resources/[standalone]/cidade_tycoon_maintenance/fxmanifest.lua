@@ -2,8 +2,8 @@ fx_version 'cerulean'
 game 'gta5'
 
 name 'cidade_tycoon_maintenance'
-author 'Cidade Tycoon'
-description 'Modulo de manutencao, desgaste e faturamento de veiculos da Cidade Tycoon'
+author 'Codex + Cidade Tycoon'
+description 'Modulo de Manutenção, Desgaste e Oficinas da Cidade Tycoon'
 version '1.0.0'
 
 lua54 'yes'
@@ -20,18 +20,12 @@ server_scripts {
 }
 
 client_scripts {
-    '@qbx_core/modules/playerdata.lua',
     'client/main.lua',
-    'client/wear_tear.lua',
-}
-
-files {
-    'config/maintenance.lua',
 }
 
 dependencies {
     'ox_lib',
-    'oxmysql',
     'ox_inventory',
-    'cidade_tycoon_core',
+    'oxmysql',
+    'cidade_tycoon_core'
 }

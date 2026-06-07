@@ -1,5 +1,5 @@
 local VEHICLES = exports.qbx_core:GetVehiclesByName()
-local GARAGE_PED_MODEL = `s_m_m_dockwork_01`
+local GARAGE_PED_MODEL = joaat('s_m_m_dockwork_01')
 
 local blips = {}
 local menus = {}
@@ -106,7 +106,7 @@ local function isSpawnCoolingDown()
 end
 
 local function beginSpawnCooldown(timeoutMs)
-    spawnRequestToken += 1
+    spawnRequestToken = spawnRequestToken + 1
     local currentToken = spawnRequestToken
     spawnCooldownUntil = GetGameTimer() + timeoutMs
 
@@ -119,7 +119,7 @@ local function beginSpawnCooldown(timeoutMs)
 end
 
 local function clearSpawnCooldown()
-    spawnRequestToken += 1
+    spawnRequestToken = spawnRequestToken + 1
     spawnCooldownUntil = 0
 end
 
@@ -582,7 +582,7 @@ local function waitAndLoadGarages()
     CreateThread(function()
         local attempts = 0
         while attempts < 20 do
-            attempts += 1
+            attempts = attempts + 1
             if NetworkIsSessionStarted() and LocalPlayer and LocalPlayer.state and LocalPlayer.state.isLoggedIn then
                 setupGaragePoints()
                 return

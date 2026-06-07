@@ -1,7 +1,6 @@
 local function DebugLog(text, ...)
     print(string.format("^1[Tycoon:Server:Racing]^7 %s", string.format(text, ...)))
 end
-
 local function createRacingTables()
     MySQL.update.await([[
         CREATE TABLE IF NOT EXISTS tycoon_race_winners (
@@ -10,7 +9,7 @@ local function createRacingTables()
             citizenid VARCHAR(50) NOT NULL,
             vehicle_model VARCHAR(50) NOT NULL,
             time_ms INT NOT NULL,
-            reward INT DEFAULT 0,
+            reward BIGINT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             INDEX (race_id),

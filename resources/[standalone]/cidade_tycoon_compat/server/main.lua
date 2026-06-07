@@ -2,110 +2,78 @@ local function DebugLog(text, ...)
     print(string.format("^5[Tycoon:Compat]^7 %s", string.format(text, ...)))
 end
 
--- REDIRECT TABLET DASHBOARD (Temporary Bridge)
-lib.callback.register('transport_tycoon_infinito:server:getTabletDashboard', function(source)
-    DebugLog("Redirecionando getTabletDashboard legado para o modulo tablet.")
-    return exports.cidade_tycoon_tablet:GetDashboardForSource(source)
-end)
-
--- REDIRECT FREELANCE CONTEXT
-lib.callback.register('transport_tycoon_infinito:server:getCompanyAndFreelanceContext', function(source)
-    DebugLog("Redirecionando getCompanyAndFreelanceContext para o modulo freelance.")
-    return exports.cidade_tycoon_freelance:GetCompanyAndFreelanceContextForSource(source)
-end)
-
-lib.callback.register('transport_tycoon_infinito:server:getUpgradeDashboard', function(source)
-    DebugLog("Redirecionando getUpgradeDashboard legado para o modulo maintenance.")
-    return exports.cidade_tycoon_maintenance:GetUpgradeDashboardForSource(source)
-end)
-
--- REDIRECT MISSIONS
-RegisterNetEvent('transport_tycoon_infinito:server:completeFreelanceMission', function(missionId, vehNetId)
-    local src = source
-    TriggerEvent('cidade_tycoon_freelance:server:completeFreelanceMission', src, missionId, vehNetId)
-end)
-
--- REDIRECT LEADERBOARDS (City Hall Leaderboard & Richest Leaderboard)
-lib.callback.register('transport_tycoon_infinito:server:getRichestPlayersLeaderboard', function(source, requestedLimit)
-    local desiredLimit = math.max(5, math.min(50, tonumber(requestedLimit) or 10))
-    local rows = MySQL.query.await([[
-        SELECT citizenid, charinfo,
-               CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(money, '$.cash')), '0') AS UNSIGNED) AS cash,
-               CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(money, '$.bank')), '0') AS UNSIGNED) AS bank
-        FROM players
-        ORDER BY (
-            CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(money, '$.cash')), '0') AS UNSIGNED) +
-            CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(money, '$.bank')), '0') AS UNSIGNED)
-        ) DESC
-        LIMIT ?
-    ]], { desiredLimit })
-
-    local leaderboard = {}
-    for index = 1, #rows do
-        local row = rows[index]
-        local firstName = 'Unknown'
-        local lastName = 'Player'
-
-        if row.charinfo and row.charinfo ~= '' then
-            local ok, decoded = pcall(json.decode, row.charinfo)
-            if ok and type(decoded) == 'table' then
-                firstName = decoded.firstname or firstName
-                lastName = decoded.lastname or lastName
-            end
-        end
-
-        local cash = tonumber(row.cash) or 0
-        local bank = tonumber(row.bank) or 0
-
-        table.insert(leaderboard, {
-            rank = index,
-            citizenId = row.citizenid,
-            name = firstName .. " " .. lastName,
-            company_name = firstName .. " " .. lastName,
-            score = cash + bank,
-            hybrid_score = cash + bank,
-            total = cash + bank
-        })
+-- ==========================================
+-- SAFE PROXY HELPER (Guardian Rule)
+-- ==========================================
+local function safeExportCall(resource, exportName, ...)
+    if GetResourceState(resource) ~= 'started' then
+        DebugLog("^1ERRO:^7 Recurso '%s' não está iniciado. Export '%s' ignorado.", resource, exportName)
+        return nil
     end
 
-    return leaderboard
+    local ok, result = pcall(function(...)
+        return exports[resource][exportName](...)
+    end, ...)
+
+    if not ok then
+        DebugLog("^1ERRO CRÍTICO:^7 Falha ao chamar export '%s:%s' -> %s", resource, exportName, tostring(result))
+        return nil
+    end
+
+    return result
+end
+
+-- ==========================================
+-- LEGACY REDIRECTS (transport_tycoon_infinito:*)
+-- ==========================================
+
+-- TABLET DASHBOARD
+lib.callback.register('transport_tycoon_infinito:server:getTabletDashboard', function(source)
+    return safeExportCall('cidade_tycoon_tablet', 'GetDashboardForSource', source)
+end)
+
+-- FREELANCE CONTEXT
+lib.callback.register('transport_tycoon_infinito:server:getCompanyAndFreelanceContext', function(source)
+    return safeExportCall('cidade_tycoon_freelance', 'GetCompanyAndFreelanceContextForSource', source)
+end)
+
+-- UPGRADE DASHBOARD
+lib.callback.register('transport_tycoon_infinito:server:getUpgradeDashboard', function(source)
+    return safeExportCall('cidade_tycoon_maintenance', 'GetUpgradeDashboardForSource', source)
+end)
+
+-- LEADERBOARDS (Redirecting to CityHall - centralized logic)
+lib.callback.register('transport_tycoon_infinito:server:getRichestPlayersLeaderboard', function(source, limit)
+    -- We assume CityHall will have a 'GetWealthLeaderboard' export soon
+    -- For now, we use a internal fallback if export is missing
+    local data = safeExportCall('cidade_tycoon_cityhall', 'GetWealthLeaderboard', limit)
+    if data then return data end
+    
+    return {} -- Return empty to avoid UI crash if CityHall hasn't implemented it yet
 end)
 
 lib.callback.register('transport_tycoon_infinito:server:getStatueLeaderboardTop10', function(source)
-    local rows = MySQL.query.await([[
-        SELECT tp.citizenid, tp.company_name, tp.hybrid_score, p.charinfo
-        FROM tycoon_players tp
-        INNER JOIN players p ON p.citizenid = tp.citizenid
-        WHERE tp.hybrid_score > 0
-        ORDER BY tp.hybrid_score DESC
-        LIMIT 10
-    ]])
-
-    local leaderboard = {}
-    for index = 1, #rows do
-        local row = rows[index]
-        local firstName = 'Unknown'
-        local lastName = 'Player'
-
-        if row.charinfo and row.charinfo ~= '' then
-            local ok, decoded = pcall(json.decode, row.charinfo)
-            if ok and type(decoded) == 'table' then
-                firstName = decoded.firstname or firstName
-                lastName = decoded.lastname or lastName
-            end
+    local dashboard = safeExportCall('cidade_tycoon_cityhall', 'getDashboard', source)
+    if dashboard and dashboard.leaderboard then
+        -- Convert to expected legacy format
+        local legacyList = {}
+        for i, v in ipairs(dashboard.leaderboard) do
+            table.insert(legacyList, {
+                rank = i,
+                name = v.company_name or v.name,
+                score = v.hybrid_score or v.score,
+                totalReceived = v.hybrid_score or v.score
+            })
         end
-
-        table.insert(leaderboard, {
-            rank = index,
-            citizenId = row.citizenid,
-            name = row.company_name or (firstName .. " " .. lastName),
-            company_name = row.company_name or (firstName .. " " .. lastName),
-            score = row.hybrid_score,
-            hybrid_score = row.hybrid_score,
-            totalReceived = row.hybrid_score
-        })
+        return legacyList
     end
-
-    return leaderboard
+    return {}
 end)
 
+-- MISSION EVENTS
+RegisterNetEvent('transport_tycoon_infinito:server:completeFreelanceMission', function()
+    local src = source
+    safeExportCall('cidade_tycoon_freelance', 'CompleteFreelanceMissionForSource', src)
+end)
+
+DebugLog("Camada de compatibilidade 2.0 (Resiliente) carregada.")

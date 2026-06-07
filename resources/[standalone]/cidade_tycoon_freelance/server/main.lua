@@ -1,571 +1,310 @@
 local sharedConfig = require 'config.shared'
-
 local MissionState = {
     activeMissions = {}, -- [source] = missionData
     sequence = 1000
 }
 
--- Logger helpers
 local function DebugLog(text, ...)
-    local success, formattedText = pcall(string.format, tostring(text), ...)
-    print(string.format("^3[Tycoon:Server:Freelance]^7 %s", success and formattedText or tostring(text)))
+    print(string.format("^3[Tycoon:Server:Freelance]^7 %s", string.format(text, ...)))
 end
 
-local function DebugError(text, ...)
-    local success, formattedText = pcall(string.format, tostring(text), ...)
-    print(string.format("^1[Tycoon-Error:Server:Freelance]^7 %s", success and formattedText or tostring(text)))
+-- ==========================================
+-- SANITIZATION (Guardian Requirement)
+-- ==========================================
+local function sanitizePlayerMission(source)
+    if MissionState.activeMissions[source] then
+        DebugLog("Limpando missão órfã para o ID %d", source)
+        MissionState.activeMissions[source] = nil
+    end
 end
 
--- Profile helpers using Core Exports and State Bags
+AddEventHandler('qbx_core:server:onPlayerLoaded', function(source)
+    sanitizePlayerMission(source)
+end)
+
+AddEventHandler('playerDropped', function()
+    sanitizePlayerMission(source)
+end)
+
+-- ==========================================
+-- MISSION CORE LOGIC (Server Authoritative)
+-- ==========================================
+
 local function getProfile(source)
-    local stateProfile = Player(source).state.tycoonProfile
-    if stateProfile then return stateProfile end
     return exports.cidade_tycoon_core:GetPlayerProfile(source)
 end
 
-local function addXp(source, amount)
-    return exports.cidade_tycoon_core:AddExperience(source, amount)
+local function syncMissionToStateBag(source, missionData)
+    local profile = getProfile(source)
+    if profile then
+        profile.activeMission = missionData
+        Player(source).state:set('tycoonProfile', profile, true)
+    end
 end
 
-local function getActiveVehiclePlateForSource(source)
-    local profile = getProfile(source)
-    if not profile then return nil, 0 end
-    
+local function updateMissionPhase(mission)
+    if mission.completed then
+        mission.phase = 'completed'
+        mission.objective = 'completed'
+        return
+    end
+
+    local remainingAtOrigin = math.max(0, mission.totalRequired - mission.collectedFromOrigin)
+    local remainingToDeliver = math.max(0, mission.totalRequired - mission.totalDelivered)
+    local loadTarget = math.min(mission.capacity, remainingToDeliver)
+    local deliveryBatchActive = mission.phase == 'delivery'
+        and (mission.inTrunk > 0 or mission.carryingSource == 'vehicle')
+    local readyForDelivery = not mission.carryingBox and mission.inTrunk > 0
+        and (mission.inTrunk >= loadTarget or remainingAtOrigin == 0)
+
+    if deliveryBatchActive or readyForDelivery or mission.carryingSource == 'vehicle'
+        or (mission.carryingBox and remainingAtOrigin == 0) then
+        mission.phase = 'delivery'
+        mission.objective = 'delivery'
+    else
+        mission.phase = 'pickup'
+        mission.objective = 'pickup'
+    end
+end
+
+local function syncMission(source, mission)
+    updateMissionPhase(mission)
+    syncMissionToStateBag(source, mission)
+    TriggerClientEvent('cidade_tycoon_freelance:client:syncMission', source, mission)
+end
+
+local function isPlayerNear(source, coords, maxDistance)
     local ped = GetPlayerPed(source)
-    local veh = GetVehiclePedIsIn(ped, false)
-    if veh ~= 0 then
-        local plate = GetVehicleNumberPlateText(veh)
-        -- Update stored plate if we are in a vehicle
-        exports.cidade_tycoon_core:UpdateActivePlate(source, plate)
-        return plate, VehToNet(veh)
-    end
-
-    -- Fallback to profile's stored plate
-    return profile.activePlate, 0
+    if ped == 0 or not coords then return false end
+    return #(GetEntityCoords(ped) - vec3(coords.x, coords.y, coords.z)) <= maxDistance
 end
 
--- Core Logic
-local function generateMissionStops(mode, count)
-    local points = sharedConfig.freelance.points[mode] or {}
-    local stops = {}
-    
-    if #points == 0 then
-        -- Fallback se nao houver pontos configurados
-        return { { hubName = "Destino Emergencial", coords = vector3(0.0, 0.0, 0.0) } }
-    end
-
-    local usedIndexes = {}
-    for i = 1, count do
-        local idx
-        repeat
-            idx = math.random(1, #points)
-        until not usedIndexes[idx] or #usedIndexes >= #points
-        
-        usedIndexes[idx] = true
-        table.insert(stops, {
-            hubName = "Destino #" .. i,
-            coords = points[idx],
-        })
-    end
-    return stops
-end
-
-local function startFreelanceMissionForSource(source, hubId, modeName, clientVehicleData, contractType)
-    DebugLog("Iniciando startFreelanceMissionForSource para source %s", tostring(source))
-    local success, result = pcall(function()
-        local profile = getProfile(source)
-        if not profile then
-            DebugError("Perfil nao encontrado para source %s", tostring(source))
-            return { ok = false, message = 'Falha ao carregar perfil tycoon.' }
-        end
-
-        if profile.isSuspended then
-            return { ok = false, message = 'Sua licença tycoon está suspensa. Pague seus impostos na Prefeitura!' }
-        end
-
-        if MissionState.activeMissions[source] then
-            DebugLog("Jogador %s ja tem missao ativa", profile.citizenid)
-            return { ok = false, message = 'Voce ja possui uma missao ativa.' }
-        end
-
-        local hub = sharedConfig.hubs[hubId]
-        if not hub then
-            DebugError("Hub %s nao encontrado no config", tostring(hubId))
-            return { ok = false, message = 'Sede logistica invalida.' }
-        end
-
-        local activePlate, vehicleNetId = getActiveVehiclePlateForSource(source)
-        if not activePlate then
-            return { ok = false, message = 'Voce precisa de um veiculo ativo para iniciar esta missao.' }
-        end
-
-        -- Detectar Capacidade do Veículo
-        local vehicleEntity = NetworkGetEntityFromNetworkId(vehicleNetId)
-        local modelHash = GetEntityModel(vehicleEntity)
-        local vehData = exports.cidade_tycoon_core:GetVehicleDataByHash(modelHash)
-        local capacity = vehData and vehData.capacity or 1
-        
-        DebugLog("Veiculo detectado: %s | Capacidade: %d", tostring(vehData and vehData.label or "Unknown"), capacity)
-
-        -- Validation logic (Skills/Level/Tutorial)
-        local isTutorialMission = false
-        if profile.tutorial and profile.tutorial.active then
-            local tutorialStep = profile.tutorial.currentStep
-            local tutorialHubId = tonumber(profile.tutorial.assignedHubId)
-
-            if tutorialStep ~= 'accept_tutorial_contract' and tutorialStep ~= 'complete_first_delivery' then
-                return { ok = false, message = 'Conclua a etapa atual do Guia do Iniciante antes de iniciar contratos.' }
-            end
-
-            if modeName ~= 'land' or tutorialHubId ~= hubId then
-                return { ok = false, message = ('Seu primeiro contrato deve sair do hub %s em rota terrestre.'):format(profile.tutorial.assignedHubName or 'designado') }
-            end
-
-            -- Pegar o modelo do veículo do jogador
-            local vehicleEntity = NetworkGetEntityFromNetworkId(vehicleNetId)
-            local modelHash = GetEntityModel(vehicleEntity)
-            local vehData = exports.cidade_tycoon_core:GetVehicleDataByHash(modelHash)
-            local modelName = vehData and vehData.model or 'unknown'
-
-            if tostring(modelName):lower() ~= 'cruiser' then
-                return { ok = false, message = 'Use sua cruiser inicial para concluir o contrato guiado.' }
-            end
-
-            contractType = 'comum'
-            isTutorialMission = true
-        end
-
-        if contractType == 'fragile' and (profile.skills.skill_fragile or 0) < 1 then
-            return { ok = false, message = 'Requer habilidade Fragil Nivel 1.' }
-        end
-
-        -- Setup Mission Scaling
-        local playerLevel = profile.level or 1
-        local totalRequired = math.min(30, 3 + math.floor(playerLevel / 2))
-        local stopsCount = math.min(3, 1 + math.floor(playerLevel / 12))
-
-        -- Tutorial mission is always 1 stop with 5 boxes for simplicity
-        if isTutorialMission then
-            totalRequired = 5
-            stopsCount = 1
-        end
-
-        MissionState.sequence = MissionState.sequence + 1
-        DebugLog("Gerando %d paradas para modo %s (Total caixas: %d)", stopsCount, tostring(modeName), totalRequired)
-        local stops = generateMissionStops(modeName, stopsCount)
-        
-        if not stops or #stops == 0 then
-            DebugError("generateMissionStops retornou vazio ou nil")
-            return { ok = false, message = 'Falha ao gerar destinos de entrega.' }
-        end
-
-        local mission = {
-            missionId = MissionState.sequence,
-            citizenId = profile.citizenid,
-            mode = modeName,
-            contractType = contractType,
-            hubId = hubId,
-            totalRequired = totalRequired,
-            capacity = capacity,
-            collectedFromOrigin = 0,
-            inTrunk = 0,
-            totalDelivered = 0,
-            currentStopIndex = 1,
-            stops = stops,
-            deliveryCoordinates = { x = stops[1].coords.x, y = stops[1].coords.y, z = stops[1].coords.z },
-            deliveryRadius = sharedConfig.freelance.deliveryRadius,
-            cargoHealth = 100,
-            activePlate = activePlate,
-            vehicleNetId = vehicleNetId,
-            isTutorial = isTutorialMission
-        }
-
-        MissionState.activeMissions[source] = mission
-
-        if isTutorialMission then
-            advanceTutorialStep(source, 'complete_first_delivery', {
-                assignedHubId = hubId,
-                tutorialContractId = tostring(mission.missionId),
-            })
-        end
-
-        DebugLog("Missao #%d iniciada com sucesso para %s. Placa: %s | Capacidade: %d | Tutorial: %s", mission.missionId, profile.citizenid, tostring(activePlate), capacity, tostring(isTutorialMission))
-
-        return {
-            ok = true,
-            mission = mission
-        }
-    end)
-
-    if not success then
-        DebugError("ERRO CRITICO em startFreelanceMissionForSource: %s", tostring(result))
-        return { ok = false, message = 'Erro interno ao processar inicio de missao.' }
-    end
-
-    return result
-end
-
-local function freightActionForSource(source, clientMissionId, actionName, clientVehicleNetId)
-    local mission = MissionState.activeMissions[source]
-    if not mission or mission.missionId ~= clientMissionId then
-        return { ok = false, message = 'Missao invalida.' }
-    end
-
-    if actionName == 'pickup_origin' then
-        if mission.collectedFromOrigin >= mission.totalRequired then
-            return { ok = false, message = 'Todas as caixas ja foram coletadas com o NPC.' }
-        end
-        return { ok = true, state = mission }
-    elseif actionName == 'load_vehicle' then
-        if mission.inTrunk >= mission.capacity then
-            return { ok = false, message = 'Veiculo sem espaco suficiente!' }
-        end
-        
-        mission.collectedFromOrigin = mission.collectedFromOrigin + 1
-        mission.inTrunk = mission.inTrunk + 1
-        
-        return { ok = true, state = mission }
-    elseif actionName == 'unload_vehicle' then
-        if mission.inTrunk <= 0 then
-            return { ok = false, message = 'Nao ha carga no veiculo!' }
-        end
-        return { ok = true, state = mission }
-    elseif actionName == 'deliver_box' then
-        if mission.inTrunk <= 0 then
-            return { ok = false, message = 'Voce nao tem carga para entregar!' }
-        end
-
-        mission.inTrunk = mission.inTrunk - 1
-        mission.totalDelivered = mission.totalDelivered + 1
-
-        -- Logica de Paradas (Stops)
-        local boxesPerStop = math.ceil(mission.totalRequired / #mission.stops)
-        
-        if (mission.totalDelivered % boxesPerStop == 0) and mission.currentStopIndex < #mission.stops then
-            mission.currentStopIndex = mission.currentStopIndex + 1
-            local nextStop = mission.stops[mission.currentStopIndex]
-            mission.deliveryCoordinates = { x = nextStop.coords.x, y = nextStop.coords.y, z = nextStop.coords.z }
-        end
-
-        if mission.totalDelivered >= mission.totalRequired then
-            mission.completed = true
-        end
-        
-        return { ok = true, state = mission }
-    end
-
-    return { ok = false, message = 'Acao desconhecida.' }
-end
-
-local function startPlayerBulkContract(source, hubId, jobId)
-    local profile = getProfile(source)
-    if not profile then return { ok = false, message = 'Perfil nao encontrado.' } end
-
-    if profile.isSuspended then
-        return { ok = false, message = 'Licença suspensa. Regularize seus impostos para aceitar contratos corporativos.' }
-    end
-
-    local job = MySQL.single.await('SELECT * FROM tycoon_job_board WHERE id = ?', { jobId })
-    if not job or job.status ~= 'posted' then return { ok = false, message = 'Contrato nao disponivel.' } end
-
-    local activePlate, vehicleNetId = getActiveVehiclePlateForSource(source)
-    if not activePlate then return { ok = false, message = 'Voce precisa de um veiculo ativo.' } end
-
-    -- Detectar Capacidade do Veículo
-    local vehicleEntity = NetworkGetEntityFromNetworkId(vehicleNetId)
-    local modelHash = GetEntityModel(vehicleEntity)
-    local vehData = exports.cidade_tycoon_core:GetVehicleDataByHash(modelHash)
-    local capacity = vehData and vehData.capacity or 1
-
-    -- Mark job as accepted
-    MySQL.update.await('UPDATE tycoon_job_board SET status = "accepted", accepted_by = ? WHERE id = ?', { profile.citizenid, jobId })
-
-    local destCoords = json.decode(job.dest_coords)
-    local mission = {
-        missionId = jobId + 5000, -- Offset for bulk jobs
-        isBulk = true,
-        jobId = jobId,
-        citizenId = profile.citizenid,
-        mode = 'land',
-        contractType = job.cargo_type,
-        hubId = hubId,
-        totalRequired = 15, -- Bulk usually requires more boxes
-        capacity = capacity,
-        collectedFromOrigin = 0,
-        inTrunk = 0,
-        totalDelivered = 0,
-        currentStopIndex = 1,
-        stops = { { hubName = "Entrega Corporativa", coords = destCoords } },
-        deliveryCoordinates = { x = destCoords.x, y = destCoords.y, z = destCoords.z },
-        deliveryRadius = 15.0,
-        cargoHealth = 100,
-        activePlate = activePlate,
-        vehicleNetId = vehicleNetId,
-        fixedReward = job.reward
-    }
-
-    MissionState.activeMissions[source] = mission
-    return { ok = true, mission = mission }
-end
-
-local function completeFreelanceMissionForSource(source, clientMissionId, clientVehicleNetId)
-    local mission = MissionState.activeMissions[source]
-    if not mission or mission.missionId ~= clientMissionId or not mission.completed then
-        return false
-    end
-
-    local isTutorialCompleted = false
-    local tutorialBonus = 0
-    if mission.isTutorial then
-        isTutorialCompleted = true
-        tutorialBonus = 5000
-        advanceTutorialStep(source, 'complete_first_delivery', { completed = true })
-    end
-
-    local baseReward = mission.fixedReward or (sharedConfig.freelance.baseRewardPerBox[mission.mode] or 1000)
-    local mult = mission.fixedReward and 1.0 or (sharedConfig.freelance.rewardMultipliers[mission.contractType] or 1.0)
-    
-    -- Skill Modifiers from Core
-    local skillMult = exports.cidade_tycoon_core:GetTycoonSkillModifier(mission.citizenId, 'freelance_reward_multiplier') or 1.0
-    
-    -- Integrity Penalty (0.0 to 1.0)
-    local integrityFactor = math.max(0.1, (mission.cargoHealth or 100) / 100.0)
-    
-    local grossReward = math.floor(baseReward * (mission.isBulk and 1 or mission.totalRequired) * mult * skillMult * integrityFactor)
-    
-    -- Operational Costs (Fuel, Wear, Logistics Fee) - 7% gross
-    local operationalCost = math.floor(grossReward * 0.07)
-    
-    -- Reward Floor (Safety: At least 15% gross)
-    local netReward = math.max(math.floor(grossReward * 0.15), grossReward - operationalCost)
-    
-    local expGained = math.floor(250 * integrityFactor)
-
-    -- Payment
-    local player = exports.cidade_tycoon_core:GetFrameworkPlayer(source)
-    if player then
-        player.Functions.AddMoney('bank', netReward + tutorialBonus, 'tycoon-freelance-payment')
-        exports.cidade_tycoon_core:AddExperience(source, expGained)
-        exports.cidade_tycoon_core:AddReputation(source, 'general', 10) -- Small completion bonus
-        
-        -- Log Transaction
-        exports.cidade_tycoon_core:LogTransaction(source, netReward + tutorialBonus, 'income', 'freelance', 
-            isTutorialCompleted and ('Frete: %s | Bruto: $%d | Custos: -$%d | Bonus Onboarding: +$5000'):format(mission.contractType, grossReward, operationalCost)
-            or ('Frete: %s | Bruto: $%d | Custos: -$%d'):format(mission.contractType, grossReward, operationalCost)
-        )
-    end
-
-    if mission.isBulk then
-        MySQL.update.await('UPDATE tycoon_job_board SET status = "completed" WHERE id = ?', { mission.jobId })
-    end
-
-    MissionState.activeMissions[source] = nil
-    syncMissionToStateBag(source, nil)
-
-    TriggerClientEvent('cidade_tycoon_freelance:client:freelanceMissionCompleted', source, {
-        netReward = netReward,
-        gainedExperience = expGained,
-        cargoIntegrity = mission.cargoHealth or 100,
-        operationalCost = operationalCost,
-        tutorialCompleted = isTutorialCompleted,
-        tutorialBonusCash = tutorialBonus
-    })
-
+local function validateMissionVehicle(source, mission, vehicleNetId, bindVehicle)
+    vehicleNetId = tonumber(vehicleNetId)
+    if not vehicleNetId or vehicleNetId <= 0 then return false end
+    local vehicle = NetworkGetEntityFromNetworkId(vehicleNetId)
+    local ped = GetPlayerPed(source)
+    if ped == 0 or vehicle == 0 or not DoesEntityExist(vehicle) or GetEntityType(vehicle) ~= 2 then return false end
+    if #(GetEntityCoords(ped) - GetEntityCoords(vehicle)) > sharedConfig.freelance.unloadVehicleDistance then return false end
+    if mission.vehicleNetId and mission.vehicleNetId ~= vehicleNetId then return false end
+    if bindVehicle and not mission.vehicleNetId then mission.vehicleNetId = vehicleNetId end
     return true
 end
 
-local function getCompanyAndFreelanceContextForSource(source)
+lib.callback.register('cidade_tycoon_freelance:server:startFreelanceMission', function(source, hubId, modeName, _, contractType)
     local profile = getProfile(source)
-    local activeMission = MissionState.activeMissions[source]
-    local estimatedReward = 0
-    
-    if activeMission then
-        local base = activeMission.fixedReward or (sharedConfig.freelance.baseRewardPerBox[activeMission.mode] or 1000)
-        local mult = activeMission.fixedReward and 1.0 or (sharedConfig.freelance.rewardMultipliers[activeMission.contractType] or 1.0)
-        estimatedReward = math.floor(base * (activeMission.isBulk and 1 or activeMission.totalRequired) * mult)
+    if not profile or profile.isSuspended then
+        return { ok = false, message = 'Licença suspensa ou perfil não carregado.' }
     end
 
-    return {
-        hasActiveMission = activeMission ~= nil,
-        activeMission = activeMission,
-        estimatedReward = estimatedReward,
-        profile = profile
-    }
-end
+    if MissionState.activeMissions[source] then
+        return { ok = false, message = 'Você já possui uma missão ativa.' }
+    end
 
-local function getDriverDashboardForSource(source)
-    local profile = getProfile(source)
-    if not profile then return nil end
-    return {
-        driver_level = profile.level,
-        experience = profile.experience,
-        skill_fragile = profile.skills.skill_fragile or 0,
-        skill_heavy = profile.skills.skill_heavy or 0,
-        skill_hazardous = profile.skills.skill_hazardous or 0,
-    }
-end
+    local hub = sharedConfig.hubs[hubId]
+    if not hub then return { ok = false, message = 'Hub inválido.' } end
 
--- Tutorial Logic
-local function advanceTutorialStep(source, nextStep, options)
-    if nextStep == 'go_to_garage' then
-        local profile = getProfile(source)
-        if profile and profile.citizenid then
-            local existingVehicle = MySQL.single.await('SELECT id FROM player_vehicles WHERE citizenid = ? AND vehicle = ? LIMIT 1', { profile.citizenid, 'cruiser' })
-            if not existingVehicle then
-                DebugLog("Concedendo cruiser starter para o jogador %s na garagem motelgarage", profile.citizenid)
-                local vehicleId, err = exports.qbx_vehicles:CreatePlayerVehicle({
-                    citizenid = profile.citizenid,
-                    model = 'cruiser',
-                    garage = 'motelgarage',
-                    props = {
-                        engineHealth = 1000,
-                        bodyHealth = 1000,
-                        fuelLevel = 100,
-                    }
-                })
-                if vehicleId then
-                    DebugLog("Cruiser starter criada com sucesso. ID: %s", tostring(vehicleId))
-                else
-                    DebugError("Erro ao criar cruiser starter para %s: %s", profile.citizenid, err and err.message or "Erro desconhecido")
-                end
-            end
+    local missionId = MissionState.sequence
+    MissionState.sequence = MissionState.sequence + 1
+
+    -- 1. Determine Total Boxes based on Type
+    local totalRequired = 1
+    if contractType == 'heavy' then
+        totalRequired = math.random(5, 10)
+    else
+        totalRequired = math.random(1, 5)
+    end
+
+    -- 2. Determine Number of Delivery Points (1 to 3, depending on volume)
+    local numPoints = 1
+    if totalRequired > 6 then
+        numPoints = math.random(2, 3)
+    elseif totalRequired > 3 then
+        numPoints = math.random(1, 2)
+    end
+
+    -- 3. Select Random Locations and Distribute Boxes
+    local deliveryPoints = {}
+    local availablePoints = sharedConfig.freelance.points[modeName]
+    local shuffledPoints = {}
+    for i = 1, #availablePoints do table.insert(shuffledPoints, availablePoints[i]) end
+    for i = #shuffledPoints, 2, -1 do
+        local j = math.random(i)
+        shuffledPoints[i], shuffledPoints[j] = shuffledPoints[j], shuffledPoints[i]
+    end
+
+    local boxesLeft = totalRequired
+    for i = 1, numPoints do
+        local boxesForThisPoint = (i == numPoints) and boxesLeft or math.random(1, math.max(1, math.floor(boxesLeft / (numPoints - i + 1))))
+        table.insert(deliveryPoints, {
+            coords = shuffledPoints[i],
+            required = boxesForThisPoint,
+            delivered = 0
+        })
+        boxesLeft = boxesLeft - boxesForThisPoint
+    end
+
+    local mission = {
+        missionId = missionId,
+        hubId = hubId,
+        mode = modeName,
+        contractType = contractType or 'standard',
+        totalRequired = totalRequired,
+        totalDelivered = 0,
+        collectedFromOrigin = 0,
+        inTrunk = 0,
+        carryingBox = false,
+        carryingSource = nil,
+        vehicleNetId = nil,
+        phase = 'pickup',
+        objective = 'pickup',
+        capacity = (contractType == 'heavy') and 3 or 1, -- Capacidade base do contrato, mas o veículo manda
+        cargoHealth = 100,
+        startTime = os.time(),
+        deliveryPoints = deliveryPoints,
+        currentPointIndex = 1 -- Para o cliente saber qual blip mostrar
+    }
+
+    MissionState.activeMissions[source] = mission
+    syncMission(source, mission)
+
+    if profile.tutorial and profile.tutorial.active then
+        if profile.tutorial.currentStep == 'go_to_hub' or profile.tutorial.currentStep == 'accept_tutorial_contract' then
+            exports.cidade_tycoon_core:UpdateTutorialStep(source, 'complete_first_delivery')
         end
     end
 
-    local success = exports.cidade_tycoon_core:UpdateTutorialStep(source, nextStep, options)
-    if success then
-        local profile = getProfile(source)
-        return { ok = true, tutorial = profile.tutorial }
-    end
-    return { ok = false, message = 'Falha ao atualizar tutorial.' }
-end
+    return { ok = true, mission = mission }
+end)
 
-local function handleTutorialVehicleRetrieved(source, modelName, garageName)
+lib.callback.register('cidade_tycoon_freelance:server:freightAction', function(source, missionId, action, vehicleNetId)
+    local mission = MissionState.activeMissions[source]
+    if not mission or mission.missionId ~= missionId then return { ok = false } end
+    
+    if action == 'pickup_origin' then
+        local hub = sharedConfig.hubs[mission.hubId]
+        if mission.phase == 'pickup' and not mission.carryingBox
+            and isPlayerNear(source, hub and hub.coords, sharedConfig.freelance.pickupOriginDistance)
+            and mission.collectedFromOrigin < mission.totalRequired then
+            mission.collectedFromOrigin = mission.collectedFromOrigin + 1
+            mission.carryingBox = true
+            mission.carryingSource = 'origin'
+            syncMission(source, mission)
+            return { ok = true, state = mission }
+        end
+    elseif action == 'load_vehicle' then
+        if mission.carryingBox and mission.inTrunk < mission.capacity
+            and validateMissionVehicle(source, mission, vehicleNetId, true) then
+            mission.inTrunk = mission.inTrunk + 1
+            mission.carryingBox = false
+            mission.carryingSource = nil
+            syncMission(source, mission)
+            return { ok = true, state = mission }
+        end
+    elseif action == 'unload_vehicle' then
+        local currentPoint = mission.deliveryPoints[mission.currentPointIndex]
+        if mission.phase == 'delivery' and not mission.carryingBox and mission.inTrunk > 0
+            and isPlayerNear(source, currentPoint and currentPoint.coords, sharedConfig.freelance.serverValidationDistance)
+            and validateMissionVehicle(source, mission, vehicleNetId, false) then
+            mission.inTrunk = mission.inTrunk - 1
+            mission.carryingBox = true
+            mission.carryingSource = 'vehicle'
+            syncMission(source, mission)
+            return { ok = true, state = mission }
+        end
+    elseif action == 'deliver_box' then
+        local currentPoint = mission.deliveryPoints[mission.currentPointIndex]
+        if mission.phase == 'delivery' and mission.carryingBox and mission.carryingSource == 'vehicle' and currentPoint
+            and isPlayerNear(source, currentPoint.coords, sharedConfig.freelance.serverValidationDistance)
+            and currentPoint.delivered < currentPoint.required then
+            currentPoint.delivered = currentPoint.delivered + 1
+            mission.totalDelivered = mission.totalDelivered + 1
+            mission.carryingBox = false
+            mission.carryingSource = nil
+            
+            -- Se completou este ponto, pula para o próximo se houver
+            if currentPoint.delivered >= currentPoint.required then
+                if mission.currentPointIndex < #mission.deliveryPoints then
+                    mission.currentPointIndex = mission.currentPointIndex + 1
+                end
+            end
+
+            if mission.totalDelivered >= mission.totalRequired then
+                mission.completed = true
+            end
+            syncMission(source, mission)
+            return { ok = true, state = mission }
+        end
+        return { ok = false, message = 'Ponto de entrega já concluído.' }
+    end
+    return { ok = false, message = 'Ação de carga negada pelo servidor.' }
+end)
+
+-- REWARD LOGIC (Server-Authoritative)
+RegisterNetEvent('cidade_tycoon_freelance:server:completeFreelanceMission', function(missionId)
+    local src = source
+    local mission = MissionState.activeMissions[src]
+    if not mission or mission.missionId ~= missionId then return end
+
+    if not mission.completed then
+        DebugLog("Jogador %d tentou finalizar missão sem entregar todas as caixas!", src)
+        return 
+    end
+
+    local baseReward = 2500
+    local mult = (mission.contractType == 'fragile') and 1.4 or (mission.contractType == 'heavy') and 1.8 or (mission.contractType == 'hazardous') and 2.5 or 1.0
+    local integrityBonus = mission.cargoHealth / 100
+    local finalReward = math.floor(baseReward * mult * integrityBonus)
+
+    exports.cidade_tycoon_core:AddMoney(src, 'bank', finalReward, 'tycoon-freelance-reward')
+    exports.cidade_tycoon_core:AddExperience(src, 150)
+    exports.cidade_tycoon_core:LogTransaction(src, finalReward, 'income', 'freelance', ('Entrega Freelance: %s'):format(mission.contractType))
+
+    -- Tutorial Check
+    local profile = getProfile(src)
+    if profile and profile.tutorial.active and profile.tutorial.currentStep == 'complete_first_delivery' then
+        exports.cidade_tycoon_core:UpdateTutorialStep(src, 'completed')
+        exports.cidade_tycoon_core:AddMoney(src, 'bank', 5000, 'tycoon-tutorial-bonus')
+        exports.cidade_tycoon_core:NotifyPlayer(src, 'Guia do Iniciante Concluído! Bônus de $5.000 recebido.', 'success')
+    end
+
+    MissionState.activeMissions[src] = nil
+    syncMissionToStateBag(src, nil)
+    exports.cidade_tycoon_core:NotifyPlayer(src, ('Frete finalizado! Recebido: $%d'):format(finalReward), 'success')
+end)
+
+-- TUTORIAL SKIP
+RegisterCommand('tycoon_skip_tutorial', function(source)
     local profile = getProfile(source)
-    if not profile or not profile.tutorial.active then return false end
-
-    if tostring(modelName or ''):lower() ~= 'cruiser' then return false end
-
-    if profile.tutorial.currentStep == 'go_to_garage' or profile.tutorial.currentStep == 'retrieve_bike' then
-        advanceTutorialStep(source, 'go_to_hub', { assignedGarage = garageName, assignedHubId = 8 })
-        return true
-    end
-    return false
-end
-
-local function cancelFreelanceWithFineForSource(source)
-    local mission = MissionState.activeMissions[source]
-    if not mission then
-        return false, 'Voce nao possui nenhuma missao ativa.'
-    end
-
-    local fine = 2000
-    local success = exports.cidade_tycoon_core:RemoveMoney(source, fine, 'tycoon-freelance-cancel-fine')
+    if not profile or not profile.tutorial.active then return end
     
-    if success then
-        MissionState.activeMissions[source] = nil
-        syncMissionToStateBag(source, nil)
-        return true, 'Missao cancelada. Multa de $2.000 aplicada.'
-    else
-        return false, 'Saldo insuficiente para pagar a multa de cancelamento ($2.000).'
-    end
-end
+    exports.cidade_tycoon_core:UpdateTutorialStep(source, 'completed')
+    exports.cidade_tycoon_core:NotifyPlayer(source, 'Você pulou o tutorial Tycoon.', 'inform')
+end, false)
 
--- Callbacks
-lib.callback.register('cidade_tycoon_freelance:server:getCompanyAndFreelanceContext', getCompanyAndFreelanceContextForSource)
-lib.callback.register('cidade_tycoon_freelance:server:getDriverDashboard', getDriverDashboardForSource)
-lib.callback.register('cidade_tycoon_freelance:server:getActiveVehiclePlate', getActiveVehiclePlateForSource)
-lib.callback.register('cidade_tycoon_freelance:server:advanceTutorialStep', advanceTutorialStep)
-
-lib.callback.register('cidade_tycoon_freelance:server:trainDriverSkill', function(source, skillKey)
-    return exports.cidade_tycoon_core:TrainSkill(source, skillKey)
+exports('AdvanceTutorialStepForSource', function(source, nextStep, options)
+    return exports.cidade_tycoon_core:UpdateTutorialStep(source, nextStep, options)
 end)
 
-lib.callback.register('cidade_tycoon_freelance:server:startFreelanceMission', function(source, hubId, modeName, clientVehicleData, contractType)
-    return startFreelanceMissionForSource(source, hubId, modeName, clientVehicleData, contractType)
-end)
-
-lib.callback.register('cidade_tycoon_freelance:server:startPlayerBulkContract', function(source, hubId, jobId)
-    return startPlayerBulkContract(source, hubId, jobId)
-end)
-
-lib.callback.register('cidade_tycoon_freelance:server:getSkillModifier', function(source, modifierName)
-    return exports.cidade_tycoon_core:GetSkillModifier(source, modifierName)
-end)
-
-lib.callback.register('cidade_tycoon_freelance:server:freightAction', function(source, clientMissionId, actionName, clientVehicleNetId)
-    return freightActionForSource(source, clientMissionId, actionName, clientVehicleNetId)
-end)
-
-lib.callback.register('cidade_tycoon_freelance:server:cancelFreelanceWithFine', cancelFreelanceWithFineForSource)
-
-RegisterNetEvent('cidade_tycoon_freelance:server:completeFreelanceMission', function(clientMissionId, clientVehicleNetId)
-    local source = source
-    completeFreelanceMissionForSource(source, clientMissionId, clientVehicleNetId)
-end)
-
-RegisterNetEvent('cidade_tycoon_freelance:server:failFreelanceMission', function(reason)
-    local source = source
-    MissionState.activeMissions[source] = nil
-    syncMissionToStateBag(source, nil)
-end)
-
--- Exports
-local function getSharedPoints(mode)
-    return sharedConfig.freelance.points[mode] or {}
-end
-
-exports('GetSharedPoints', getSharedPoints)
-exports('GetCompanyAndFreelanceContextForSource', getCompanyAndFreelanceContextForSource)
-exports('GetDriverDashboardForSource', getDriverDashboardForSource)
-exports('GetActiveVehiclePlateForSource', getActiveVehiclePlateForSource)
-exports('TrainDriverSkillForSource', function(source, skillKey) return exports.cidade_tycoon_core:TrainSkill(source, skillKey) end)
-exports('StartFreelanceMissionForSource', startFreelanceMissionForSource)
-exports('StartPlayerBulkContractForSource', startPlayerBulkContract)
-exports('FreightActionForSource', freightActionForSource)
-exports('CompleteFreelanceMissionForSource', completeFreelanceMissionForSource)
-exports('FailFreelanceMissionForSource', function(source, reason) 
-    MissionState.activeMissions[source] = nil 
-    syncMissionToStateBag(source, nil)
-end)
-
--- Modularized implementations (Legacy bridges removed)
-exports('AdvanceTutorialStepForSource', advanceTutorialStep)
-exports('HandleTutorialVehicleRetrieved', handleTutorialVehicleRetrieved)
-exports('CancelFreelanceWithFineForSource', cancelFreelanceWithFineForSource)
 exports('SetActiveVehiclePlate', function(source, plate)
-    return exports.cidade_tycoon_core:UpdateActivePlate(source, plate)
+    local profile = getProfile(source)
+    if not profile then return end
+    exports.cidade_tycoon_core:UpdateProfileField(source, 'active_plate', plate)
 end)
 
-AddEventHandler('qbx_core:server:onPlayerLoaded', function(source)
-    local mission = MissionState.activeMissions[source]
-    if mission then
-        syncMissionToStateBag(source, mission)
-        DebugLog("Missao ativa re-sincronizada para jogador %d ao conectar.", source)
+exports('HandleTutorialVehicleRetrieved', function(source)
+    local profile = getProfile(source)
+    if profile and profile.tutorial.active and (profile.tutorial.currentStep == 'retrieve_bike' or profile.tutorial.currentStep == 'get_starter_vehicle') then
+        exports.cidade_tycoon_core:UpdateTutorialStep(source, 'go_to_hub')
+        exports.cidade_tycoon_core:NotifyPlayer(source, 'Excelente! Agora vá até a PostOP para seu primeiro frete.', 'inform')
     end
 end)
 
-AddEventHandler('qbx_core:server:onPlayerUnload', function(source)
-    MissionState.activeMissions[source] = nil
+exports('GetCompanyAndFreelanceContextForSource', function(source)
+    local mission = MissionState.activeMissions[source]
+    return {
+        hasActiveMission = mission ~= nil,
+        activeMission = mission,
+        estimatedReward = 2500
+    }
 end)
-
--- Hooks para automação do gameplay
-AddEventHandler('qbx_garages:server:vehicleSpawned', function(veh)
-    local source = NetworkGetEntityOwner(veh)
-    if not source or source <= 0 then return end
-
-    local plate = GetVehicleNumberPlateText(veh)
-    local modelHash = GetEntityModel(veh)
-    
-    -- Atualiza placa ativa no core
-    exports.cidade_tycoon_core:UpdateActivePlate(source, plate)
-    
-    -- Tenta avançar tutorial se for a bike inicial
-    local vehData = exports.qbx_core:GetVehicleData(modelHash)
-    local modelName = vehData and vehData.model or "unknown"
-    
-    handleTutorialVehicleRetrieved(source, modelName, "Garagem")
-    DebugLog("Veiculo spawnado detectado para %s. Placa: %s | Modelo: %s", tostring(source), tostring(plate), tostring(modelName))
-end)
-
-

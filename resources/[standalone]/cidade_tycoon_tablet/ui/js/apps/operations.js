@@ -125,8 +125,8 @@ function renderTutorial(tutorial) {
       desc: `Siga a rota marcada em seu GPS até a garagem designada (${escapeHTML(tutorial.assignedGarage || 'Garagem')}) para retirar seu primeiro veículo.`
     },
     retrieve_bike: {
-      title: 'Retire sua Cruiser',
-      desc: 'Abra a garagem e retire seu veículo inicial (Cruiser) para poder fazer suas entregas de onboarding.'
+      title: 'Retire sua Faggio',
+      desc: 'Abra a garagem e retire seu veículo inicial (Faggio) para poder fazer suas entregas de onboarding.'
     },
     go_to_hub: {
       title: 'Dirija-se ao Hub Logístico',

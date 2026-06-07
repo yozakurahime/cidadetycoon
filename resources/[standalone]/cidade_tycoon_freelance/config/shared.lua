@@ -48,38 +48,8 @@ config.freelance = {
 
 config.hubs = {
     [1] = {
-        name = 'Terminal de Carga LS',
-        coords = vector3(1208.94, -2975.53, 5.87),
-        modes = { land = true, air = false, water = false },
-    },
-    [2] = {
-        name = "La Mesa - Logistica",
-        coords = vector3(730.0, -1088.0, 22.2),
-        modes = { land = true },
-    },
-    [3] = {
-        name = "Elysian Island - Marina & Cargas",
-        coords = vector3(1177.0, -3304.0, 5.9),
-        modes = { land = true, water = true },
-    },
-    [4] = {
-        name = "Terminal - Armazem Central",
-        coords = vector3(1200.0, -1275.0, 35.2),
-        modes = { land = true },
-    },
-    [5] = {
-        name = "Grapeseed - Armazem Norte",
-        coords = vector3(1700.0, 4920.0, 42.1),
-        modes = { land = true, air = true },
-    },
-    [6] = {
-        name = "Sandy Shores - Aerodromo & Cargas",
-        coords = vector3(1960.0, 3745.0, 32.3),
-        modes = { land = true, air = true },
-    },
-    [7] = {
-        name = "Paleto Bay - Logistica Global",
-        coords = vector3(2678.0, 3288.0, 55.2),
+        name = "Porto de Los Santos - Logística Global",
+        coords = vector3(1197.2, -3250.6, 7.1),
         modes = { land = true, water = true, air = true },
     },
 }

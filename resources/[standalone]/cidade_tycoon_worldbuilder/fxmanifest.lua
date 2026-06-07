@@ -5,7 +5,7 @@ lua54 'yes'
 name 'cidade_tycoon_worldbuilder'
 author 'Cidade Tycoon'
 description 'Editor persistente de props e remocoes de mapa para hubs e lojas.'
-version '1.0.0'
+version '1.1.0'
 
 shared_scripts {
     '@ox_lib/init.lua',
@@ -20,4 +20,7 @@ server_scripts {
     'server/main.lua'
 }
 
-dependency 'ox_lib'
+dependencies {
+    'ox_lib',
+    'cidade_tycoon_core'
+}

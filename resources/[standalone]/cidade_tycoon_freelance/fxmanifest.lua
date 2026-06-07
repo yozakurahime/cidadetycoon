@@ -23,6 +23,17 @@ client_scripts {
     'client/main.lua',
 }
 
+exports {
+    'TryStartFreelance'
+}
+
+server_exports {
+    'AdvanceTutorialStepForSource',
+    'SetActiveVehiclePlate',
+    'HandleTutorialVehicleRetrieved',
+    'GetCompanyAndFreelanceContextForSource'
+}
+
 dependencies {
     'ox_lib',
     'cidade_tycoon_core',

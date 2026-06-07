@@ -1,11 +1,9 @@
 local config = WorldBuilder.Config
+local resourceName = GetCurrentResourceName()
 local dataFile = 'data/world.json'
-
-local world = {
-    props = {},
-    removals = {},
-    externalEntities = {}
-}
+local backupFile = 'data/world.json.bkp'
+local activeLocks = {}
+local world = { props = {}, removals = {}, externalEntities = {} }
 
 local function notify(source, message, notifyType)
     TriggerClientEvent('ox_lib:notify', source, {
@@ -15,307 +13,348 @@ local function notify(source, message, notifyType)
     })
 end
 
-local function hasBuilderPermission(source)
-    if source == 0 then return true end
-    if IsPlayerAceAllowed(source, config.permissionAce) or IsPlayerAceAllowed(source, 'command') then
-        return true
-    end
+local function isPlayerAllowed(source)
+    if source == 0 or IsPlayerAceAllowed(source, config.permissionAce) then return true end
+    if GetResourceState('cidade_tycoon_core') ~= 'started' then return false end
 
-    if GetResourceState('qbx_core') == 'started' then
-        for _, group in ipairs(config.adminGroups) do
-            if exports.qbx_core:HasPermission(source, group) then
-                return true
-            end
-        end
+    for _, group in ipairs(config.adminGroups or {}) do
+        local ok, allowed = pcall(function()
+            return exports.cidade_tycoon_core:HasPermission(source, group)
+        end)
+        if ok and allowed then return true end
     end
-
     return false
 end
 
-local function loadWorld()
-    local raw = LoadResourceFile(GetCurrentResourceName(), dataFile)
-    if not raw or raw == '' then
-        world = { props = {}, removals = {}, externalEntities = {} }
-        return
-    end
-
-    local ok, decoded = pcall(json.decode, raw)
-    if not ok or type(decoded) ~= 'table' then
-        print(('[%s] Falha ao ler %s, iniciando vazio.'):format(GetCurrentResourceName(), dataFile))
-        world = { props = {}, removals = {}, externalEntities = {} }
-        return
-    end
-
-    world.props = type(decoded.props) == 'table' and decoded.props or {}
-    world.removals = type(decoded.removals) == 'table' and decoded.removals or {}
-    world.externalEntities = type(decoded.externalEntities) == 'table' and decoded.externalEntities or {}
-end
-
-local function saveWorld()
-    local encoded = json.encode(world)
-    SaveResourceFile(GetCurrentResourceName(), dataFile, encoded, -1)
-end
-
-local function nextId(prefix, collection)
-    local stamp = os.time()
-    local tries = 0
-
-    while tries < 1000 do
-        tries = tries + 1
-        local id = ('%s_%s_%04d'):format(prefix, stamp, math.random(0, 9999))
-        local exists = false
-        for _, item in ipairs(collection) do
-            if item.id == id then
-                exists = true
-                break
-            end
-        end
-        if not exists then return id end
-    end
-
-    return ('%s_%s_%s'):format(prefix, stamp, tries)
-end
-
-local function findById(collection, id)
-    for index, item in ipairs(collection) do
-        if item.id == id then
-            return item, index
-        end
-    end
+local function validNumber(value)
+    value = tonumber(value)
+    if not value or value ~= value or value == math.huge or value == -math.huge then return nil end
+    return value
 end
 
 local function sanitizeVec3(value)
     if type(value) ~= 'table' then return nil end
-    local x, y, z = tonumber(value.x), tonumber(value.y), tonumber(value.z)
+    local x, y, z = validNumber(value.x), validNumber(value.y), validNumber(value.z)
     if not x or not y or not z then return nil end
     return { x = x, y = y, z = z }
 end
 
-local function sanitizePlacement(payload)
+local function sanitizeRotation(value, heading)
+    value = type(value) == 'table' and value or {}
+    return {
+        x = validNumber(value.x) or 0.0,
+        y = validNumber(value.y) or 0.0,
+        z = validNumber(value.z) or validNumber(heading) or 0.0
+    }
+end
+
+local function sanitizeProp(payload)
     if type(payload) ~= 'table' then return nil end
-    local model = tostring(payload.model or ''):lower()
-    if model == '' or #model > 80 then return nil end
-
+    local model = tostring(payload.model or ''):lower():sub(1, 80)
     local coords = sanitizeVec3(payload.coords)
-    local rotation = sanitizeVec3(payload.rotation or { x = 0.0, y = 0.0, z = payload.heading or 0.0 })
-    if not coords or not rotation then return nil end
+    if model == '' or not coords then return nil end
 
+    local rotation = sanitizeRotation(payload.rotation, payload.heading)
     return {
         id = payload.id,
         label = tostring(payload.label or model):sub(1, 80),
         model = model,
         coords = coords,
         rotation = rotation,
-        heading = tonumber(payload.heading) or rotation.z or 0.0,
+        heading = validNumber(payload.heading) or rotation.z,
         frozen = payload.frozen ~= false,
         collision = payload.collision ~= false,
-        target = payload.target ~= false,
-        createdBy = payload.createdBy
+        target = payload.target ~= false
+    }
+end
+
+local function sanitizeRemoval(payload)
+    if type(payload) ~= 'table' then return nil end
+    local model = validNumber(payload.model)
+    local coords = sanitizeVec3(payload.coords)
+    if not model or not coords then return nil end
+
+    return {
+        id = payload.id,
+        label = tostring(payload.label or 'Objeto oculto'):sub(1, 80),
+        model = model,
+        coords = coords,
+        radius = math.max(0.5, math.min(validNumber(payload.radius) or config.defaultRadius, 25.0))
     }
 end
 
 local function sanitizeExternal(payload)
     if type(payload) ~= 'table' then return nil end
-
-    local entityType = tostring(payload.entityType or '')
-    if entityType ~= 'object' and entityType ~= 'ped' and entityType ~= 'vehicle' then return nil end
-
-    local model = tonumber(payload.model)
+    local entityType = tostring(payload.entityType or payload.type or '')
+    local model = validNumber(payload.model)
     local originCoords = sanitizeVec3(payload.originCoords)
     local coords = sanitizeVec3(payload.coords)
-    local rotation = sanitizeVec3(payload.rotation or { x = 0.0, y = 0.0, z = payload.heading or 0.0 })
-    if not model or not originCoords or not coords or not rotation then return nil end
+    if (entityType ~= 'object' and entityType ~= 'ped' and entityType ~= 'vehicle')
+        or not model or not originCoords or not coords then
+        return nil
+    end
 
+    local rotation = sanitizeRotation(payload.rotation, payload.heading or (payload.coords and payload.coords.w))
     return {
         id = payload.id,
-        label = tostring(payload.label or 'Entidade externa'):sub(1, 80),
+        label = tostring(payload.label or (entityType .. ' ' .. model)):sub(1, 80),
         entityType = entityType,
         model = model,
         originCoords = originCoords,
         coords = coords,
         rotation = rotation,
-        heading = tonumber(payload.heading) or rotation.z or 0.0,
-        radius = math.max(0.5, math.min(tonumber(payload.radius) or config.defaultExternalRadius, 35.0)),
+        heading = validNumber(payload.heading) or validNumber(payload.coords and payload.coords.w) or rotation.z,
+        radius = math.max(0.5, math.min(validNumber(payload.radius) or config.defaultExternalRadius, 35.0)),
         frozen = payload.frozen ~= false,
         collision = payload.collision ~= false
     }
 end
 
+local function normalizeWorld(decoded)
+    if type(decoded) ~= 'table' then return nil end
+    return {
+        props = type(decoded.props) == 'table' and decoded.props or {},
+        removals = type(decoded.removals) == 'table' and decoded.removals or {},
+        externalEntities = type(decoded.externalEntities) == 'table' and decoded.externalEntities or {}
+    }
+end
+
+local function decodeWorld(raw)
+    if not raw or raw == '' then return nil end
+    local ok, decoded = pcall(json.decode, raw)
+    if not ok then return nil end
+    return normalizeWorld(decoded)
+end
+
+local function loadWorld()
+    local primaryRaw = LoadResourceFile(resourceName, dataFile)
+    local loaded = decodeWorld(primaryRaw)
+    if loaded then
+        world = loaded
+        return true
+    end
+
+    local backupRaw = LoadResourceFile(resourceName, backupFile)
+    loaded = decodeWorld(backupRaw)
+    if loaded then
+        world = loaded
+        SaveResourceFile(resourceName, dataFile, backupRaw, -1)
+        print('^3[Tycoon:WorldBuilder]^7 world.json restaurado do backup.')
+        return true
+    end
+
+    world = { props = {}, removals = {}, externalEntities = {} }
+    if primaryRaw and primaryRaw ~= '' then
+        print('^1[Tycoon:WorldBuilder]^7 world.json e backup invalidos; mundo iniciado vazio.')
+    end
+    return false
+end
+
+local function saveWorld()
+    local encoded = json.encode(world)
+    if not encoded then return false end
+
+    local currentRaw = LoadResourceFile(resourceName, dataFile)
+    if decodeWorld(currentRaw) then
+        SaveResourceFile(resourceName, backupFile, currentRaw, -1)
+    end
+
+    local saved = SaveResourceFile(resourceName, dataFile, encoded, -1)
+    if saved == false then
+        print('^1[Tycoon:WorldBuilder]^7 Falha ao salvar world.json.')
+        return false
+    end
+    return true
+end
+
+local function findById(collection, id)
+    for index, item in ipairs(collection) do
+        if item.id == id then return item, index end
+    end
+end
+
+local function nextId(prefix, collection)
+    for _ = 1, 100 do
+        local id = ('%s_%d_%04d'):format(prefix, os.time(), math.random(0, 9999))
+        if not findById(collection, id) then return id end
+    end
+    return ('%s_%d_%d'):format(prefix, os.time(), GetGameTimer())
+end
+
+local function distanceSquared(a, b)
+    local dx, dy, dz = a.x - b.x, a.y - b.y, a.z - b.z
+    return dx * dx + dy * dy + dz * dz
+end
+
+local function commit(action, category, data)
+    if not saveWorld() then return false end
+    TriggerClientEvent('cidade_tycoon_worldbuilder:client:updateObject', -1, action, category, data)
+    return true
+end
+
 lib.callback.register('cidade_tycoon_worldbuilder:server:getWorld', function(source)
-    return world, hasBuilderPermission(source)
+    return world, isPlayerAllowed(source)
 end)
 
 lib.callback.register('cidade_tycoon_worldbuilder:server:hasPermission', function(source)
-    return hasBuilderPermission(source)
+    return isPlayerAllowed(source)
+end)
+
+lib.callback.register('cidade_tycoon_worldbuilder:server:requestLock', function(source, objectId)
+    if not isPlayerAllowed(source) or type(objectId) ~= 'string' then return false end
+    if activeLocks[objectId] and activeLocks[objectId] ~= source then return false end
+    activeLocks[objectId] = source
+    return true
+end)
+
+lib.callback.register('cidade_tycoon_worldbuilder:server:releaseLock', function(source, objectId)
+    if activeLocks[objectId] == source then activeLocks[objectId] = nil end
+    return true
 end)
 
 lib.callback.register('cidade_tycoon_worldbuilder:server:addProp', function(source, payload)
-    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
-
-    local prop = sanitizePlacement(payload)
-    if not prop then return { ok = false, message = 'Dados invalidos.' } end
+    if not isPlayerAllowed(source) then return { ok = false, message = 'Sem permissao.' } end
+    local prop = sanitizeProp(payload)
+    if not prop then return { ok = false, message = 'Dados do objeto invalidos.' } end
 
     prop.id = nextId('prop', world.props)
     prop.createdBy = GetPlayerName(source) or ('source:%s'):format(source)
     prop.createdAt = os.time()
-
     table.insert(world.props, prop)
-    saveWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
-
-    return { ok = true, message = 'Prop salvo.', id = prop.id }
+    if not commit('add', 'props', prop) then
+        table.remove(world.props)
+        return { ok = false, message = 'Falha ao salvar o mundo.' }
+    end
+    return { ok = true, message = 'Objeto adicionado.', id = prop.id }
 end)
 
 lib.callback.register('cidade_tycoon_worldbuilder:server:updateProp', function(source, id, payload)
-    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
+    if not isPlayerAllowed(source) then return { ok = false, message = 'Sem permissao.' } end
+    local existing, index = findById(world.props, id)
+    if not index then return { ok = false, message = 'Objeto nao encontrado.' } end
+    if activeLocks[id] and activeLocks[id] ~= source then
+        return { ok = false, message = 'Objeto esta sendo editado por outra pessoa.' }
+    end
 
-    local existing = findById(world.props, id)
-    if not existing then return { ok = false, message = 'Prop nao encontrado.' } end
-
-    local prop = sanitizePlacement(payload)
-    if not prop then return { ok = false, message = 'Dados invalidos.' } end
-
-    existing.label = prop.label
-    existing.model = prop.model
-    existing.coords = prop.coords
-    existing.rotation = prop.rotation
-    existing.heading = prop.heading
-    existing.frozen = prop.frozen
-    existing.collision = prop.collision
-    existing.target = prop.target
-    existing.updatedBy = GetPlayerName(source) or ('source:%s'):format(source)
-    existing.updatedAt = os.time()
-
-    saveWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
-
-    return { ok = true, message = 'Prop atualizado.' }
+    local prop = sanitizeProp(payload)
+    if not prop then return { ok = false, message = 'Dados do objeto invalidos.' } end
+    prop.id = existing.id
+    prop.createdBy = existing.createdBy
+    prop.createdAt = existing.createdAt
+    prop.updatedBy = GetPlayerName(source) or ('source:%s'):format(source)
+    prop.updatedAt = os.time()
+    world.props[index] = prop
+    if not commit('update', 'props', prop) then
+        world.props[index] = existing
+        return { ok = false, message = 'Falha ao salvar o mundo.' }
+    end
+    return { ok = true, message = 'Objeto atualizado.' }
 end)
 
 lib.callback.register('cidade_tycoon_worldbuilder:server:deleteProp', function(source, id)
-    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
-
-    local _, index = findById(world.props, id)
-    if not index then return { ok = false, message = 'Prop nao encontrado.' } end
-
+    if not isPlayerAllowed(source) then return { ok = false, message = 'Sem permissao.' } end
+    local prop, index = findById(world.props, id)
+    if not index then return { ok = false, message = 'Objeto nao encontrado.' } end
     table.remove(world.props, index)
-    saveWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
-
-    return { ok = true, message = 'Prop removido.' }
+    if not commit('delete', 'props', prop) then
+        table.insert(world.props, index, prop)
+        return { ok = false, message = 'Falha ao salvar o mundo.' }
+    end
+    return { ok = true, message = 'Objeto removido.' }
 end)
 
 lib.callback.register('cidade_tycoon_worldbuilder:server:addRemoval', function(source, payload)
-    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
-    if type(payload) ~= 'table' then return { ok = false, message = 'Dados invalidos.' } end
+    if not isPlayerAllowed(source) then return { ok = false, message = 'Sem permissao.' } end
+    local removal = sanitizeRemoval(payload)
+    if not removal then return { ok = false, message = 'Dados da remocao invalidos.' } end
 
-    local coords = sanitizeVec3(payload.coords)
-    local model = tonumber(payload.model)
-    if not coords or not model then return { ok = false, message = 'Objeto invalido.' } end
-
-    local removal = {
-        id = nextId('hide', world.removals),
-        label = tostring(payload.label or 'Mapa oculto'):sub(1, 80),
-        model = model,
-        coords = coords,
-        radius = math.max(0.5, math.min(tonumber(payload.radius) or config.defaultRadius, 25.0)),
-        createdBy = GetPlayerName(source) or ('source:%s'):format(source),
-        createdAt = os.time()
-    }
-
+    removal.id = nextId('rem', world.removals)
+    removal.createdBy = GetPlayerName(source) or ('source:%s'):format(source)
+    removal.createdAt = os.time()
     table.insert(world.removals, removal)
-    saveWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
-
-    return { ok = true, message = 'Prop do mapa ocultado.', id = removal.id }
+    if not commit('add', 'removals', removal) then
+        table.remove(world.removals)
+        return { ok = false, message = 'Falha ao salvar o mundo.' }
+    end
+    return { ok = true, message = 'Remocao registrada.', id = removal.id }
 end)
 
 lib.callback.register('cidade_tycoon_worldbuilder:server:deleteRemoval', function(source, id)
-    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
-
-    local _, index = findById(world.removals, id)
+    if not isPlayerAllowed(source) then return { ok = false, message = 'Sem permissao.' } end
+    local removal, index = findById(world.removals, id)
     if not index then return { ok = false, message = 'Remocao nao encontrada.' } end
-
     table.remove(world.removals, index)
-    saveWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
-
-    return { ok = true, message = 'Remocao apagada. Reinicie a area para o mapa vanilla voltar.' }
+    if not commit('delete', 'removals', removal) then
+        table.insert(world.removals, index, removal)
+        return { ok = false, message = 'Falha ao salvar o mundo.' }
+    end
+    return { ok = true, message = 'Remocao desfeita.' }
 end)
 
 lib.callback.register('cidade_tycoon_worldbuilder:server:addExternalEntity', function(source, payload)
-    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
-
+    if not isPlayerAllowed(source) then return { ok = false, message = 'Sem permissao.' } end
     local external = sanitizeExternal(payload)
-    if not external then return { ok = false, message = 'Dados invalidos.' } end
+    if not external then return { ok = false, message = 'Dados da entidade invalidos.' } end
 
-    external.id = nextId('ext', world.externalEntities)
-    external.createdBy = GetPlayerName(source) or ('source:%s'):format(source)
-    external.createdAt = os.time()
+    local existing, index
+    if external.id then existing, index = findById(world.externalEntities, external.id) end
+    if not index then
+        for i, item in ipairs(world.externalEntities) do
+            if item.model == external.model and (item.entityType or item.type) == external.entityType
+                and item.originCoords and distanceSquared(item.originCoords, external.originCoords) < 1.0 then
+                existing, index = item, i
+                break
+            end
+        end
+    end
 
-    table.insert(world.externalEntities, external)
-    saveWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
+    local action = index and 'update' or 'add'
+    if index then
+        external.id = existing.id
+        external.createdBy = existing.createdBy
+        external.createdAt = existing.createdAt
+        external.updatedBy = GetPlayerName(source) or ('source:%s'):format(source)
+        external.updatedAt = os.time()
+        world.externalEntities[index] = external
+    else
+        external.id = nextId('ext', world.externalEntities)
+        external.createdBy = GetPlayerName(source) or ('source:%s'):format(source)
+        external.createdAt = os.time()
+        table.insert(world.externalEntities, external)
+    end
 
-    return { ok = true, message = 'Posicao externa salva.', id = external.id }
-end)
-
-lib.callback.register('cidade_tycoon_worldbuilder:server:updateExternalEntity', function(source, id, payload)
-    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
-
-    local existing = findById(world.externalEntities, id)
-    if not existing then return { ok = false, message = 'Entidade externa nao encontrada.' } end
-
-    local external = sanitizeExternal(payload)
-    if not external then return { ok = false, message = 'Dados invalidos.' } end
-
-    existing.label = external.label
-    existing.entityType = external.entityType
-    existing.model = external.model
-    existing.originCoords = external.originCoords
-    existing.coords = external.coords
-    existing.rotation = external.rotation
-    existing.heading = external.heading
-    existing.radius = external.radius
-    existing.frozen = external.frozen
-    existing.collision = external.collision
-    existing.updatedBy = GetPlayerName(source) or ('source:%s'):format(source)
-    existing.updatedAt = os.time()
-
-    saveWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
-
-    return { ok = true, message = 'Posicao externa atualizada.' }
+    if not commit(action, 'externalEntities', external) then
+        if index then world.externalEntities[index] = existing else table.remove(world.externalEntities) end
+        return { ok = false, message = 'Falha ao salvar o mundo.' }
+    end
+    return { ok = true, message = 'Entidade externa salva.', id = external.id }
 end)
 
 lib.callback.register('cidade_tycoon_worldbuilder:server:deleteExternalEntity', function(source, id)
-    if not hasBuilderPermission(source) then return { ok = false, message = 'Sem permissao.' } end
-
-    local _, index = findById(world.externalEntities, id)
-    if not index then return { ok = false, message = 'Entidade externa nao encontrada.' } end
-
+    if not isPlayerAllowed(source) then return { ok = false, message = 'Sem permissao.' } end
+    local external, index = findById(world.externalEntities, id)
+    if not index then return { ok = false, message = 'Entidade nao encontrada.' } end
     table.remove(world.externalEntities, index)
-    saveWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
-
-    return { ok = true, message = 'Override externo removido.' }
+    if not commit('delete', 'externalEntities', external) then
+        table.insert(world.externalEntities, index, external)
+        return { ok = false, message = 'Falha ao salvar o mundo.' }
+    end
+    return { ok = true, message = 'Configuracao removida.' }
 end)
 
 RegisterCommand('wb_reload', function(source)
-    if not hasBuilderPermission(source) then
-        notify(source, 'Sem permissao.', 'error')
-        return
-    end
-
+    if not isPlayerAllowed(source) then return end
     loadWorld()
-    TriggerClientEvent('cidade_tycoon_worldbuilder:client:syncWorld', -1, world)
-    notify(source, 'World Builder recarregado.', 'success')
+    TriggerClientEvent('cidade_tycoon_worldbuilder:client:fullSync', -1, world)
+    if source ~= 0 then notify(source, 'Mundo recarregado com sucesso.', 'success') end
 end, false)
 
-AddEventHandler('onResourceStart', function(resource)
-    if resource ~= GetCurrentResourceName() then return end
-    math.randomseed(os.time())
-    loadWorld()
+AddEventHandler('playerDropped', function()
+    local source = source
+    for id, owner in pairs(activeLocks) do
+        if owner == source then activeLocks[id] = nil end
+    end
 end)
 
+math.randomseed(os.time())
 loadWorld()

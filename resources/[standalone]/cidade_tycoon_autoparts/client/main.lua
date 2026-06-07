@@ -8,14 +8,18 @@ local function notifyAutoParts(message, type)
         description = message,
         type = type or 'inform',
     })
+    if type == 'success' then
+        PlaySoundFrontend(-1, "PURCHASE_ACK", "HUD_LIQUIPEDIA_SOUNDSET", 1)
+    end
 end
 
--- 1. MECHANICAL SHELF
-function OpenMechanicalShelf()
-    local parts = { 'engine_block', 'transmission_gear', 'suspension_arm' }
-    local options = {}
+-- 1. DYNAMIC SHELF OPENER
+function OpenShelfMenu(shelfKey)
+    local shelf = Config.Shelves[shelfKey]
+    if not shelf then return end
 
-    for _, itemName in ipairs(parts) do
+    local options = {}
+    for _, itemName in ipairs(shelf.items) do
         local part = exports.cidade_tycoon_core:GetPartData(itemName)
         if part then
             table.insert(options, {
@@ -30,66 +34,31 @@ function OpenMechanicalShelf()
     end
 
     lib.registerContext({
-        id = 'tycoon_autoparts_mechanical',
-        title = 'Prateleira: Componentes Mecânicos',
+        id = 'tycoon_autoparts_' .. shelfKey,
+        title = shelf.title,
         options = options
     })
-    lib.showContext('tycoon_autoparts_mechanical')
+    lib.showContext('tycoon_autoparts_' .. shelfKey)
 end
 
--- 2. MAINTENANCE SHELF
-function OpenMaintenanceShelf()
-    local parts = { 'basic_repair_kit', 'brake_pads', 'truck_tire' }
-    local options = {}
-
-    for _, itemName in ipairs(parts) do
-        local part = exports.cidade_tycoon_core:GetPartData(itemName)
-        if part then
-            table.insert(options, {
-                title = part.label,
-                description = ('Preço: $%d | Peso: %.1fkg'):format(part.price, part.weight / 1000),
-                onSelect = function()
-                    local res = lib.callback.await('cidade_tycoon_autoparts:server:purchasePart', false, itemName, 1)
-                    notifyAutoParts(res.message, res.ok and 'success' or 'error')
-                end
-            })
-        end
-    end
-
-    lib.registerContext({
-        id = 'tycoon_autoparts_maintenance',
-        title = 'Prateleira: Itens de Manutenção',
-        options = options
-    })
-    lib.showContext('tycoon_autoparts_maintenance')
-end
-
--- 3. RECYCLING STATION
+-- 2. RECYCLING STATION
 function OpenRecyclingStation()
-    local options = {
-        {
-            title = 'Reciclar Sucata Mecânica',
-            description = 'Gera: 5x Minério de Metal para o galpão.',
-            icon = 'recycle',
+    local options = {}
+    for _, opt in ipairs(Config.Recycling.options) do
+        table.insert(options, {
+            title = opt.title,
+            description = ('Gera: %dx %s para o galpão.'):format(opt.amount, opt.reward),
+            icon = opt.icon,
             onSelect = function()
-                local res = lib.callback.await('cidade_tycoon_autoparts:server:recycleScrap', false, 'mechanical_scrap')
+                local res = lib.callback.await('cidade_tycoon_autoparts:server:recycleScrap', false, opt.item)
                 notifyAutoParts(res.message, res.ok and 'success' or 'error')
             end
-        },
-        {
-            title = 'Reciclar Sucata Eletrônica',
-            description = 'Gera: 5x Componentes Eletrônicos para o galpão.',
-            icon = 'microchip',
-            onSelect = function()
-                local res = lib.callback.await('cidade_tycoon_autoparts:server:recycleScrap', false, 'electronic_scrap')
-                notifyAutoParts(res.message, res.ok and 'success' or 'error')
-            end
-        }
-    }
+        })
+    end
 
     lib.registerContext({
         id = 'tycoon_autoparts_recycling',
-        title = 'Estação de Reciclagem de Peças',
+        title = Config.Recycling.title,
         options = options
     })
     lib.showContext('tycoon_autoparts_recycling')
@@ -97,8 +66,10 @@ end
 
 -- SPAWN PHYSICAL PROPS AND ATTACH TARGETS
 local function createPhysicalInteractionPoint(coords, modelName, label, icon, onSelectFunc, floatingText)
-    local modelHash = type(modelName) == 'string' and GetHashKey(modelName) or modelName
+    local modelHash = GetHashKey(modelName)
     
+    if not IsModelInCdimage(modelHash) then return nil end
+
     RequestModel(modelHash)
     local timer = GetGameTimer() + 5000
     while not HasModelLoaded(modelHash) and GetGameTimer() < timer do
@@ -106,7 +77,6 @@ local function createPhysicalInteractionPoint(coords, modelName, label, icon, on
     end
 
     if not HasModelLoaded(modelHash) then
-        print("^1[Tycoon:AutoParts] Falha ao carregar modelo: " .. tostring(modelName))
         return nil
     end
     
@@ -129,43 +99,49 @@ local function createPhysicalInteractionPoint(coords, modelName, label, icon, on
         entity = obj,
         text = floatingText or label,
     })
+    SetModelAsNoLongerNeeded(modelHash)
     return obj
 end
 
 CreateThread(function()
     Wait(3000)
     
+    if not logisticsConfig or not logisticsConfig.warehouses then
+        print("^1[Tycoon:AutoParts]^7 ERRO: Tabela de galpões não encontrada no shared config.")
+        return
+    end
+    
     for id, warehouse in pairs(logisticsConfig.warehouses) do
-        local base = warehouse.autopartsCoords or warehouse.productionCoords
+        local base = warehouse.productionCoords
         if base then
             -- 1. Mechanical Shelf (Left)
             createPhysicalInteractionPoint(
                 vec3(base.x - 2.5, base.y, base.z), 
                 "prop_table_03", 
-                'Prateleira: Componentes Pesados', 
-                'fa-solid fa-engine', 
-                OpenMechanicalShelf,
-                "~y~Componentes Pesados~w~"
+                Config.Shelves['mechanical'].label, 
+                Config.Shelves['mechanical'].icon, 
+                function() OpenShelfMenu('mechanical') end,
+                Config.Shelves['mechanical'].color .. Config.Shelves['mechanical'].label
             )
 
             -- 2. Maintenance Shelf (Right)
             createPhysicalInteractionPoint(
                 vec3(base.x + 2.5, base.y, base.z), 
                 "prop_table_03b", 
-                'Prateleira: Itens de Manutenção', 
-                'fa-solid fa-wrench', 
-                OpenMaintenanceShelf,
-                "~b~Itens de Manutencao~w~"
+                Config.Shelves['maintenance'].label, 
+                Config.Shelves['maintenance'].icon, 
+                function() OpenShelfMenu('maintenance') end,
+                Config.Shelves['maintenance'].color .. Config.Shelves['maintenance'].label
             )
 
             -- 3. Recycling Bin (Back)
             createPhysicalInteractionPoint(
                 vec3(base.x, base.y - 2.5, base.z), 
-                "prop_bin_05a", 
-                'Caçamba de Reciclagem (Sucata)', 
-                'fa-solid fa-recycle', 
+                "prop_ld_bin_01", 
+                Config.Recycling.label, 
+                Config.Recycling.icon, 
                 OpenRecyclingStation,
-                "~g~Reciclagem de Sucata~w~"
+                Config.Recycling.color .. Config.Recycling.label
             )
         end
     end
@@ -182,7 +158,7 @@ CreateThread(function()
                 local coords = GetEntityCoords(prop.entity)
                 local dist = #(playerCoords - coords)
 
-                if dist < 15.0 then
+                if dist < 12.0 then
                     wait = 0
                     render3DText(coords, prop.text)
                 end
@@ -215,5 +191,5 @@ AddEventHandler('onResourceStop', function(res)
 end)
 
 exports('OpenAutoPartsShop', function()
-    OpenMaintenanceShelf()
+    OpenShelfMenu('maintenance')
 end)
