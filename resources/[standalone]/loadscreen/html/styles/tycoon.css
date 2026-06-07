@@ -98,6 +98,72 @@
     box-shadow: 0 18px 52px rgba(0, 0, 0, 0.28);
 }
 
+#tycoon-info .discord-card {
+    padding: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    min-height: 12.5rem;
+    border-left-color: #5865f2;
+    background:
+        radial-gradient(circle at 82% 18%, rgba(88, 101, 242, 0.26), transparent 36%),
+        linear-gradient(135deg, rgba(5, 8, 12, 0.9), rgba(12, 18, 28, 0.72));
+}
+
+.discord-banner {
+    position: relative;
+    min-height: 100%;
+    background:
+        linear-gradient(180deg, rgba(88, 101, 242, 0.22), rgba(5, 8, 12, 0.82)),
+        rgba(88, 101, 242, 0.2);
+}
+
+.discord-banner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(5, 8, 12, 0.54));
+}
+
+.discord-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.86;
+}
+
+.discord-content {
+    padding: 1.05rem 1.15rem 1.15rem;
+}
+
+.discord-highlights {
+    margin: 0.8rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.42rem;
+    list-style: none;
+}
+
+.discord-highlights li {
+    padding: 0.38rem 0.48rem;
+    color: rgba(248, 250, 252, 0.82);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.035rem;
+}
+
+#tycoon-info .discord-card strong {
+    color: #fff;
+    background: linear-gradient(135deg, #5865f2, #7289da);
+    box-shadow: 0 14px 32px rgba(88, 101, 242, 0.28);
+}
+
 #tycoon-info .label {
     margin-bottom: 0.35rem;
     color: var(--primary-color);
@@ -130,6 +196,10 @@
     font-size: 0.96rem;
 }
 
+#tycoon-info .discord-card .label {
+    color: #9da7ff;
+}
+
 #audio-controls {
     right: 5rem;
     left: auto;
@@ -151,5 +221,17 @@
     #tycoon-info {
         right: 2rem;
         bottom: 5.2rem;
+    }
+
+    #tycoon-info .discord-card {
+        grid-template-columns: 1fr;
+    }
+
+    .discord-banner {
+        min-height: 8rem;
+    }
+
+    .discord-highlights {
+        grid-template-columns: 1fr;
     }
 }

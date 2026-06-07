@@ -1,18 +1,53 @@
+/*=========================*/
+/*========= GLOBAL =========*/
+/*=========================*/
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 body {
-	display: flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-	overflow: hidden;
-	background-color: #0000006e !important;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .main {
-	width: 1280px;
-	height: 726px;
-	background-color: #f5f6f8;
-	border-radius: 0px 20px 20px 0px;
-	display: grid;
-    grid-template-columns: 80px 1200px;
+    width: 1050px;
+    height: 620px;
+    max-width: 95vw;
+    max-height: 90vh;
+    background-color: #f4f6f8;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+h4.text-uppercase {
+    font-size: 1rem;
+    font-weight: 900;
+    color: #1a1c23;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+}
+
+p.page-desc {
+    color: #718096;
+    font-size: 11px;
+    margin-bottom: 15px;
+    font-weight: 600;
 }
 
 /*===========================*/
@@ -20,293 +55,77 @@ body {
 /*===========================*/
 
 .sidebar-navigation {
-	display: inline-block;
-	height: 100%;
-	width: 80px;
-	background-color: #313443;
+    height: 100%;
+    width: 70px;
+    background-color: #1a1c23;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.05);
 }
 
 .sidebar-navigation ul {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-	font-family: "Lato", sans-serif;
-	line-height: 1;
-	text-align: center;
-	color: white;
-	height: 100%;
+    list-style: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar-navigation ul li {
-	padding: 20px 0;
-	cursor: pointer;
-	transition: all ease-out 120ms;
-    max-height: 66px;
-}
-
-.sidebar-navigation ul li i {
-	display: block;
-	font-size: 24px;
-	transition: all ease 450ms;
-	width: 100%;
+    padding: 18px 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    text-align: center;
 }
 
 .sidebar-navigation ul li svg {
-	display: block;
-	transition: all ease 450ms;
-	width: 24px;
-	height: 24px;
-	margin: 0 auto;
-	fill: white;
+    display: block;
+    width: 22px;
+    height: 22px;
+    margin: 0 auto;
+    fill: #718096;
+    transition: all 0.2s ease;
+}
+
+.sidebar-navigation ul li:hover svg,
+.sidebar-navigation ul li.active svg {
+    fill: #63d19e;
+    transform: scale(1.1);
+}
+
+.sidebar-navigation ul li.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20%;
+    height: 60%;
+    width: 3px;
+    background: #63d19e;
+    border-radius: 0 4px 4px 0;
 }
 
 .sidebar-navigation ul li .tooltip {
-	display: inline-block;
-	position: relative;
-	background-color: #313443;
-	padding: 8px 15px;
-	border-radius: 3px;
-	margin-top: -26px;
-	left: 90px;
-	opacity: 0;
-	visibility: hidden;
-	font-size: 12px;
-	letter-spacing: 0.5px;
-	width: 100px;
-}
-
-.sidebar-navigation ul li .tooltip:before {
-	content: "";
-	display: block;
-	position: absolute;
-	left: -4px;
-	top: 10px;
-	transform: rotate(45deg);
-	width: 10px;
-	height: 10px;
-	background-color: inherit;
-}
-
-.sidebar-navigation ul li:hover {
-	background-color: #22252e;
+    position: absolute;
+    background-color: #1a1c23;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    left: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    visibility: hidden;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 10px 10px 20px rgba(0,0,0,0.2);
+    z-index: 1000;
 }
 
 .sidebar-navigation ul li:hover .tooltip {
-	visibility: visible;
-	opacity: 1;
-	transition: all ease 450ms;
-}
-
-.sidebar-navigation ul li.active {
-	background-color: #22252e;
-}
-
-.sidebar-navigation ul li.active i {
-	color: #98d7ec;
-}
-
-.sidebar-navigation ul li:hover svg {
-	fill: #98d7ec;
-}
-
-.sidebar-navigation ul li.active svg {
-	fill: #98d7ec;
-}
-
-/*=========================*/
-/*========= SKILL =========*/
-/*=========================*/
-
-.skills-page {
-	overflow: auto;
-}
-
-.container-progresses{
-    padding: 10px;
-    border: 1px solid #e3dada;
-    margin-top: 12px;
-    border-radius: 5px;
-    background: #fff;
-}
-
-.progresses {
-    display: flex;
-	align-items: center;
-	margin: 15px;
-}
-
-.line {
-    width: 120px;
-    height: 6px;
-    background: #63d19e
-}
-.redline {
-    width: 120px;
-    height: 6px;
-    background: #d16363
-}
-
-.steps {
-    display: flex;
-    background-color: #63d19e;
-    color: #fff;
-    font-size: 14px;
-    width: 40px;
-    height: 40px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%
-}
-
-.redsteps {
-    display: flex;
-    background-color: #d16363;
-    color: #fff;
-    font-size: 14px;
-    width: 40px;
-    height: 40px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%
-}
-
-.redsteps:hover {
-    background-color: #a32d2d;
-    cursor: pointer;
-}
-
-.skill-description {
-	font-size: 13px;
-}
-
-.collapsible {
-	background-color: #ebebeb;
-	color: #000000;
-	cursor: pointer;
-	padding: 18px;
-	width: 100%;
-	border: none;
-	text-align: left;
-	outline: none;
-	font-size: 15px;
-}
-
-.active, .collapsible:hover {
-	background-color: #b9b9b9;
-}
-
-.content {
-	padding: 0 18px;
-	display: none;
-	overflow: hidden;
-	background-color: #f1f1f1;
-	font-size: 13px;
-}
-
-.accordion_two_section {
-    background: #f7f7f7
-}
-
-.ptb-100 {
-    padding-top: 100px;
-    padding-bottom: 100px
-}
-
-.accordionTwo .panel-group {
-    margin-bottom: 0
-}
-
-.accordionTwo .panel {
-    background-color: transparent;
-    box-shadow: none;
-    border-bottom: 10px solid transparent;
-    border-radius: 0;
-    margin: 0
-}
-
-.accordionTwo .panel-default {
-    border: 0
-}
-
-.accordionTwo .panel-default>.panel-heading {
-    background: #4385f5;
-    border-radius: 0px;
-    border-color: #4385f5
-}
-
-.accordion-wrap .panel-heading {
-    padding: 0px;
-    border-radius: 0px
-}
-
-.panel-title {
-    margin-top: 0;
-    margin-bottom: 0;
-    font-size: 16px;
-    color: inherit
-}
-
-.accordionTwo .panel .panel-heading a.collapsed {
-    color: #999999;
-    background-color: #fff;
-    display: block;
-    padding: 12px 20px
-}
-
-.accordionTwo .panel .panel-heading a {
-    display: block;
-    padding: 12px 20px;
-    color: #fff
-}
-
-.accordion-wrap .panel .panel-heading a {
-    font-size: 14px
-}
-
-.accordionTwo .panel-group .panel-heading+.panel-collapse>.panel-body {
-    border-top: 0;
-    padding-top: 0;
-    padding: 20px 20px 20px 30px;
-    background: #4385f5;
-    color: #fff;
-    font-size: 14px;
-    line-height: 24px
-}
-
-.accordionTwo .panel .panel-heading a:after {
-    content: "\2212";
-    color: #4285f4;
-    background: #fff
-}
-
-.accordionTwo .panel .panel-heading a:after,
-.accordionTwo .panel .panel-heading a.collapsed:after {
-    font-family: 'FontAwesome';
-    font-size: 14px;
-    float: right;
-    width: 21px;
-    display: block;
-    height: 21px;
-    line-height: 21px;
-    text-align: center;
-    border-radius: 50%;
-    color: #FFF
-}
-
-.accordionTwo .panel .panel-heading a.collapsed:after {
-    content: "\2b";
-    color: #fff;
-    background-color: #DADADA
-}
-
-.accordionTwo .panel .panel-heading a:after {
-    content: "\2212";
-    color: #4285f4;
-    background: #dadada
-}
-
-a:link {
-    text-decoration: none
+    visibility: visible;
+    opacity: 1;
+    left: 75px;
 }
 
 /*=========================*/
@@ -314,724 +133,844 @@ a:link {
 /*=========================*/
 
 .container-pages {
-	height: 726px;
+    height: 100%;
+    overflow: hidden;
+    background: #f4f6f8;
 }
 
 .pages {
-	display: none;
-	padding: 20px;
-	height: 100%;
+    display: none;
+    padding: 20px 25px;
+    height: 100%;
+    overflow-y: auto;
 }
 
-.main-page {
-	display: block;
+.pages::-webkit-scrollbar {
+    width: 4px;
 }
 
-.bronze {
-	color: #9e5a00;
+.pages::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 10px;
 }
+
+/*=========================*/
+/*========= PROFILE =========*/
+/*=========================*/
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.stat-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.stat-icon-box svg {
+    width: 18px;
+    height: 18px;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #1a1c23;
+    display: block;
+}
+
+.stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #718096;
+    text-transform: uppercase;
+}
+
+.bg-light-success { background: #f0fff4; color: #38a169; }
+.bg-light-primary { background: #ebf4ff; color: #3182ce; }
+.bg-light-warning { background: #fffaf0; color: #dd6b20; }
+.bg-light-info { background: #e6fffa; color: #319795; }
 
 /*========================*/
 /*========= JOBS =========*/
 /*========================*/
 
-.main-page {
-    overflow: auto;
-}
-.job-page {
-    overflow: auto;
-}
-.freight-page {
-    overflow: auto;
-}
-.drivers-page {
-    overflow: auto;
-}
-.trucks-page {
-    overflow: auto;
+.job-card {
+    background: white;
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 8px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    transition: all 0.2s ease;
 }
 
-.icons i {
-    color: #b5b3b3;
-    border: 1px solid #b5b3b3;
-    padding: 6px;
-    margin-left: 4px;
-    border-radius: 5px;
-    cursor: pointer
+.job-card:hover {
+    border-color: #63d19e;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-.activity-done {
-    font-weight: 600
+.job-info-main h6 {
+    font-weight: 800;
+    color: #1a1c23;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
 }
 
-.list-group li {
-    margin-bottom: 12px
+.job-details-row {
+    display: flex;
+    gap: 15px;
 }
 
-.list li {
-    list-style: none;
-    padding: 10px;
-    border: 1px solid #e3dada;
-    margin-top: 12px;
-    border-radius: 5px;
-    background: #fff
+.job-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #4a5568;
 }
 
-.checkicon {
-    color: green;
-    font-size: 19px
+.job-detail-item svg {
+    width: 14px;
+    height: 14px;
+    fill: #a0aec0;
 }
 
-.date-time {
-    font-size: 12px
+.cargo-icons-wrapper {
+    display: flex;
+    gap: 4px;
+    background: #edf2f7;
+    padding: 5px;
+    border-radius: 6px;
 }
 
-.profile-image {
-	display: flex;
+.cargo-svg {
+    width: 18px;
+    height: 18px;
 }
 
-.profile-image div img {
-	margin-left: 3px;
+.locked-job {
+    opacity: 0.5;
+    filter: grayscale(1);
 }
 
-.tooltip_icon {
-	position: relative;
-	display: inline-block;
+.locked-tag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #e53e3e;
+    color: white;
+    font-size: 8px;
+    padding: 2px 8px;
+    border-radius: 0 0 6px 0;
+    font-weight: 800;
+    text-transform: uppercase;
 }
 
-.tooltip_icon .tooltiptext {
-	visibility: hidden;
-	width: 120px;
-	background-color: black;
-	color: #fff;
-	text-align: center;
-	border-radius: 6px;
-	padding: 5px 0;
-	position: absolute;
-	z-index: 1;
-	top: 150%;
-	left: 50%;
-	margin-left: -60px;
-	opacity: 0;
-	font-size: 12px;
+/*=========================*/
+/*========= SKILL =========*/
+/*=========================*/
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
 }
 
-.tooltip_icon .tooltiptext::after {
-	content: "";
-	position: absolute;
-	bottom: 100%;
-	left: 50%;
-	margin-left: -5px;
-	border-width: 5px;
-	border-style: solid;
-	border-color: transparent transparent black transparent;
+.skill-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
 }
 
-.tooltip_icon:hover .tooltiptext {
-	visibility: visible;
-	opacity: 1;
-	transition: opacity 450ms;
+.skill-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.skill-icon-container {
+    width: 32px;
+    height: 32px;
+    background: #edf2f7;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+}
+
+.skill-icon-container svg {
+    width: 16px;
+    height: 16px;
+    fill: #1a1c23;
+}
+
+.skill-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #1a1c23;
+    text-transform: uppercase;
+}
+
+.progresses {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.line, .redline {
+    width: 20px;
+    height: 2px;
+}
+.line { background: #63d19e; }
+.redline { background: #e2e8f0; }
+
+.steps, .redsteps {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+.steps { background: #63d19e; color: white; }
+.redsteps { background: #f7fafc; color: #a0aec0; border: 1px solid #e2e8f0; cursor: pointer; }
+
+.collapsible {
+	background-color: #f8f9fa;
+	color: #313443;
+	cursor: pointer;
+	padding: 8px 12px;
+	width: 100%;
+	border: 1px solid #eee;
+	text-align: left;
+	outline: none;
+	font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+}
+
+.content {
+	padding: 0 10px;
+	display: none;
+	font-size: 10px;
+    color: #6c757d;
 }
 
 /*==============================*/
 /*========= DIAGNOSTIC =========*/
 /*==============================*/
 
-.diagnostic-page {
-	display: none;
-	max-width: 1200px;
+.diagnostic-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 
-.diagnostic-page .card-content:hover{
-    background-color: #dfdfdf;
+.diagnostic-list {
+    flex: 1;
+    display: grid;
+    gap: 6px;
+}
+
+.diagnostic-card {
+    background: white;
+    border-radius: 8px;
+    padding: 10px 15px;
+    border: 1px solid #e2e8f0;
     cursor: pointer;
+}
+
+.diagnostic-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.diagnostic-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    color: #1a1c23;
+    font-size: 9px;
+    text-transform: uppercase;
+}
+
+.diagnostic-status-badge {
+    font-size: 7px;
+    font-weight: 900;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.status-excellent { background: #e8f5e9; color: #2e7d32; }
+.status-good { background: #e3f2fd; color: #1565c0; }
+.status-fair { background: #fff3e0; color: #ef6c00; }
+.status-critical { background: #ffebee; color: #c62828; }
+
+.diagnostic-percentage {
+    font-size: 0.9rem;
+    font-weight: 900;
+}
+
+.diag-progress {
+    height: 3px;
+    background: #edf2f7;
+    margin-top: 4px;
+    border-radius: 2px;
+}
+
+.diag-progress-bar { height: 100%; border-radius: 2px; }
+
+.truck-display {
+    flex: 1;
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+}
+
+.truck-display img {
+    max-width: 100%;
+    max-height: 150px;
+    object-fit: contain;
 }
 
 /*==========================*/
 /*========= DEALER =========*/
 /*==========================*/
 
-.dealership-page {
-	overflow: auto;
+.dealer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
 }
 
-.card {
-    width: 280px;
-	border-radius: 10px;
-	margin: 5px;
-}
-.card-2 {
-    width: 600px;
-	border-radius: 10px;
-	margin: 5px;
+.truck-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
 }
 
-.truck-card-img-top {
-    border-top-right-radius: 10px;
-    border-top-left-radius: 10px
+.truck-card-img {
+    height: 100px;
+    background: #f7fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
 }
 
-span.text-muted {
-    font-size: 12px
-}
+.truck-card-img img { max-height: 100%; max-width: 100%; }
 
-small.text-muted {
-    font-size: 8px
-}
+.truck-card-content { padding: 12px; }
 
-h5.mb-0 {
-    font-size: 1rem
-}
+.truck-card-title { font-weight: 800; font-size: 0.8rem; color: #1a1c23; margin-bottom: 2px; }
 
-small.ghj {
-    font-size: 9px
-}
+.truck-card-price { font-weight: 800; color: #38a169; font-size: 0.9rem; margin-bottom: 8px; display: block; }
 
-.mid {
-    background: #ECEDF1
-}
-
-h6.ml-1 {
-    font-size: 13px
-}
-
-small.key {
-    text-decoration: underline;
-    font-size: 9px;
-    cursor: pointer
-}
-
-.btn-danger {
-    color: #FFCBD2
-}
-
-.btn-danger:focus {
-    box-shadow: none
-}
-
-small.justify-content-center {
-    font-size: 9px;
-    cursor: pointer;
-    text-decoration: underline
-}
+.spec-item { background: #f7fafc; padding: 4px 8px; border-radius: 4px; }
+.spec-label { font-size: 6px; color: #718096; font-weight: 800; text-transform: uppercase; }
+.spec-value { font-size: 9px; color: #1a1c23; font-weight: 700; }
 
 /*==========================*/
 /*========= BANK =========*/
 /*==========================*/
 
-.bank-page .card-content:hover{
-    background-color: #dfdfdf;
+.bank-wallet-actions {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.loan-card {
+    background: white;
+    border-radius: 8px;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #e2e8f0;
     cursor: pointer;
-}
-.width-600{
-    width: 570px !important;
-}
-.deposit-money{
-    display: block;
-    margin-bottom: 5px;
-    padding: 0px;
+    margin-bottom: 8px;
 }
 
-.deposit-money-btn{
-    display: block;
-    /* height: 30px; */
-    padding: 3px 12px !important;
+.loan-card:hover { background: #3182ce; color: white !important; }
+.loan-card:hover * { color: white !important; fill: white !important; }
+
+/*=============================*/
+/*========= UTILS =========*/
+/*=============================*/
+
+.btn {
+    border-radius: 4px !important;
+    font-weight: 800 !important;
+    font-size: 9px !important;
+    padding: 6px 12px !important;
+    text-transform: uppercase;
+    border: none !important;
+    cursor: pointer;
+    transition: opacity 0.2s;
 }
 
-/*===========================*/
-/*========= RECRUIT =========*/
-/*===========================*/
+.btn:hover { opacity: 0.9; }
 
-.recruitment-page {
-	overflow: auto;
-}
+.btn-blue { background: #3182ce !important; color: white; }
+.btn-red { background: #e53e3e !important; color: white; }
+.btn-success { background: #38a169 !important; color: white; }
+.btn-warning { background: #ffa000 !important; color: white !important; }
 
-.card.user-card {
-    border-top: none;
-    -webkit-box-shadow: 0 0 1px 2px rgba(0,0,0,0.05), 0 -2px 1px -2px rgba(0,0,0,0.04), 0 0 0 -1px rgba(0,0,0,0.05);
-    box-shadow: 0 0 1px 2px rgba(0,0,0,0.05), 0 -2px 1px -2px rgba(0,0,0,0.04), 0 0 0 -1px rgba(0,0,0,0.05);
-    -webkit-transition: all 150ms linear;
-    transition: all 150ms linear;
-}
+.progress { background: #edf2f7; border-radius: 10px; height: 8px; }
+.bg-success { background-color: #38a169 !important; }
+.bg-danger { background-color: #e53e3e !important; }
 
-.card {
-    border-radius: 5px;
-    -webkit-box-shadow: 0 1px 2.94px 0.06px rgba(4,26,55,0.16);
-    box-shadow: 0 1px 2.94px 0.06px rgba(4,26,55,0.16);
-    border: none;
-    margin-bottom: 30px;
-    -webkit-transition: all 0.3s ease-in-out;
-    transition: all 0.3s ease-in-out;
-}
-
-.user-card .card-block {
-    text-align: center;
-}
-
-.card .card-block {
-    padding: 25px;
-}
-
-.user-card .card-block .user-image {
-    position: relative;
-    margin: 0 auto;
-    display: inline-block;
-    padding: 5px;
-    width: 110px;
-    height: 110px;
-}
-
-.user-card .card-block .user-image img {
-    z-index: 20;
+[data-tooltip] { position: relative; }
+[data-tooltip]:before {
+    content: attr(data-tooltip);
     position: absolute;
-    top: 5px;
-    left: 5px;
-        width: 100px;
-    height: 100px;
-}
-
-.img-radius {
-    border-radius: 50%;
-}
-.img-width {
-    max-width: 50px;
-}
-
-.m-b-10 {
-    margin-bottom: 10px;
-}
-
-.m-t-25 {
-    margin-top: 25px;
-}
-
-.card .card-block p {
-    line-height: 1.4;
-}
-
-.text-muted {
-    color: #919aa3!important;
-    margin: 0px;
-}
-
-.user-card .card-block .activity-leval li.actived {
-    background-color: #2ed8b6;
-}
-
-.user-card .card-block .activity-leval li {
-    display: inline-block;
-    width: 14%;
-    height: 4px;
-    margin: 0 3px;
-    background-color: #ccc;
-}
-
-.user-card .card-block .counter-block {
-    color: #fff;
-}
-
-.user-card .card-block .user-social-link i {
-    font-size: 30px;
-}
-
-.user-card .card-block .user-image:before {
-    bottom: 0;
-    border-bottom-left-radius: 50px;
-    border-bottom-right-radius: 50px;
-}
-
-.user-card .card-block .user-image:after, .user-card .card-block .user-image:before {
-    content: "";
-    width: 100%;
-    height: 48%;
-    border: 2px solid #4099ff;
-    position: absolute;
-    left: 0;
-    z-index: 10;
-}
-
-.user-card .card-block .user-image:after {
-    top: 0;
-    border-top-left-radius: 50px;
-    border-top-right-radius: 50px;
-}
-
-.user-card .card-block .user-image:after, .user-card .card-block .user-image:before {
-    content: "";
-    width: 100%;
-    height: 48%;
-    border: 2px solid #4099ff;
-    position: absolute;
-    left: 0;
-    z-index: 10;
-}
-
-/*=========================*/
-/*========= MODAL =========*/
-/*=========================*/
-
-.modal-confirm {		
-    color: #636363;
-    width: 400px;
-}
-.modal-confirm .modal-content {
-    padding: 20px;
-    border-radius: 5px;
-    border: none;
-    text-align: center;
-    font-size: 14px;
-}
-.modal-confirm .modal-header {
-    border-bottom: none;   
-    position: relative;
-}
-.modal-confirm h4 {
-    text-align: center;
-    font-size: 26px;
-    margin: 30px 0 -10px;
-}
-.modal-confirm .close {
-    position: absolute;
-    top: -5px;
-    right: -2px;
-}
-.modal-confirm .modal-body {
-    color: #999;
-}
-.modal-confirm .modal-footer {
-    border: none;
-    text-align: center;		
-    border-radius: 5px;
-    font-size: 13px;
-    padding: 10px 15px 25px;
-}
-.modal-confirm .modal-footer a {
-    color: #999;
-}		
-.modal-confirm .icon-box {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto;
-    border-radius: 50%;
-    z-index: 9;
-    text-align: center;
-    border: 3px solid #f15e5e;
-}
-.modal-confirm .icon-box i {
-    color: #f15e5e;
-    font-size: 46px;
-    display: inline-block;
-    margin-top: 13px;
-}
-.modal-confirm .btn, .modal-confirm .btn:active {
-    color: #fff;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1c23;
+    color: white;
+    padding: 4px 8px;
     border-radius: 4px;
-    background: #60c7c1;
-    text-decoration: none;
-    transition: all 0.4s;
-    line-height: normal;
-    min-width: 120px;
-    border: none;
-    min-height: 40px;
-    border-radius: 3px;
-    margin: 0 5px;
+    font-size: 9px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    z-index: 1000;
 }
-.modal-confirm .btn-secondary {
-    background: #c1c1c1;
-}
-.modal-confirm .btn-secondary:hover, .modal-confirm .btn-secondary:focus {
-    background: #a8a8a8;
-}
-.modal-confirm .btn-danger {
-    background: #f15e5e;
-}
-.modal-confirm .btn-danger:hover, .modal-confirm .btn-danger:focus {
-    background: #ee3535;
-}
-.trigger-btn {
-    display: inline-block;
-    margin: 100px auto;
+[data-tooltip]:hover:before { opacity: 1; visibility: visible; }
+
+/* ANIMATIONS */
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(209, 99, 99, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(209, 99, 99, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(209, 99, 99, 0); }
 }
 
-/*=============================*/
-/*========= SCROLLBAR =========*/
-/*=============================*/
-
-::-webkit-scrollbar {
-	display: none;
+@keyframes success-glow {
+    0% { border-color: #63d19e; box-shadow: 0 0 0 0 rgba(99, 209, 158, 0.4); }
+    70% { border-color: #63d19e; box-shadow: 0 0 0 15px rgba(99, 209, 158, 0); }
+    100% { border-color: #e2e8f0; box-shadow: 0 0 0 0 rgba(99, 209, 158, 0); }
 }
 
-[data-tooltip] {
-	position: relative;
-	z-index: 10;
-  }
-  
-  /* Positioning and visibility settings of the tooltip */
-  [data-tooltip]:before,
-  [data-tooltip]:after {
-	position: absolute;
-	visibility: hidden;
-	opacity: 0;
-	left: 50%;
-	bottom: calc(100% + 5px); /* 5px is the size of the arrow */
-	pointer-events: none;
-	transition: 0.2s;
-	will-change: transform;
-  }
-  
-  /* The actual tooltip with a dynamic width */
-  [data-tooltip]:before {
-	content: attr(data-tooltip);
-	padding: 10px 18px;
-	min-width: 50px;
-	max-width: 300px;
-	width: max-content;
-	width: -moz-max-content;
-	border-radius: 6px;
-	font-size: 14px;
-	background-color: rgba(59, 72, 80, 0.9);
-	background-image: linear-gradient(30deg,
-	  rgba(59, 72, 80, 0.44),
-	  rgba(59, 68, 75, 0.44),
-	  rgba(60, 82, 88, 0.44));
-	box-shadow: 0px 0px 24px rgba(0, 0, 0, 0.2);
-	color: #fff;
-	text-align: center;
-	white-space: pre-wrap;
-	transform: translate(-50%, -5px) scale(0.5);
-  }
-  
-  /* Tooltip arrow */
-  [data-tooltip]:after {
-	content: '';
-	border-style: solid;
-	border-width: 5px 5px 0px 5px; /* CSS triangle */
-	border-color: rgba(55, 64, 70, 0.9) transparent transparent transparent;
-	transition-duration: 0s; /* If the mouse leaves the element, 
-								the transition effects for the 
-								tooltip arrow are "turned off" */
-	transform-origin: top;   /* Orientation setting for the
-								slide-down effect */
-	transform: translateX(-50%) scaleY(0);
-  }
-  
-  /* Tooltip becomes visible at hover */
-  [data-tooltip]:hover:before,
-  [data-tooltip]:hover:after {
-	visibility: visible;
-	opacity: 1;
-  }
-  /* Scales from 0.5 to 1 -> grow effect */
-  [data-tooltip]:hover:before {
-	transition-delay: 0.3s;
-	transform: translate(-50%, -5px) scale(1);
-  }
-  /* 
-	Arrow slide down effect only on mouseenter (NOT on mouseleave)
-  */
-  [data-tooltip]:hover:after {
-	transition-delay: 0.5s; /* Starting after the grow effect */
-	transition-duration: 0.2s;
-	transform: translateX(-50%) scaleY(1);
-  }
-  /*
-	That's it.
-  */
-  
-  
-  
-  
-  
-  
-  /*
-	If you want some adjustability
-	here are some orientation settings you can use:
-  */
-  
-  /* LEFT */
-  /* Tooltip + arrow */
-  [data-tooltip-location="left"]:before,
-  [data-tooltip-location="left"]:after {
-	left: auto;
-	right: calc(100% + 5px);
-	bottom: 50%;
-  }
-  
-  /* Tooltip */
-  [data-tooltip-location="left"]:before {
-	transform: translate(-5px, 50%) scale(0.5);
-  }
-  [data-tooltip-location="left"]:hover:before {
-	transform: translate(-5px, 50%) scale(1);
-  }
-  
-  /* Arrow */
-  [data-tooltip-location="left"]:after {
-	border-width: 5px 0px 5px 5px;
-	border-color: transparent transparent transparent rgba(55, 64, 70, 0.9);
-	transform-origin: left;
-	transform: translateY(50%) scaleX(0);
-  }
-  [data-tooltip-location="left"]:hover:after {
-	transform: translateY(50%) scaleX(1);
-  }
-  
-  
-  
-  /* RIGHT */
-  [data-tooltip-location="right"]:before,
-  [data-tooltip-location="right"]:after {
-	left: calc(100% + 5px);
-	bottom: 50%;
-  }
-  
-  [data-tooltip-location="right"]:before {
-	transform: translate(5px, 50%) scale(0.5);
-  }
-  [data-tooltip-location="right"]:hover:before {
-	transform: translate(5px, 50%) scale(1);
-  }
-  
-  [data-tooltip-location="right"]:after {
-	border-width: 5px 5px 5px 0px;
-	border-color: transparent rgba(55, 64, 70, 0.9) transparent transparent;
-	transform-origin: right;
-	transform: translateY(50%) scaleX(0);
-  }
-  [data-tooltip-location="right"]:hover:after {
-	transform: translateY(50%) scaleX(1);
-  }
-  
-  
-  
-  /* BOTTOM */
-  [data-tooltip-location="bottom"]:before,
-  [data-tooltip-location="bottom"]:after {
-	top: calc(100% + 5px);
-	bottom: auto;
-  }
-  
-  [data-tooltip-location="bottom"]:before {
-	transform: translate(-50%, 5px) scale(0.5);
-  }
-  [data-tooltip-location="bottom"]:hover:before {
-	transform: translate(-50%, 5px) scale(1);
-  }
-  
-  [data-tooltip-location="bottom"]:after {
-	border-width: 0px 5px 5px 5px;
-	border-color: transparent transparent rgba(55, 64, 70, 0.9) transparent;
-	transform-origin: bottom;
-  }
+.success-trained {
+    animation: success-glow 1.5s ease-out !important;
+}
 
-  /* Standard SVG icons used inside the content */
-  .checkicon {
-	width: 19px;
-	height: 19px;
-	fill: green;
-	vertical-align: middle;
-	display: inline-block;
-  }
-  
-  .route-svg, .coins-svg, .clock-svg, .tools-svg, .medal-svg, .check-svg {
-	width: 16px;
-	height: 16px;
-	vertical-align: middle;
-	display: inline-block;
-  }
-  
-  .route-svg {
-	fill: #007bff;
-  }
-  
-  .coins-svg {
-	fill: #ffc107;
-  }
-  
-  .clock-svg {
-	fill: #6c757d;
-  }
-  
-  .tools-svg {
-	fill: #17a2b8;
-  }
-  
-  .medal-svg {
-	fill: #fd7e14;
-  }
-  
-  .check-svg {
-	fill: #28a745;
-  }
-  
-  .cargo-svg {
-	width: 30px;
-	height: 30px;
-	display: inline-block;
-	vertical-align: middle;
-	border-radius: 50%;
-  }
+/* TABLET MODE (IFRAME) */
 
-  /* Large statistics and category SVGs in Profile, Diagnostics, Bank */
-  .card-icon-svg {
-	width: 42px;
-	height: 42px;
-	fill: currentColor;
-	vertical-align: middle;
-	display: inline-block;
-	transition: transform 0.3s ease;
-  }
-  
-  .card:hover .card-icon-svg {
-	transform: scale(1.1);
-  }
-  
-  /* Dealership specifications (Engine, Power) inline SVGs */
-  .dealership-icon-svg {
-	width: 24px;
-	height: 24px;
-	fill: currentColor;
-	vertical-align: middle;
-	display: inline-block;
-	margin-right: 8px;
-  }
-  
-  /* Rectangular, rounded-corner truck thumbnails in the Fleet tab */
-  .truck-thumbnail {
-	width: 70px;
-	height: 45px;
-	object-fit: cover;
-	border-radius: 6px;
-	margin-right: 12px;
-	border: 1px solid rgba(0, 0, 0, 0.1);
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-	display: inline-block;
-	vertical-align: middle;
-  }
-  
-  /* Interactive lateral truck image on the Diagnostics page */
-  .truck-img {
-	text-align: center;
-	padding: 15px;
-  }
-  
-  .truck-img img {
-	max-width: 480px;
-	width: 100%;
-	object-fit: contain;
-	filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.12));
-	transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  
-  .truck-img img:hover {
-	transform: scale(1.03);
-  }
-  
-  /* Modal error/exclamation icons */
-  .modal-icon-svg {
-	width: 48px;
-	height: 48px;
-	fill: #f15e5e;
-	display: block;
-	margin: 0 auto;
-  }
+body.iframe-mode {
+    background-color: transparent !important;
+}
+
+body.iframe-mode .main {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Mobile/Tablet adjustment (window mode) */
+@media (max-width: 1200px) {
+    .main { width: 95vw; height: 90vh; }
+}
+
+/* PREMIUM UX POLISH */
+
+:root {
+    --tycoon-bg: #eef2f7;
+    --tycoon-panel: rgba(255, 255, 255, 0.92);
+    --tycoon-panel-solid: #ffffff;
+    --tycoon-ink: #172033;
+    --tycoon-muted: #6d7890;
+    --tycoon-soft: #e8edf5;
+    --tycoon-primary: #63d19e;
+    --tycoon-primary-strong: #34b47d;
+    --tycoon-blue: #5c6bc0;
+    --tycoon-danger: #d16363;
+    --tycoon-shadow: 0 16px 40px rgba(23, 32, 51, 0.14);
+    --tycoon-shadow-soft: 0 8px 24px rgba(23, 32, 51, 0.08);
+    --tycoon-radius: 18px;
+}
+
+body {
+    color: var(--tycoon-ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+}
+
+.main {
+    background:
+        radial-gradient(circle at top left, rgba(99, 209, 158, 0.18), transparent 32%),
+        linear-gradient(135deg, #f8fafc 0%, var(--tycoon-bg) 100%);
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: var(--tycoon-shadow);
+}
+
+.sidebar-navigation {
+    background:
+        linear-gradient(180deg, rgba(25, 32, 48, 0.98) 0%, rgba(18, 23, 35, 0.98) 100%);
+}
+
+.sidebar-navigation ul li {
+    margin: 4px 8px;
+    padding: 14px 0;
+    border-radius: 14px;
+}
+
+.sidebar-navigation ul li:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-navigation ul li.active {
+    background: rgba(99, 209, 158, 0.12);
+}
+
+.sidebar-navigation ul li.active::before {
+    left: -8px;
+    height: 52%;
+    top: 24%;
+    background: linear-gradient(180deg, #88e8bc, var(--tycoon-primary));
+}
+
+.sidebar-navigation ul li svg {
+    fill: #8f9bb3;
+}
+
+.sidebar-navigation ul li:hover svg,
+.sidebar-navigation ul li.active svg {
+    fill: var(--tycoon-primary);
+    filter: drop-shadow(0 4px 10px rgba(99, 209, 158, 0.25));
+}
+
+.sidebar-navigation ul li .tooltip {
+    border-radius: 10px;
+    background: rgba(23, 32, 51, 0.96);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.container-pages {
+    background: transparent;
+}
+
+.pages {
+    padding: 24px 28px;
+    scrollbar-gutter: stable;
+}
+
+h4.text-uppercase {
+    color: var(--tycoon-ink);
+    font-size: 1.08rem;
+    letter-spacing: 0.08em;
+}
+
+p.page-desc {
+    color: var(--tycoon-muted);
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 18px;
+}
+
+.stats-grid,
+.dealer-grid,
+.skills-grid {
+    gap: 14px;
+}
+
+.stat-card,
+.job-card,
+.skill-card,
+.diagnostic-card,
+.truck-card,
+.truck-display,
+.bank-wallet-actions,
+.loan-card {
+    background: var(--tycoon-panel);
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    box-shadow: var(--tycoon-shadow-soft);
+    backdrop-filter: blur(10px);
+}
+
+.stat-card,
+.skill-card,
+.bank-wallet-actions,
+.truck-display {
+    border-radius: var(--tycoon-radius);
+}
+
+.job-card,
+.diagnostic-card,
+.truck-card,
+.loan-card {
+    border-radius: 15px;
+}
+
+.job-card,
+.truck-card,
+.loan-card,
+.diagnostic-card {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.job-card:hover,
+.truck-card:hover,
+.loan-card:hover,
+.diagnostic-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 209, 158, 0.7);
+    box-shadow: 0 14px 32px rgba(23, 32, 51, 0.13);
+}
+
+.stat-icon-box,
+.skill-icon-container {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+.stat-value {
+    color: var(--tycoon-ink);
+    letter-spacing: -0.03em;
+}
+
+.stat-label,
+.spec-label {
+    color: var(--tycoon-muted);
+}
+
+.btn-premium,
+button.btn-premium,
+.collapsible {
+    border: 0;
+    border-radius: 12px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    box-shadow: 0 8px 18px rgba(99, 209, 158, 0.22);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.btn-premium:hover,
+button.btn-premium:hover,
+.collapsible:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow: 0 12px 24px rgba(99, 209, 158, 0.28);
+}
+
+.btn-premium:active,
+button.btn-premium:active,
+.collapsible:active {
+    transform: translateY(0);
+}
+
+.btn-premium:disabled,
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    filter: grayscale(0.2);
+    box-shadow: none;
+}
+
+.progress,
+.diag-progress {
+    overflow: hidden;
+    background: #dfe7f1;
+}
+
+.progress-bar,
+.diag-progress-bar {
+    background: linear-gradient(90deg, var(--tycoon-primary-strong), var(--tycoon-primary));
+}
+
+.truck-card-img {
+    background:
+        radial-gradient(circle at center, rgba(99, 209, 158, 0.14), transparent 58%),
+        linear-gradient(180deg, #f8fafc, #edf2f7);
+}
+
+.truck-card-title {
+    color: var(--tycoon-ink);
+}
+
+.truck-card-price {
+    color: var(--tycoon-primary-strong);
+}
+
+.spec-item,
+.content,
+.deposit-input-group input,
+#input-deposit-money {
+    border: 1px solid var(--tycoon-soft);
+    background: rgba(248, 250, 252, 0.86);
+    border-radius: 12px;
+}
+
+.content {
+    margin-top: 8px;
+    padding: 10px 12px;
+    color: var(--tycoon-muted);
+}
+
+.diagnostic-container {
+    align-items: stretch;
+}
+
+.diagnostic-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.diagnostic-status-badge {
+    border-radius: 999px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+}
+
+.modal-content {
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.26);
+}
+
+.empty-state,
+.muted-empty,
+[data-empty="true"] {
+    color: var(--tycoon-muted);
+    border: 1px dashed #c7d2e2;
+    background: rgba(255, 255, 255, 0.65);
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    font-weight: 700;
+}
+
+body.iframe-mode .main {
+    border-radius: 18px !important;
+    background:
+        radial-gradient(circle at top right, rgba(92, 107, 192, 0.12), transparent 34%),
+        linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+body.iframe-mode .pages {
+    padding: 18px 20px;
+}
+
+body.iframe-mode .sidebar-navigation {
+    width: 58px;
+}
+
+body.iframe-mode .main {
+    grid-template-columns: 58px 1fr;
+}
+
+body.iframe-mode .sidebar-navigation ul li {
+    margin: 3px 6px;
+    padding: 11px 0;
+}
+
+body.iframe-mode .sidebar-navigation ul li svg {
+    width: 20px;
+    height: 20px;
+}
+
+body.iframe-mode .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.iframe-mode .dealer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.iframe-mode .diagnostic-container {
+    gap: 10px;
+}
+
+body.iframe-mode .truck-display img {
+    max-height: 120px;
+}
+
+@media (max-width: 900px) {
+    .stats-grid,
+    .dealer-grid,
+    body.iframe-mode .stats-grid,
+    body.iframe-mode .dealer-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .diagnostic-container {
+        flex-direction: column;
+    }
+}
+
+/* Standalone NPC mode: keep the panel as a modal, not a near-fullscreen app. */
+body:not(.iframe-mode) {
+    padding: 32px;
+    background:
+        radial-gradient(circle at center, rgba(99, 209, 158, 0.12), transparent 42%),
+        rgba(7, 10, 18, 0.42) !important;
+    backdrop-filter: blur(4px);
+}
+
+body:not(.iframe-mode) .main {
+    width: min(920px, calc(100vw - 96px)) !important;
+    height: min(560px, calc(100vh - 96px)) !important;
+    max-width: calc(100vw - 96px) !important;
+    max-height: calc(100vh - 96px) !important;
+    border-radius: 24px !important;
+}
+
+body:not(.iframe-mode) .pages {
+    padding: 20px 24px;
+}
+
+body:not(.iframe-mode) .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body:not(.iframe-mode) .dealer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body:not(.iframe-mode) .truck-display img {
+    max-height: 120px;
+}

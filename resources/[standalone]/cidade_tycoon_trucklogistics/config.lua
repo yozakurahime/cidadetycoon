@@ -8,12 +8,16 @@ Config.formatacao = {
 	['location'] = 'pt-BR'		-- This is the location of your country, to format the decimal places according to your standard [Examples: pt-BR, en-US]
 }
 
+Config.spawnNPCs = true                                                 -- Ativar spawn de NPCs locais no trucklogistics no ponto antigo
+
 -- Here are the places where the person can open the trucker menu
 -- You can add as many locations as you like, just use the location already created as an example
 Config.empresas = {
 	["trucker_1"] = {															-- ID
-		['nome'] = "Cidade Tycoon Logistica",														-- Name
-		['coordenada'] = {1242.58, -3196.67, 6.03},	-- Coordinate to open the menu
+		['nome'] = "Porto de Los Santos - PostOP",														-- Name
+		['coordenada'] = {1242.58, -3196.67, 5.03},	-- Coordinate to open the menu
+		['heading'] = 330.0,
+		['ped'] = "s_m_m_trucker_01",
 		['coordenada_garagem'] = {												-- Garage coordinates, where the trucks will spawn (coordinates composed of x, y, z, h)
 			{1250.55,-3162.4,5.88,270.00},
 			{1250.76,-3168.05,5.86,270.00},
@@ -30,6 +34,38 @@ Config.empresas = {
 			{1272.68,-3159.19,5.91,90.00},
 			{1275.37,-3174.52,5.91,90.00},
 			{1275.04,-3168.83,5.91,90.00},
+		}
+	},
+	["trucker_2"] = {															-- ID
+		['nome'] = "The Foundry - Cypress Flats",														-- Name
+		['coordenada'] = {1088.1, -1998.6, 31.0},	-- Coordinate to open the menu
+		['heading'] = 180.0,
+		['ped'] = "s_m_m_construction_01",
+		['coordenada_garagem'] = {
+			{1094.0, -2000.0, 31.0, 90.0},
+			{1094.0, -1995.0, 31.0, 90.0},
+			{1094.0, -1990.0, 31.0, 90.0},
+		},
+		['coordenada_cargas'] = {
+			{1085.0, -1990.0, 31.0, 270.0},
+			{1085.0, -1985.0, 31.0, 270.0},
+			{1085.0, -1980.0, 31.0, 270.0},
+		}
+	},
+	["trucker_3"] = {															-- ID
+		['nome'] = "Logística de Paleto Bay",														-- Name
+		['coordenada'] = {-105.0, 6340.5, 31.5},	-- Coordinate to open the menu
+		['heading'] = 45.0,
+		['ped'] = "s_m_y_dockwork_01",
+		['coordenada_garagem'] = {
+			{-98.0, 6342.0, 31.5, 315.0},
+			{-101.0, 6339.0, 31.5, 315.0},
+			{-104.0, 6336.0, 31.5, 315.0},
+		},
+		['coordenada_cargas'] = {
+			{-110.0, 6350.0, 31.5, 135.0},
+			{-113.0, 6347.0, 31.5, 135.0},
+			{-116.0, 6344.0, 31.5, 135.0},
 		}
 	}
 }

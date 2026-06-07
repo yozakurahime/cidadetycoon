@@ -251,7 +251,7 @@ RegisterNetEvent('cidade_tycoon_freelance:server:completeFreelanceMission', func
         return 
     end
 
-    local baseReward = 2500
+    local baseReward = 2250
     local mult = (mission.contractType == 'fragile') and 1.4 or (mission.contractType == 'heavy') and 1.8 or (mission.contractType == 'hazardous') and 2.5 or 1.0
     local integrityBonus = mission.cargoHealth / 100
     local finalReward = math.floor(baseReward * mult * integrityBonus)

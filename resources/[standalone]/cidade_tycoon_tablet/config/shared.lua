@@ -571,8 +571,8 @@ setVehicleCapacity(5, { 'models', 'teslapd', 'chr20', 'skyline', 'm6f13', 'demon
 setVehicleCapacity(6, { 'rs6', 'rs72020' })
 
 -- Super / hyper status
-setVehicleCapacity(2, { 'fct', 'wraith', 'dawnonyx', 'rculi', 'rrphantom', 'f812' })
-setVehicleCapacity(1, {
+setVehicleCapacity(3, { 'fct', 'wraith', 'dawnonyx', 'rculi', 'rrphantom', 'f812' })
+setVehicleCapacity(2, {
     'mp412c', 'f430s', 'amggtrr20', 'r8ppi', 'yfe458i1', 'fgt', 'r820', '650s',
     'yfe458s1', '675lt', 'huracanst', 'yfe458i2', 'lp670sv', 'cgt', 'yfe458s2',
     '720s', 'lp700r', 'gt17', 'yfef12t', 'yfef12a', 'svj63', 'regalia', 'it18',

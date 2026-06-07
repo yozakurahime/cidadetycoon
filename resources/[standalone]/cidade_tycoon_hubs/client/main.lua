@@ -78,9 +78,45 @@ local function setupHubManager()
                         {
                             name = 'tycoon_hub_contracts_' .. hub.id,
                             icon = 'fa-solid fa-truck-ramp-box',
-                            label = (hub.title or 'Despachante') .. ': Contratos',
+                            label = 'Contratos Rápidos (Freelance)',
                             onSelect = function()
                                 exports.cidade_tycoon_freelance:TryStartFreelance(hub.id, 'land')
+                            end
+                        },
+                        {
+                            name = 'tycoon_hub_purchase_' .. hub.id,
+                            icon = 'fa-solid fa-building-circle-check',
+                            label = 'Adquirir Sede/Galpão (R$ ' .. hub.purchasePrice .. ')',
+                            canInteract = function()
+                                local profile = LocalPlayer.state.tycoonProfile
+                                return not profile or not profile.hasCompany
+                            end,
+                            onSelect = function()
+                                CreateThread(function()
+                                    local alert = lib.alertDialog({
+                                        header = 'Adquirir Sede',
+                                        content = ('Deseja adquirir o galpão "%s" como sua sede logística por R$ %s?'):format(hub.name, hub.purchasePrice),
+                                        centered = true,
+                                        cancel = true,
+                                        labels = { confirm = 'Confirmar', cancel = 'Cancelar' }
+                                    })
+                                    if alert == 'confirm' then
+                                        local result = lib.callback.await('cidade_tycoon_tablet:server:purchaseCompany', false, hub.id)
+                                        if result and result.ok then
+                                            exports.qbx_core:Notify(result.message, 'success')
+                                        else
+                                            exports.qbx_core:Notify(result and result.message or 'Erro ao comprar galpão', 'error')
+                                        end
+                                    end
+                                end)
+                            end
+                        },
+                        {
+                            name = 'tycoon_hub_terminal_' .. hub.id,
+                            icon = 'fa-solid fa-tablet-screen-button',
+                            label = 'Acessar Terminal (Tablet)',
+                            onSelect = function()
+                                exports.cidade_tycoon_tablet:OpenTablet()
                             end
                         }
                     })

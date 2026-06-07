@@ -29,9 +29,9 @@ Config.JobBoard = {
 Config.warehouses = {
     [1] = {
         name = 'PostOP Hub (LS)',
-        coords = vec4(1194.2, -3107.5, 6.0, 90.0),
-        productionCoords = vec3(1200.0, -3112.0, 6.0),
-        autopartsCoords = vec3(1190.0, -3110.0, 6.0)
+        coords = vec4(1197.2, -3250.6, 7.1, 90.0),
+        productionCoords = vec3(1193.9, -3250.7, 7.1),
+        autopartsCoords = vec3(1176.0, -3246.5, 7.0)
     },
     [2] = {
         name = 'The Foundry (Cypress Flats)',

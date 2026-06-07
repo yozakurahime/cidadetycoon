@@ -37,5 +37,6 @@ dependencies {
     'ox_lib',
     'ox_inventory',
     'oxmysql',
-    'cidade_tycoon_core'
+    'cidade_tycoon_core',
+    'cidade_tycoon_logistics'
 }

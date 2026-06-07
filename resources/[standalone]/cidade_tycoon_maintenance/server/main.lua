@@ -5,16 +5,33 @@ end
 -- ==========================================
 -- DYNAMIC NPC FEES (Guardian Requirement)
 -- ==========================================
-local function calculateLaborFee(plate)
+local function calculateLaborFee(plate, source)
     local vehicleRow = MySQL.single.await('SELECT vehicle FROM player_vehicles WHERE plate = ?', { plate })
     if not vehicleRow then return 5000 end
 
     local vehData = exports.cidade_tycoon_core:GetVehicleData(vehicleRow.vehicle)
     local price = vehData and vehData.price or 25000
     
-    -- Rule: 30% of price (Min $1,000, Max $15,000)
+    -- Base Rule: 30% of price (Min $1,000, Max $15,000)
     local fee = math.floor(price * 0.3)
-    return math.max(1000, math.min(15000, fee))
+    fee = math.max(1000, math.min(15000, fee))
+
+    -- 1. Regra de Isenção para Novatos (Tier 0 até Level 5)
+    if source then
+        local profile = exports.cidade_tycoon_core:GetPlayerProfile(source)
+        local isTier0 = vehData and vehData.tier == 0
+        local isLowLevel = profile and profile.level <= 5
+        if isTier0 and isLowLevel then
+            return 0
+        end
+    end
+
+    -- 2. Multiplicador de Luxo (10x para Super e Hyper)
+    if vehData and (vehData.category == 'super' or vehData.category == 'hyper' or vehData.maintenanceClass == 'hyper' or vehData.maintenanceClass == 'exotic') then
+        fee = fee * 10
+    end
+
+    return fee
 end
 
 -- ==========================================
@@ -79,25 +96,33 @@ lib.callback.register('cidade_tycoon_maintenance:server:getWorkshopVehicleData',
             suspension = { label = 'Suspensão', condition = status.suspension_health },
             tires = { label = 'Pneus', condition = status.tires_health },
         },
-        laborFee = calculateLaborFee(plate)
+        laborFee = calculateLaborFee(plate, source)
     }
 end)
 
 lib.callback.register('cidade_tycoon_maintenance:server:repairSubsystem', function(source, plate, subsystemKey)
     local src = source
-    local laborFee = calculateLaborFee(plate)
+    local laborFee = calculateLaborFee(plate, src)
     local player = exports.cidade_tycoon_core:GetFrameworkPlayer(src)
     
-    if exports.cidade_tycoon_core:GetMoneyBalance(player, 'bank') < laborFee then
+    if laborFee > 0 and exports.cidade_tycoon_core:GetMoneyBalance(player, 'bank') < laborFee then
         return { ok = false, message = ('Saldo insuficiente para mão de obra ($%d).'):format(laborFee) }
     end
 
     -- Process Repair via Core
-    if exports.cidade_tycoon_core:RemoveMoney(player, 'bank', laborFee, 'tycoon-npc-repair') then
+    local successRemoval = true
+    if laborFee > 0 then
+        successRemoval = exports.cidade_tycoon_core:RemoveMoney(player, 'bank', laborFee, 'tycoon-npc-repair')
+    end
+
+    if successRemoval then
         local success = exports.cidade_tycoon_core:ApplyPartRepair(plate, subsystemKey, 25.0) -- Repair 25% condition
         if success then
-            exports.cidade_tycoon_core:LogTransaction(src, laborFee, 'expense', 'repair', 'Manutenção NPC: ' .. subsystemKey)
-            return { ok = true, message = ('Subsistema %s reparado com sucesso!'):format(subsystemKey) }
+            if laborFee > 0 then
+                exports.cidade_tycoon_core:LogTransaction(src, laborFee, 'expense', 'repair', 'Manutenção NPC: ' .. subsystemKey)
+            end
+            local msg = (laborFee == 0) and 'Manutenção gratuita (Iniciante) concluída!' or ('Subsistema %s reparado por $%d!'):format(subsystemKey, laborFee)
+            return { ok = true, message = msg }
         end
     end
     return { ok = false, message = 'Falha no reparo.' }

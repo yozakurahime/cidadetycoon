@@ -52,5 +52,6 @@ files {
 dependencies {
 	'oxmysql',
 	'qbx_core',
+	'ox_target',
 	'cidade_tycoon_core',
 }

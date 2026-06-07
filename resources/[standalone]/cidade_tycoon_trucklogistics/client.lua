@@ -23,28 +23,93 @@ end)
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- LOCAIS
 -----------------------------------------------------------------------------------------------------------------------------------------	
-Citizen.CreateThread(function()
-	SetNuiFocus(false,false)
-	local timer = 5
-	while true do
-		timer = 3000
-		for k,mark in pairs(Config.empresas) do
-			local x,y,z = table.unpack(mark.coordenada)
-			local distance = #(GetEntityCoords(PlayerPedId()) - vector3(x,y,z))
-			if not menuactive and distance <= 15.0 then
-				timer = 1
-				DrawMarker(21,x,y,z-0.6,0,0,0,0.0,0,0,0.5,0.5,0.4,255,0,0,50,0,0,0,1)
-				if distance <= 2.0 then
-					DrawText3D2(x,y,z-0.6, Lang[Config.lang]['open'], 0.40)
-					if IsControlJustPressed(0,38) then
-						empresaAtual = k
-						TriggerServerEvent("cidade_tycoon_trucklogistics:getData")
-					end
-				end
-			end
-		end
-		Citizen.Wait(timer)
+local spawnedPeds = {}
+local abertoViaTablet = false
+
+CreateThread(function()
+    if Config.spawnNPCs then
+        for k, v in pairs(Config.empresas) do
+            local point = lib.points.new({
+                coords = vector3(v.coordenada[1], v.coordenada[2], v.coordenada[3]),
+                distance = 60.0
+            })
+
+            function point:onEnter()
+                if not spawnedPeds[k] then
+                    local model = GetHashKey(v.ped)
+                    RequestModel(model)
+                    while not HasModelLoaded(model) do Wait(10) end
+
+                    local ped = CreatePed(4, model, v.coordenada[1], v.coordenada[2], v.coordenada[3] - 1.0, v.heading, false, true)
+                    SetEntityAsMissionEntity(ped, true, true)
+                    SetBlockingOfNonTemporaryEvents(ped, true)
+                    SetEntityInvincible(ped, true)
+                    FreezeEntityPosition(ped, true)
+                    TaskStartScenarioInPlace(ped, "WORLD_HUMAN_CLIPBOARD", 0, true)
+
+                    spawnedPeds[k] = ped
+
+                    -- Adiciona Blip vinculado ao NPC (Segue o NPC se movido)
+                    local blip = AddBlipForEntity(ped)
+                    SetBlipSprite(blip, 478)
+                    SetBlipColour(blip, 4)
+                    SetBlipScale(blip, 0.7)
+                    SetBlipAsShortRange(blip, true)
+                    BeginTextCommandSetBlipName("STRING")
+                    AddTextComponentString(v.nome or "Transportadora")
+                    EndTextCommandSetBlipName(blip)
+
+                    -- Interação via ox_target (Terceiro Olho)
+                    exports.ox_target:addLocalEntity(ped, {
+                        {
+                            name = 'open_trucker_menu_' .. k,
+                            label = 'Gerenciar Transportadora',
+                            icon = 'fa-solid fa-truck-ramp-box',
+                            distance = 2.5,
+                            onSelect = function()
+                                if not menuactive then
+                                    TriggerEvent('cidade_tycoon_tablet:client:openTablet', 'trucker')
+                                    TriggerEvent('cidade_tycoon_trucklogistics:openViaTablet', k)
+                                end
+                            end
+                        }
+                    })
+                end
+            end
+
+            function point:onExit()
+                if spawnedPeds[k] then
+                    if DoesEntityExist(spawnedPeds[k]) then
+                        DeleteEntity(spawnedPeds[k])
+                    end
+                    spawnedPeds[k] = nil
+                end
+            end
+        end
+    end
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if GetCurrentResourceName() ~= resourceName then return end
+    for _, ped in pairs(spawnedPeds) do
+        if DoesEntityExist(ped) then
+            DeleteEntity(ped)
+        end
+    end
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:openViaTablet', function(empresaId)
+	abertoViaTablet = true
+	if empresaId then
+		empresaAtual = empresaId
 	end
+	TriggerServerEvent('cidade_tycoon_trucklogistics:getData')
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:closeViaTablet', function()
+	abertoViaTablet = false
+	menuactive = false
+	TriggerServerEvent('cidade_tycoon_trucklogistics:closeUI')
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:open', function(dados,update)
@@ -60,15 +125,23 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:open', function(dados,update)
 		dados.trucker_available_contracts[k]['reward'] = tonumber(string.format("%.f", (dados.trucker_available_contracts[k].distance * v.price_per_km)))
 	end
 	
-	-- Abre NUI
-	SendNUIMessage({ 
-		showmenu = true,
-		update = update,
-		dados = dados
-	})
-	if update == false then
-		menuactive = true
-		SetNuiFocus(true,true)
+	-- Abre NUI ou envia para o Tablet
+	if abertoViaTablet then
+		TriggerEvent('cidade_tycoon_tablet:client:truckLogisticsMessage', {
+			showmenu = true,
+			update = update,
+			dados = dados
+		})
+	else
+		SendNUIMessage({ 
+			showmenu = true,
+			update = update,
+			dados = dados
+		})
+		if update == false then
+			menuactive = true
+			SetNuiFocus(true,true)
+		end
 	end
 end)
 

@@ -85,4 +85,26 @@ CreateThread(function()
         SET img = REPLACE(img, 'https://bootdey.com/img/Content/avatar/', 'img/')
         WHERE img LIKE 'https://bootdey.com/img/Content/avatar/%'
     ]])
+
+    -- Deleta motoristas da agência não contratados para forçar a geração com os novos nomes corretos do Config
+    MySQL.query.await("DELETE FROM trucker_drivers WHERE user_id IS NULL")
+
+    -- Migração para novos campos de status e financeiro
+    MySQL.query.await([[
+        ALTER TABLE `trucker_drivers` 
+        ADD COLUMN IF NOT EXISTS `status` VARCHAR(50) DEFAULT 'IDLE',
+        ADD COLUMN IF NOT EXISTS `current_job_reward` BIGINT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS `current_cargo_name` VARCHAR(100) DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS `active_event` VARCHAR(100) DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS `route_events` LONGTEXT DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS `pending_event_data` LONGTEXT DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS `total_profit` BIGINT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS `total_spent` BIGINT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS `timer` INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS `level` INT DEFAULT 1,
+        ADD COLUMN IF NOT EXISTS `exp` INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS `finished_deliveries` INT DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS `traveled_distance` DOUBLE DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS `total_work_time` BIGINT DEFAULT 0
+    ]])
 end)

@@ -1,5 +1,35 @@
+local logisticsConfig = require '@cidade_tycoon_logistics/config/shared'
+
+local WarehousePrices = {
+    [1] = 50000,
+    [2] = 125000,
+    [3] = 225000,
+}
+
 local function DebugLog(text, ...)
     print(string.format("^2[Tycoon:Server:Tablet]^7 %s", string.format(text, ...)))
+end
+
+local function getWarehouseList()
+    local warehouses = {}
+    for id, warehouse in pairs(logisticsConfig.warehouses or {}) do
+        warehouses[#warehouses + 1] = {
+            id = id,
+            name = warehouse.name,
+            price = warehouse.price or WarehousePrices[id] or 75000,
+            coords = warehouse.coords,
+        }
+    end
+    table.sort(warehouses, function(a, b) return a.id < b.id end)
+    return warehouses
+end
+
+local function decodeCoords(raw)
+    if type(raw) == 'table' then return raw end
+    if type(raw) ~= 'string' or raw == '' then return nil end
+    local ok, decoded = pcall(json.decode, raw)
+    if ok then return decoded end
+    return nil
 end
 
 -- ==========================================
@@ -69,13 +99,23 @@ local function getDashboardForSource(source)
     end
     payload.company = bizData and {
         hasCompany = bizData.hasCompany,
+        id = bizData.company and bizData.company.id,
         name = bizData.company and bizData.company.name,
-        vault = bizData.company and bizData.company.vaultBalance,
+        level = bizData.company and bizData.company.level,
+        vault = bizData.company and (bizData.company.vault_balance or bizData.company.vaultBalance),
         employeesCount = # (bizData.employees or {}),
         activeRoutes = # (bizData.activeDeliveries or {})
     } or { hasCompany = false }
     payload.hasCompany = bizData and bizData.hasCompany or false
-    payload.warehouses = bizData and bizData.warehouses or {}
+    payload.warehouses = getWarehouseList()
+    payload.staff = bizData and bizData.employees or {}
+    payload.production = bizData and bizData.activeDeliveries or {}
+    payload.fleet = {}
+    if bizData and bizData.company and bizData.company.id then
+        pcall(function()
+            payload.fleet = MySQL.query.await('SELECT * FROM tycoon_company_fleet WHERE company_id = ?', { bizData.company.id }) or {}
+        end)
+    end
 
     -- 5. Fetch Garage Fleet (vehicles property inside garage)
     payload.garage = { vehicles = {} }
@@ -172,6 +212,72 @@ lib.callback.register('cidade_tycoon_tablet:server:getDashboard', getDashboardFo
 lib.callback.register('cidade_tycoon_tablet:server:advanceTutorialStep', function(source, stepName, payload)
     local success = exports.cidade_tycoon_core:UpdateTutorialStep(source, stepName, payload)
     return { ok = success }
+end)
+
+lib.callback.register('cidade_tycoon_tablet:server:purchaseCompany', function(source, warehouseId)
+    warehouseId = tonumber(warehouseId)
+    local warehouse = warehouseId and logisticsConfig.warehouses and logisticsConfig.warehouses[warehouseId]
+    if not warehouse then return { ok = false, message = 'Galpao invalido.' } end
+
+    local player = exports.cidade_tycoon_core:GetFrameworkPlayer(source)
+    local citizenId = exports.cidade_tycoon_core:GetCitizenId(player)
+    if not citizenId then return { ok = false, message = 'Perfil nao carregado.' } end
+
+    local existing = MySQL.single.await('SELECT id FROM tycoon_companies WHERE citizenid = ?', { citizenId })
+    if existing then return { ok = false, message = 'Voce ja possui uma empresa logistica.' } end
+
+    local price = warehouse.price or WarehousePrices[warehouseId] or 75000
+    if exports.cidade_tycoon_core:GetMoneyBalance(player, 'bank') < price then
+        return { ok = false, message = ('Saldo insuficiente. Necessario: $%s'):format(price) }
+    end
+
+    if not exports.cidade_tycoon_core:RemoveMoney(player, 'bank', price, 'tablet-company-purchase') then
+        return { ok = false, message = 'Falha ao processar pagamento.' }
+    end
+
+    local profile = exports.cidade_tycoon_core:GetPlayerProfile(source)
+    local companyName = (profile and profile.companyName) or 'Nova Empresa Logistica'
+    MySQL.insert.await([[
+        INSERT INTO tycoon_companies (citizenid, name, warehouse_id, vault_balance)
+        VALUES (?, ?, ?, 0)
+    ]], { citizenId, companyName, warehouseId })
+
+    -- Clear profile cache and reload to instantly update State Bags on client
+    pcall(function()
+        exports.cidade_tycoon_core:ClearProfileCache(citizenId)
+        exports.cidade_tycoon_core:GetPlayerProfile(source)
+    end)
+
+    pcall(function()
+        exports.cidade_tycoon_core:LogTransaction(source, price, 'expense', 'company', ('Compra de galpao: %s'):format(warehouse.name))
+    end)
+
+    return { ok = true, message = ('Empresa criada em %s.'):format(warehouse.name) }
+end)
+
+lib.callback.register('cidade_tycoon_tablet:server:acceptJobBoardJob', function(source, jobId)
+    jobId = tonumber(jobId)
+    if not jobId then return { ok = false, message = 'Contrato invalido.' } end
+
+    local profile = exports.cidade_tycoon_core:GetPlayerProfile(source)
+    if not profile or not profile.citizenid then return { ok = false, message = 'Perfil nao carregado.' } end
+
+    local job = MySQL.single.await('SELECT * FROM tycoon_job_board WHERE id = ?', { jobId })
+    if not job or job.status ~= 'posted' then
+        return { ok = false, message = 'Contrato indisponivel.' }
+    end
+
+    local changed = MySQL.update.await([[
+        UPDATE tycoon_job_board
+        SET status = 'taken', assigned_citizenid = ?
+        WHERE id = ? AND status = 'posted'
+    ]], { profile.citizenid, jobId })
+
+    if not changed or changed < 1 then
+        return { ok = false, message = 'Outro motorista pegou esse contrato primeiro.' }
+    end
+
+    return { ok = true, message = 'Contrato aceito com sucesso!' }
 end)
 
 -- ==========================================

@@ -172,6 +172,20 @@ local function getPlayerProfile(source)
         }
     }
 
+    -- Resiliently enrich profile with company ownership data
+    local hasCompany = false
+    local companyWarehouseId = nil
+    pcall(function()
+        local companyRow = MySQL.single.await('SELECT id, name, warehouse_id FROM tycoon_companies WHERE citizenid = ?', { citizenId })
+        if companyRow then
+            hasCompany = true
+            companyWarehouseId = companyRow.warehouse_id
+            profile.companyName = companyRow.name
+        end
+    end)
+    profile.hasCompany = hasCompany
+    profile.companyWarehouseId = companyWarehouseId
+
     PlayerProfiles[citizenId] = profile
     syncPlayerState(source, profile)
     return profile

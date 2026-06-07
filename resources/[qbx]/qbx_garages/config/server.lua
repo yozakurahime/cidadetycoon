@@ -428,6 +428,21 @@ return {
                 }
             },
         },
+        portgarage = {
+            label = 'Garagem do Porto',
+            vehicleType = VehicleType.CAR,
+            accessPoints = {
+                {
+                    blip = {
+                        name = 'Garagem do Porto',
+                        sprite = 357,
+                        color = 3,
+                    },
+                    coords = vec4(1246.8792, -3205.4978, 6.0282, 227.7941),
+                    spawn = vec4(1241.8304, -3210.9006, 5.8427, 80.1771),
+                }
+            },
+        },
 
         -- Impound Lots
         impoundlot = {

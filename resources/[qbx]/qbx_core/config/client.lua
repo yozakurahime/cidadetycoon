@@ -52,28 +52,28 @@ return {
     },
 
     discord = {
-        enabled = true, -- This will enable or disable the built in discord rich presence.
+        enabled = true, -- Enables the built in Discord rich presence.
 
-        appId = '1024981890798731345', -- This is the Application ID (Replace this with you own)
+        appId = '1024981890798731345', -- Replace with the Cidade Tycoon Discord Application ID when available.
 
-        largeIcon = { -- To set this up, visit https://forum.cfx.re/t/how-to-updated-discord-rich-presence-custom-image/157686
-            icon = 'duck', -- Here you will have to put the image name for the 'large' icon.
-            text = 'Qbox Ducky', -- Here you can add hover text for the 'large' icon.
+        largeIcon = {
+            icon = 'duck',
+            text = 'Cidade Tycoon | Transport RP',
         },
 
         smallIcon = {
-            icon = 'logo_name', -- Here you will have to put the image name for the 'small' icon.
-            text = 'This is a small icon with text', -- Here you can add hover text for the 'small' icon.
+            icon = 'logo_name',
+            text = 'Economia, empresas e logistica',
         },
 
         firstButton = {
-            text = 'Qbox Discord',
-            link = 'https://discord.gg/Z6Whda5hHA',
+            text = 'Entrar no Discord',
+            link = 'https://discord.gg/cidadetycoon',
         },
 
         secondButton = {
-            text = 'Main Website',
-            link = 'https://www.qbox.re/',
+            text = 'Jogar Cidade Tycoon',
+            link = 'https://discord.gg/cidadetycoon',
         }
     },
 

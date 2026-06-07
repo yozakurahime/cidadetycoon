@@ -25,6 +25,7 @@ server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/framework.lua',
     'server/chat_cooldown.lua',
+    'server/finance.lua',
     'server/debug.lua',
     'server/diag.lua',
     'server/profile.lua',

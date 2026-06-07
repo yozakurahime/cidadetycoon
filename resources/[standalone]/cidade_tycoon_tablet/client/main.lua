@@ -29,11 +29,14 @@ local function forceCloseTabletUi()
     SetTimecycleModifier('default')
 end
 
-local function openTablet()
-    if tabletOpen then return end
-    
+local function openTablet(startApp)
+    if tabletOpen then
+        if startApp then SendNUIMessage({ action = 'openTablet', startApp = startApp }) end
+        return
+    end
+
     -- Sound Effect: Tablet Startup
-    PlaySoundFrontend(-1, "BASE_JUMP_PASSED", "HUD_AWARDS", 1)
+    PlaySoundFrontend(-1, "Event_Message_In", "GTAO_FM_Events_Soundset", 1)
 
     local res = lib.callback.await('cidade_tycoon_tablet:server:getDashboard', false)
     if not res then 
@@ -60,7 +63,7 @@ local function openTablet()
     SetTimecycleModifierStrength(1.5)
 
     SetNuiFocus(true, true)
-    SendNUIMessage({ action = 'openTablet', payload = res })
+    SendNUIMessage({ action = 'openTablet', payload = res, startApp = startApp })
     tabletOpen = true
 end
 
@@ -184,8 +187,68 @@ RegisterNUICallback('tablet_spawn_vehicle', function(data, cb)
     cb({ ok = true, netId = response.netId, plate = response.plate })
 end)
 
--- Sincronização de Relógio delegada nativamente ao JavaScript da interface CEF (app.js)
+RegisterNUICallback('tablet_pay_taxes', function(_, cb)
+    local res = lib.callback.await('cidade_tycoon_core:server:payTaxes', false)
+    cb(res)
+end)
 
+RegisterNUICallback('tablet_pay_financing', function(data, cb)
+    local financingId = tonumber(data and data.financingId)
+    if not financingId then return cb({ ok = false, message = 'Financiamento invalido.' }) end
+    if GetResourceState('cidade_tycoon_market') ~= 'started' then
+        return cb({ ok = false, message = 'Mercado financeiro indisponivel.' })
+    end
+
+    local res = lib.callback.await('cidade_tycoon_market:server:payInstallment', false, financingId)
+    cb(res or { ok = false, message = 'Nao foi possivel pagar a parcela.' })
+end)
+
+RegisterNUICallback('purchaseCompany', function(data, cb)
+    local warehouseId = tonumber(data and data.warehouseId)
+    if not warehouseId then return cb({ ok = false, message = 'Galpao invalido.' }) end
+
+    local res = lib.callback.await('cidade_tycoon_tablet:server:purchaseCompany', false, warehouseId)
+    cb(res or { ok = false, message = 'Nao foi possivel criar a empresa.' })
+end)
+
+RegisterNUICallback('tablet_accept_job', function(data, cb)
+    local jobId = tonumber(data and data.jobId)
+    if not jobId then return cb({ ok = false, message = 'Contrato invalido.' }) end
+
+    local res = lib.callback.await('cidade_tycoon_tablet:server:acceptJobBoardJob', false, jobId)
+    if res and res.ok and res.origin then
+        local coords = res.origin
+        SetNewWaypoint(coords.x or coords[1] or 0.0, coords.y or coords[2] or 0.0)
+    end
+    cb(res or { ok = false, message = 'Nao foi possivel aceitar o contrato.' })
+end)
+
+RegisterNUICallback('cancelActiveJob', function(_, cb)
+    cb({ ok = false, message = 'Cancelamento pelo tablet ainda nao esta disponivel.' })
+end)
+
+RegisterNUICallback('openTruckLogistics', function(_, cb)
+    TriggerEvent('cidade_tycoon_trucklogistics:openViaTablet')
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('closeTruckLogistics', function(_, cb)
+    TriggerEvent('cidade_tycoon_trucklogistics:closeViaTablet')
+    cb({ ok = true })
+end)
+
+RegisterNetEvent('cidade_tycoon_tablet:client:truckLogisticsMessage', function(message)
+    SendNUIMessage({
+        action = 'truckLogisticsMessage',
+        payload = message,
+    })
+end)
+
+RegisterNetEvent('cidade_tycoon_tablet:client:forceCloseTablet', function()
+    forceCloseTabletUi()
+end)
+
+-- Sincronização de Relógio delegada nativamente ao JavaScript da interface CEF (app.js)
 
 AddEventHandler('onResourceStop', function(res)
     if res == GetCurrentResourceName() then forceCloseTabletUi() end

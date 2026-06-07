@@ -113,8 +113,65 @@ window.showConfirmationModal = function(title, message, onConfirm, onCancel = nu
 // ==========================================================================
 // Navegação do Sistema Operacional
 // ==========================================================================
+function openTruckLogisticsApp() {
+  const iframe = document.getElementById('trucker-iframe');
+  const iframeSrc = 'https://cfx-nui-cidade_tycoon_trucklogistics/nui/ui.html?tablet=true';
+
+  const syncTruckLogistics = () => {
+    window.postNUI('openTruckLogistics');
+  };
+
+  if (!iframe) {
+    syncTruckLogistics();
+    return;
+  }
+
+  if (iframe.dataset.truckerReady === 'true') {
+    syncTruckLogistics();
+    return;
+  }
+
+  if (iframe.dataset.truckerLoading === 'true') {
+    return;
+  }
+
+  iframe.dataset.truckerLoading = 'true';
+  iframe.addEventListener('load', () => {
+    iframe.dataset.truckerReady = 'true';
+    iframe.dataset.truckerLoading = 'false';
+
+    if (window.OSState.pendingTruckLogisticsMessage) {
+      postTruckLogisticsToIframe(window.OSState.pendingTruckLogisticsMessage);
+      window.OSState.pendingTruckLogisticsMessage = null;
+    }
+
+    if (window.OSState.currentApp === 'trucker' && !document.getElementById('app').classList.contains('hidden')) {
+      syncTruckLogistics();
+    }
+  }, { once: true });
+
+  iframe.src = iframeSrc;
+}
+
+function postTruckLogisticsToIframe(message) {
+  const iframe = document.getElementById('trucker-iframe');
+
+  if (!iframe || !iframe.contentWindow || iframe.dataset.truckerReady !== 'true') {
+    window.OSState.pendingTruckLogisticsMessage = message;
+    openTruckLogisticsApp();
+    return;
+  }
+
+  iframe.contentWindow.postMessage(message, '*');
+}
+
 window.openApp = function(appId) {
-  if (window.OSState.currentApp === appId) return;
+  if (window.OSState.currentApp === appId) {
+    if (appId === 'trucker') {
+      openTruckLogisticsApp();
+    }
+    return;
+  }
   window.playClickSound();
 
   // Ocultar app anterior
@@ -127,6 +184,11 @@ window.openApp = function(appId) {
     // Remover ativação do dock correspondente
     const prevDock = document.querySelector(`#dock .dock-item[data-target="${window.OSState.currentApp}"]`);
     if (prevDock) prevDock.classList.remove('active');
+  }
+
+  // Se o app anterior era o trucker, limpa no cliente do trucklogistics
+  if (window.OSState.currentApp === 'trucker') {
+    window.postNUI('closeTruckLogistics');
   }
 
   // Mostrar novo app
@@ -144,8 +206,13 @@ window.openApp = function(appId) {
     
     document.querySelector('#dock .dock-item[data-target="home"]').classList.remove('active');
     
-    // Gatilho de renderização específica
-    triggerAppRender(appId);
+    // Se for o app do caminhoneiro (trucker)
+    if (appId === 'trucker') {
+      openTruckLogisticsApp();
+    } else {
+      // Gatilho de renderização específica para outros apps
+      triggerAppRender(appId);
+    }
   }
 
   window.OSState.currentApp = appId;
@@ -217,10 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.OSState.streamerMode = localStorage.getItem('tycoon_settings_streamer') === 'true';
 
   // Aplicar Wallpaper
-  const screen = document.getElementById('tablet-screen');
-  if (screen) {
-    screen.className = `wallpaper-gradient-${window.OSState.activeWallpaper}`;
-  }
+  setTabletWallpaper(window.OSState.activeWallpaper);
 
   startClock();
   if (window.initSettings) {
@@ -252,23 +316,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Listener genérico de abas (tabs) internas dos apps (ex: Prefeitura)
   document.addEventListener('click', (e) => {
-    const tabBtn = e.target.closest('.app-tab');
+    const tabBtn = e.target.closest('.app-tab, .tab-btn');
     if (!tabBtn) return;
 
     window.playClickSound();
-    const targetId = tabBtn.getAttribute('data-tab-target');
+    const targetId = tabBtn.getAttribute('data-tab-target') || tabBtn.getAttribute('data-tab');
     if (!targetId) return;
 
-    const tabsContainer = tabBtn.closest('.app-tabs');
+    const tabsContainer = tabBtn.closest('.app-tabs, .tab-header');
     if (tabsContainer) {
-      tabsContainer.querySelectorAll('.app-tab').forEach(btn => btn.classList.remove('active'));
+      tabsContainer.querySelectorAll('.app-tab, .tab-btn').forEach(btn => btn.classList.remove('active'));
     }
     tabBtn.classList.add('active');
 
     const appPanel = tabBtn.closest('.app-view');
     if (appPanel) {
       appPanel.querySelectorAll('.tab-pane').forEach(pane => {
-        if (pane.id === `tab-${targetId}`) {
+        if (pane.id === `tab-${targetId}` || pane.id === targetId) {
           pane.classList.add('active');
         } else {
           pane.classList.remove('active');
@@ -281,6 +345,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeTablet = () => {
     window.playClickSound();
     document.getElementById('app').classList.add('hidden');
+    if (window.OSState.currentApp === 'trucker') {
+      window.postNUI('closeTruckLogistics');
+    }
     window.postNUI('closeTablet');
   };
 
@@ -301,10 +368,17 @@ window.addEventListener('message', (event) => {
   if (data.action === 'openTablet') {
     window.OSState.payload = data.payload || {};
     document.getElementById('app').classList.remove('hidden');
-    
+
     window.renderHome(window.OSState.payload);
-    if (window.OSState.currentApp !== 'home') {
-      triggerAppRender(window.OSState.currentApp);
+
+    if (data.startApp) {
+        window.openApp(data.startApp);
+    } else if (window.OSState.currentApp !== 'home') {
+      if (window.OSState.currentApp === 'trucker') {
+        openTruckLogisticsApp();
+      } else {
+        triggerAppRender(window.OSState.currentApp);
+      }
     }
     
     if (window.OSState.payload.tutorial && window.OSState.payload.tutorial.active && window.OSState.payload.tutorial.currentStep === 'welcome') {
@@ -312,6 +386,8 @@ window.addEventListener('message', (event) => {
     }
   } else if (data.action === 'closeTablet') {
     document.getElementById('app').classList.add('hidden');
+  } else if (data.action === 'truckLogisticsMessage') {
+    postTruckLogisticsToIframe(data.payload || {});
   } else if (data.action === 'updateTime') {
     if (data.time) {
       document.getElementById('status-clock').textContent = data.time;
@@ -338,6 +414,62 @@ function escapeHTML(str) {
     }[tag] || tag)
   );
 }
+
+function formatMoney(value) {
+  if (window.OSState.streamerMode) return '$ ****';
+  return `$ ${(Number(value) || 0).toLocaleString('pt-BR')}`;
+}
+
+function setTabletWallpaper(wallpaperId) {
+  const screen = document.getElementById('tablet-screen');
+  if (!screen) return;
+  screen.classList.remove('wallpaper-gradient-1', 'wallpaper-gradient-2', 'wallpaper-gradient-3', 'wallpaper-gradient-4');
+  screen.classList.add(`wallpaper-gradient-${wallpaperId}`);
+}
+
+window.initSettings = function() {
+  document.querySelectorAll('.wallpaper-option').forEach(option => {
+    const wallpaperId = option.getAttribute('data-wallpaper');
+    option.classList.toggle('active', wallpaperId === window.OSState.activeWallpaper);
+    option.addEventListener('click', () => {
+      window.OSState.activeWallpaper = wallpaperId;
+      localStorage.setItem('tycoon_settings_wallpaper', wallpaperId);
+      setTabletWallpaper(wallpaperId);
+      document.querySelectorAll('.wallpaper-option').forEach(el => el.classList.remove('active'));
+      option.classList.add('active');
+      window.showToast('Ajustes', 'Papel de parede aplicado.');
+    });
+  });
+
+  const audioToggle = document.getElementById('settings-audio-toggle');
+  if (audioToggle) {
+    audioToggle.checked = window.OSState.soundEnabled;
+    audioToggle.addEventListener('change', () => {
+      window.OSState.soundEnabled = audioToggle.checked;
+      localStorage.setItem('tycoon_settings_sound', String(audioToggle.checked));
+      window.showToast('Ajustes', audioToggle.checked ? 'Sons ativados.' : 'Sons desativados.');
+    });
+  }
+
+  const audioVolume = document.getElementById('settings-audio-volume');
+  if (audioVolume) {
+    audioVolume.value = Math.round(window.OSState.soundVolume * 100);
+    audioVolume.addEventListener('input', () => {
+      window.OSState.soundVolume = Number(audioVolume.value) / 100;
+      localStorage.setItem('tycoon_settings_volume', String(window.OSState.soundVolume));
+    });
+  }
+
+  const streamerToggle = document.getElementById('toggle-streamer-mode');
+  if (streamerToggle) {
+    streamerToggle.addEventListener('click', () => {
+      window.OSState.streamerMode = !window.OSState.streamerMode;
+      localStorage.setItem('tycoon_settings_streamer', String(window.OSState.streamerMode));
+      window.showToast('Privacidade', window.OSState.streamerMode ? 'Valores ocultos.' : 'Valores visiveis.');
+      if (window.OSState.payload) window.renderFinance(window.OSState.payload);
+    });
+  }
+};
 
 // --------------------------------------------------------------------------
 // APP: PREFEITURA (CITY HALL)
@@ -378,13 +510,18 @@ function renderLeaderboard(richest) {
     richest = Object.values(richest);
   }
 
+  if (!richest || richest.length === 0) {
+    container.innerHTML = `<p class="empty-state">Nenhum ranking disponivel.</p>`;
+    return;
+  }
+
   container.innerHTML = richest.slice(0, 10).map((player, idx) => {
     const name = player.name || player.company_name || 'Tycoon Anônimo';
     const score = player.score || player.hybrid_score || 0;
     return `
       <div class="leaderboard-row">
         <span>${idx + 1}</span>
-        <span>${escapeHTML(name)}</span>
+        <span>${escapeHTML(player.name || player.company_name || 'Tycoon Anonimo')}</span>
         <span>${score.toLocaleString('pt-BR')} PTS</span>
       </div>
     `;
@@ -402,7 +539,14 @@ function renderLicenses(licenses) {
     { key: 'pilot', label: 'Licença de Piloto Comercial', icon: '✈️' },
   ];
 
-  container.innerHTML = licenseCatalog.map(lic => {
+  const cleanLicenseCatalog = [
+    { key: 'driver', label: 'Habilitacao Classe A/B', icon: 'AB' },
+    { key: 'truck', label: 'Habilitacao Categoria C', icon: 'C' },
+    { key: 'heli', label: 'Licenca de Helicoptero', icon: 'H' },
+    { key: 'pilot', label: 'Licenca de Piloto Comercial', icon: 'P' },
+  ];
+
+  container.innerHTML = cleanLicenseCatalog.map(lic => {
     const hasLicense = licenses[lic.key] === true;
     const statusClass = hasLicense ? 'active' : 'inactive';
     const statusLabel = hasLicense ? 'ATIVA' : 'NÃO POSSUI';
@@ -412,7 +556,7 @@ function renderLicenses(licenses) {
         <div class="license-icon">${lic.icon}</div>
         <div class="license-info">
           <h4>${lic.label}</h4>
-          <span class="license-status ${statusClass}">${statusLabel}</span>
+          <span class="license-status ${statusClass}">${hasLicense ? 'ATIVA' : 'NAO POSSUI'}</span>
         </div>
       </div>
     `;
@@ -577,18 +721,57 @@ function renderTutorial(tutorial) {
 // --------------------------------------------------------------------------
 window.renderFinance = function(payload) {
   const money = payload.money || { bank: 0, cash: 0 };
-  document.getElementById('finance-bank-value').textContent = `$ ${money.bank.toLocaleString('pt-BR')}`;
-  document.getElementById('finance-cash-value').textContent = `$ ${money.cash.toLocaleString('pt-BR')}`;
+  document.getElementById('finance-bank-value').textContent = formatMoney(money.bank);
+  document.getElementById('finance-cash-value').textContent = formatMoney(money.cash);
   
   const history = payload.history || [];
   const container = document.getElementById('finance-history-list');
   if (container) {
-      container.innerHTML = history.map(item => `
+      if (history.length === 0) {
+        container.innerHTML = `<div class="empty-state"><p>Nenhuma transacao recente.</p></div>`;
+      } else {
+      container.innerHTML = history.slice(0, 4).map(item => `
         <div class="history-item">
             <span>${escapeHTML(item.description)}</span>
-            <strong style="color: ${item.type === 'income' ? 'var(--color-success)' : 'var(--color-danger)'}">${item.type === 'income' ? '+' : '-'} $${item.amount.toLocaleString()}</strong>
+            <strong style="color: ${item.type === 'income' ? 'var(--color-success)' : 'var(--color-danger)'}">${item.type === 'income' ? '+' : '-'} ${formatMoney(item.amount)}</strong>
         </div>
       `).join('');
+      }
+  }
+
+  // Render pending taxes
+  const taxesData = payload.taxes || { taxes: { total: 0, details: [] }, isDue: false, nextTaxAt: 0 };
+  taxesData.taxes = taxesData.taxes || { total: 0, details: [] };
+  taxesData.taxes.details = taxesData.taxes.details || [];
+  const taxesContainer = document.getElementById('finance-taxes-list');
+  if (taxesContainer) {
+    if (taxesData.taxes.total === 0) {
+      taxesContainer.innerHTML = `<div class="empty-state" style="padding: 16px;"><p>Você está em dia com a prefeitura.</p></div>`;
+    } else {
+      const statusLabel = taxesData.isDue ? '<span class="status-danger">VENCIDO</span>' : `<span class="status-success">EM DIA (Vence ${formatDate(taxesData.nextTaxAt)})</span>`;
+
+      taxesContainer.innerHTML = `
+        <div class="tax-card" style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <strong style="font-size: 14px;">Total Pendente: ${formatMoney(taxesData.taxes.total)}</strong>
+            ${statusLabel}
+          </div>
+          <div class="tax-details" style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 15px;">
+            ${taxesData.taxes.details.slice(0, 3).map(d => `<div style="display: flex; justify-content: space-between;"><span>${escapeHTML(d.label)}</span><span>${formatMoney(d.amount)}</span></div>`).join('')}
+          </div>
+          <button id="btn-pay-taxes" class="os-btn ${taxesData.isDue ? 'os-btn-danger' : 'os-btn-primary'}" style="width: 100%;">Regularizar Tudo</button>
+        </div>
+      `;
+
+      document.getElementById('btn-pay-taxes')?.addEventListener('click', () => {
+        window.showConfirmationModal('Impostos', `Deseja pagar ${formatMoney(taxesData.taxes.total)} em impostos e taxas?`, () => {
+          window.postNUI('tablet_pay_taxes').then(resp => {
+            if (resp && resp.message) window.showToast('Finanças', resp.message);
+            window.refreshOS();
+          });
+        });
+      });
+    }
   }
 
   // Render active financings
@@ -614,7 +797,7 @@ window.renderFinance = function(payload) {
                       <span style="font-size: 11px; color: var(--color-text-muted);">${escapeHTML(f.plate)} • Parcela ${f.installments_paid}/${f.total_installments}</span>
                     </div>
                     <div style="text-align: right;">
-                      <strong style="display: block; font-size: 14px; color: var(--color-primary);">$ ${f.installment_amount.toLocaleString('pt-BR')}</strong>
+                      <strong style="display: block; font-size: 14px; color: var(--color-primary);">${formatMoney(f.installment_amount)}</strong>
                       <span style="font-size: 10px; color: var(--color-text-muted);">Última: ${formatDate(f.last_payment)}</span>
                     </div>
                   </div>
@@ -622,7 +805,7 @@ window.renderFinance = function(payload) {
                     <div class="progress-bar" style="width: ${progress}%"></div>
                   </div>
                   <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--color-text-muted);">
-                    <span>Pago: $ ${paid.toLocaleString('pt-BR')} / $ ${total.toLocaleString('pt-BR')}</span>
+                    <span>Pago: ${formatMoney(paid)} / ${formatMoney(total)}</span>
                     <button class="os-btn os-btn-primary btn-pay-financing" data-id="${f.id}" style="padding: 4px 10px; font-size: 11px;">Pagar Parcela</button>
                   </div>
                 </div>
@@ -665,18 +848,27 @@ window.renderBusiness = function(payload) {
   } else {
     setupView.classList.add('hidden');
     mainView.classList.remove('hidden');
-    document.getElementById('business-vault-value').textContent = `$ ${(payload.company.vaultBalance || 0).toLocaleString('pt-BR')}`;
+    const company = payload.company || {};
+    document.getElementById('business-vault-value').textContent = formatMoney(company.vault || company.vaultBalance || 0);
+    document.getElementById('business-level-value').textContent = `T ${company.level || 1}`;
     renderBizFleet(payload.fleet || []);
+    renderBizStaff(payload.staff || []);
+    renderBizProduction(payload.production || []);
   }
 };
 
 function renderWarehouseList(warehouses) {
   const container = document.getElementById('business-warehouse-list');
   if (!container) return;
+  if (!warehouses || warehouses.length === 0) {
+    container.innerHTML = `<p class="empty-state">Nenhum galpao disponivel no momento.</p>`;
+    return;
+  }
+
   container.innerHTML = warehouses.map(w => `
     <div class="os-card">
       <h4>${escapeHTML(w.name)}</h4>
-      <p>$ ${w.price.toLocaleString()}</p>
+      <p>${formatMoney(w.price)}</p>
       <button class="os-btn os-btn-primary btn-buy-warehouse" data-id="${w.id}">Adquirir</button>
     </div>
   `).join('');
@@ -695,7 +887,49 @@ function renderWarehouseList(warehouses) {
 function renderBizFleet(fleet) {
   const container = document.getElementById('business-fleet-list');
   if (!container) return;
-  container.innerHTML = fleet.map(f => `<div>Placa: ${f.plate} | Status: ${f.status}</div>`).join('');
+  if (!fleet || fleet.length === 0) {
+    container.innerHTML = `<p class="empty-state">Nenhum veiculo vinculado a empresa.</p>`;
+    return;
+  }
+
+  container.innerHTML = fleet.slice(0, 6).map(f => `
+    <div class="business-row">
+      <span>${escapeHTML(f.vehicle_plate || f.plate || '---')}</span>
+      <strong>${escapeHTML(f.status || 'idle')}</strong>
+    </div>
+  `).join('');
+}
+
+function renderBizStaff(staff) {
+  const container = document.getElementById('business-staff-list');
+  if (!container) return;
+  if (!staff || staff.length === 0) {
+    container.innerHTML = `<p class="empty-state">Nenhum funcionario contratado.</p>`;
+    return;
+  }
+
+  container.innerHTML = staff.slice(0, 6).map(employee => `
+    <div class="business-row">
+      <span>${escapeHTML(employee.name || 'Funcionario')}</span>
+      <strong>Nv. ${employee.skill_level || 1}</strong>
+    </div>
+  `).join('');
+}
+
+function renderBizProduction(production) {
+  const container = document.getElementById('business-production-view');
+  if (!container) return;
+  if (!production || production.length === 0) {
+    container.innerHTML = `<p class="empty-state">Nenhuma rota corporativa ativa.</p>`;
+    return;
+  }
+
+  container.innerHTML = production.slice(0, 5).map(route => `
+    <div class="business-row">
+      <span>${escapeHTML(route.vehicle_plate || 'Rota ativa')}</span>
+      <strong>${Math.floor(route.progress || 0)}%</strong>
+    </div>
+  `).join('');
 }
 
 // --------------------------------------------------------------------------
@@ -704,10 +938,17 @@ function renderBizFleet(fleet) {
 window.renderJobs = function(payload) {
   const container = document.getElementById('jobs-board-list');
   if (!container) return;
-  container.innerHTML = (payload.availableJobs || []).map(j => `
-    <div class="os-card">
+  const jobs = payload.availableJobs || [];
+  if (jobs.length === 0) {
+    container.innerHTML = `<p class="empty-state">Nenhum contrato publicado no momento.</p>`;
+    return;
+  }
+
+  container.innerHTML = jobs.slice(0, 6).map(j => `
+    <div class="os-card job-board-card">
       <h4>${escapeHTML(j.title)}</h4>
-      <p>$ ${j.reward.toLocaleString()}</p>
+      <p>${escapeHTML(j.company_name || 'Empresa Tycoon')} | ${escapeHTML(j.cargo_type || 'Carga geral')}</p>
+      <strong>${formatMoney(j.reward)}</strong>
       <button class="os-btn os-btn-primary btn-take-job" data-id="${j.id}">Aceitar</button>
     </div>
   `).join('');
@@ -717,6 +958,7 @@ window.renderJobs = function(payload) {
       const jobId = Number(btn.getAttribute('data-id'));
       window.postNUI('tablet_accept_job', { jobId: jobId }).then(resp => {
         if (resp && resp.message) window.showToast('Emprego', resp.message);
+        if (!resp || !resp.ok) return;
         window.refreshOS();
       });
     });
