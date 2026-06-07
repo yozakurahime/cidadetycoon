@@ -1,0 +1,754 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+	--gold: #e2b35a;
+	--gold-soft: rgba(226, 179, 90, 0.2);
+	--paper: #f8f9fa;
+	--muted: rgba(255, 255, 255, 0.55);
+	
+	/* Glassmorphism Variables */
+	--glass-bg: rgba(10, 12, 18, 0.35);
+	--glass-bg-strong: rgba(6, 8, 12, 0.55);
+	--glass-border: rgba(255, 255, 255, 0.08);
+	--glass-border-light: rgba(255, 255, 255, 0.15);
+	--glass-glow: rgba(255, 255, 255, 0.03);
+	
+	/* Brand Colors (iOS Style Vibrancy) */
+	--health: #ff453a;
+	--armour: #0a84ff;
+	--stamina: #ffd60a;
+	--hunger: #ff9f0a;
+	--thirst: #64d2ff;
+	--green: #30d158;
+	--cyan: #38bdf8;
+	--panel-line: rgba(255, 255, 255, 0.12);
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html, body {
+	height: 100%;
+	overflow: hidden;
+	font-family: 'Inter', -apple-system, sans-serif;
+	color: var(--paper);
+	background: transparent;
+	user-select: none;
+}
+
+body.preview {
+	background:
+		radial-gradient(circle at 50% 50%, rgba(10, 84, 255, 0.15), transparent 50%),
+		radial-gradient(circle at 10% 20%, rgba(226, 179, 90, 0.1), transparent 30%),
+		#07090e;
+}
+
+.hidden { display: none !important; }
+
+/* Main overlay fade-in animation */
+.overlay {
+	opacity: 0;
+	transition: opacity 400ms cubic-bezier(0.25, 1, 0.5, 1);
+	letter-spacing: 0;
+}
+
+.overlay.ready { opacity: 1; }
+.overlay.off { opacity: 0; }
+
+/* Safe Zone for Ultrawide compatibility (iOS Dynamic Margins) */
+.hud-safe-zone {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	max-width: 1600px;
+	margin: 0 auto;
+	width: 92%;
+	pointer-events: none;
+}
+
+/* ==========================================
+   HEADER SECTION (Brand & Meta)
+   ========================================== */
+.scene-header {
+	position: absolute;
+	top: 30px;
+	left: 0;
+	right: 0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	pointer-events: none;
+	animation: slideDown 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.brand {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	text-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.brand-mark {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 12px;
+	color: #fff;
+	font-family: 'Outfit', sans-serif;
+	font-weight: 800;
+	font-size: 15px;
+	letter-spacing: 0.05em;
+	box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.15);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+}
+
+.brand strong {
+	display: block;
+	font-family: 'Outfit', sans-serif;
+	font-size: 14px;
+	font-weight: 800;
+	letter-spacing: 0.18em;
+	color: #fff;
+}
+
+.brand small {
+	display: block;
+	margin-top: 3px;
+	color: var(--gold);
+	font-family: 'Inter', sans-serif;
+	font-size: 8px;
+	font-weight: 700;
+	letter-spacing: 0.35em;
+}
+
+/* iOS-Style Pill Header */
+.scene-meta {
+	display: flex;
+	align-items: center;
+	height: 46px;
+	padding: 2px 20px;
+	gap: 20px;
+	background: var(--glass-bg);
+	border: 1px solid var(--glass-border);
+	border-radius: 23px; /* Perfect iOS Pill */
+	box-shadow: 
+		inset 0 1px 0 rgba(255, 255, 255, 0.08),
+		0 8px 32px 0 rgba(0, 0, 0, 0.25);
+	backdrop-filter: blur(25px);
+	-webkit-backdrop-filter: blur(25px);
+	transition: all 300ms ease;
+}
+
+.location {
+	min-width: 140px;
+	text-align: right;
+}
+
+.location small, .clock small, .gear-badge small, .fuel-label small, .vital-label small {
+	display: block;
+	color: var(--muted);
+	font-family: 'Inter', sans-serif;
+	font-size: 8px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	margin-bottom: 1px;
+}
+
+.location strong {
+	display: block;
+	max-width: 220px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 11px;
+	font-weight: 600;
+	color: #fff;
+}
+
+.clock {
+	border-left: 1px solid rgba(255, 255, 255, 0.1);
+	padding-left: 20px;
+}
+
+.clock strong {
+	font-family: 'Outfit', sans-serif;
+	font-weight: 700;
+	font-size: 18px;
+	color: #fff;
+}
+
+/* Voice Level Meter */
+.voice {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	border-left: 1px solid rgba(255, 255, 255, 0.1);
+	padding-left: 20px;
+}
+
+.voice .mic {
+	color: var(--muted);
+	font-family: 'Inter', sans-serif;
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	transition: color 250ms ease;
+}
+
+.range {
+	display: flex;
+	align-items: flex-end;
+	gap: 3px;
+	height: 14px;
+}
+
+.range i {
+	width: 3px;
+	height: 5px;
+	background: rgba(255, 255, 255, 0.15);
+	border-radius: 1px;
+	transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.range i:nth-child(2) { height: 9px; }
+.range i:nth-child(3) { height: 14px; }
+
+/* Active States */
+.voice.level-1 .range i:first-child,
+.voice.level-2 .range i:nth-child(-n+2),
+.voice.level-3 .range i { 
+	background: var(--gold); 
+	box-shadow: 0 0 6px var(--gold-soft);
+}
+.voice.talking .mic { 
+	color: #fff;
+	text-shadow: 0 0 8px rgba(255,255,255,0.4);
+}
+.voice.talking .range i {
+	background: var(--green) !important;
+	box-shadow: 0 0 8px rgba(48, 209, 88, 0.4);
+}
+
+/* Radio Widget */
+.radio {
+	position: absolute;
+	top: 86px;
+	right: 0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 18px;
+	background: var(--glass-bg);
+	border: 1px solid var(--glass-border);
+	border-radius: 18px;
+	box-shadow: 
+		inset 0 1px 0 rgba(255, 255, 255, 0.08),
+		0 8px 32px 0 rgba(0, 0, 0, 0.25);
+	backdrop-filter: blur(20px);
+	-webkit-backdrop-filter: blur(20px);
+	animation: slideInRight 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.radio span {
+	font-size: 8px;
+	font-weight: 700;
+	color: var(--gold);
+	letter-spacing: 0.15em;
+}
+
+.radio strong {
+	font-size: 11px;
+	font-weight: 600;
+	color: #fff;
+}
+
+.radio.transmitting { 
+	border-color: rgba(48, 209, 88, 0.4);
+	background: rgba(48, 209, 88, 0.05);
+	box-shadow: 
+		0 0 12px rgba(48, 209, 88, 0.1),
+		inset 0 1px 0 rgba(255, 255, 255, 0.08),
+		0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* ==========================================
+   TYCOON PANEL (Business Status)
+   ========================================== */
+.tycoon-panel {
+	display: flex;
+	flex-direction: column;
+	width: 270px;
+	min-height: 48px;
+	padding-right: 20px;
+	border-right: 1px solid var(--panel-line);
+	transition: all 400ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.tycoon-meta {
+	display: flex;
+	justify-content: flex-start;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 7px;
+}
+
+.identity-name {
+	flex: 1;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.identity-name small {
+	display: block;
+	margin-bottom: 2px;
+	color: rgba(255, 255, 255, 0.46);
+	font-size: 7px;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.identity-name strong {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-family: 'Outfit', sans-serif;
+	font-size: 14px;
+	line-height: 1;
+	font-weight: 800;
+	color: #fff;
+	text-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
+}
+
+.passport-badge {
+	flex: 0 0 auto;
+	max-width: 92px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: rgba(255, 255, 255, 0.86);
+	background: rgba(56, 189, 248, 0.12);
+	border: 1px solid rgba(56, 189, 248, 0.28);
+	font-family: 'Outfit', sans-serif;
+	font-weight: 800;
+	font-size: 8px;
+	line-height: 1;
+	padding: 5px 7px;
+	border-radius: 7px;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.passport-badge span {
+	color: #fff;
+	font-size: 9px;
+}
+
+.level-badge {
+	background: linear-gradient(135deg, var(--gold), #c9933e);
+	color: #000;
+	font-family: 'Outfit', sans-serif;
+	font-weight: 900;
+	font-size: 9px;
+	line-height: 1;
+	padding: 5px 8px;
+	border-radius: 7px;
+	box-shadow: 0 4px 12px rgba(226, 179, 90, 0.2);
+}
+
+.xp-progress {
+	height: 4px;
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 2px;
+	overflow: hidden;
+	margin-bottom: 10px;
+}
+
+#xp-fill {
+	height: 100%;
+	width: 0%;
+	background: var(--gold);
+	transition: width 1000ms cubic-bezier(0.25, 1, 0.5, 1);
+	box-shadow: 0 0 8px var(--gold-soft);
+}
+
+.mission-status {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	animation: fadeIn 600ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.mission-data {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 4px 10px;
+	font-size: 8px;
+	font-weight: 700;
+	color: var(--muted);
+	letter-spacing: 0.05em;
+}
+
+.mission-data strong {
+	color: #fff;
+	font-family: 'Outfit', sans-serif;
+	font-size: 10px;
+}
+
+#cargo-integrity {
+	color: var(--green);
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(5px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================
+   DASHBOARD SECTION (Vitals & Speedometer)
+   ========================================== */
+.dashboard-wrapper {
+	position: fixed;
+	bottom: 30px;
+	left: 0;
+	right: 0;
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	pointer-events: none;
+	animation: slideUp 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glassmorphic Container */
+.bottom-ui {
+	display: flex;
+	align-items: center;
+	gap: 22px;
+	background:
+		linear-gradient(180deg, rgba(18, 21, 27, 0.72), rgba(7, 9, 13, 0.62)),
+		rgba(6, 8, 12, 0.52);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	padding: 11px 22px;
+	border-radius: 18px;
+	box-shadow: 
+		inset 0 1px 0 rgba(255, 255, 255, 0.16),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+		0 16px 42px rgba(0, 0, 0, 0.42);
+	backdrop-filter: blur(30px);
+	-webkit-backdrop-filter: blur(30px);
+	transition: all 400ms cubic-bezier(0.25, 1, 0.5, 1);
+	pointer-events: none;
+}
+
+/* Vitals Container */
+.vitals-panel {
+	display: flex;
+	gap: 14px;
+	align-items: center;
+}
+
+/* iOS Widget Style Vitals (Horizontal pill shape) */
+.vital {
+	display: flex;
+	flex-direction: column;
+	width: 82px;
+	transition: all 300ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.vital-label {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 5px;
+	padding: 0 2px;
+}
+
+.vital-label small {
+	font-size: 7px;
+	font-weight: 800;
+	color: var(--muted);
+	letter-spacing: 0.08em;
+}
+
+.vital-label strong {
+	font-family: 'Outfit', sans-serif;
+	font-size: 12px;
+	font-weight: 700;
+	color: #fff;
+}
+
+/* Fine progress bar track */
+.bar-track {
+	height: 4px;
+	background: rgba(255, 255, 255, 0.11);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.bar-track span {
+	display: block;
+	height: 100%;
+	width: 100%;
+	border-radius: 2px;
+	transition: width 350ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Color Gradients & iOS Shadows */
+#health {
+	background: linear-gradient(90deg, #ff453a, #ff6b64);
+	box-shadow: 0 0 8px rgba(255, 69, 58, 0.35);
+}
+
+#armour {
+	background: linear-gradient(90deg, #0a84ff, #409eff);
+	box-shadow: 0 0 8px rgba(10, 132, 255, 0.35);
+}
+
+#stamina {
+	background: linear-gradient(90deg, #ffd60a, #ffe04d);
+	box-shadow: 0 0 8px rgba(255, 214, 10, 0.3);
+}
+
+#hunger {
+	background: linear-gradient(90deg, #ff9f0a, #ffb340);
+	box-shadow: 0 0 6px rgba(255, 159, 10, 0.2);
+}
+
+#thirst {
+	background: linear-gradient(90deg, #64d2ff, #99e2ff);
+	box-shadow: 0 0 6px rgba(100, 210, 255, 0.2);
+}
+
+#stress {
+	background: linear-gradient(90deg, #bf5af2, #d98cff);
+	box-shadow: 0 0 6px rgba(191, 90, 242, 0.2);
+}
+
+/* Vehicle Panel */
+.vehicle-panel {
+	display: flex;
+	align-items: center;
+	gap: 22px;
+	border-left: 1px solid rgba(255, 255, 255, 0.1);
+	padding-left: 22px;
+	transition: all 400ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.speedometer-section {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.speed-number {
+	display: flex;
+	align-items: baseline;
+	gap: 3px;
+}
+
+.speed-number strong {
+	font-family: 'Outfit', sans-serif;
+	font-size: 38px;
+	font-weight: 900;
+	letter-spacing: -0.04em;
+	color: #fff;
+	text-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
+}
+
+.speed-number small {
+	font-size: 9px;
+	font-weight: 800;
+	color: var(--muted);
+	letter-spacing: 0.05em;
+}
+
+/* Round iOS Badge for Gear */
+.gear-badge {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	width: 38px;
+	height: 38px;
+	border-radius: 50%; /* Perfect Circle */
+	box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.gear-badge small { display: none; } /* Hide MARCHA label to keep it clean */
+
+.gear-badge strong {
+	font-family: 'Outfit', sans-serif;
+	font-size: 15px;
+	font-weight: 800;
+	color: var(--gold);
+	line-height: 1;
+}
+
+/* Fuel Panel */
+.vehicle-info-section {
+	display: flex;
+	flex-direction: column;
+	width: 110px;
+	gap: 6px;
+}
+
+.fuel {
+	display: flex;
+	flex-direction: column;
+}
+
+.fuel-label {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 4px;
+	padding: 0 2px;
+}
+
+.fuel-label strong {
+	font-size: 9px;
+	font-weight: 700;
+	color: #fff;
+}
+
+#fuel {
+	background: linear-gradient(90deg, var(--gold), #ffd60a);
+	box-shadow: 0 0 8px rgba(226, 179, 90, 0.35);
+}
+
+/* Flags styling */
+.vehicle-flags {
+	display: flex;
+	gap: 6px;
+}
+
+.flag {
+	font-size: 7px;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	padding: 3px 8px;
+	border-radius: 8px; /* Rounded pill flags */
+	color: rgba(255, 255, 255, 0.2);
+	border: 1px solid rgba(255, 255, 255, 0.05);
+	background: rgba(255, 255, 255, 0.02);
+	transition: all 250ms ease;
+}
+
+.flag.active {
+	color: #fff;
+	border-color: rgba(255, 255, 255, 0.2);
+	background: rgba(255, 255, 255, 0.1);
+	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+	text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+/* Special Case: Seatbelt unbuckled alerts red */
+#belt.flag:not(.active) {
+	animation: pulseRed 2s infinite ease-in-out;
+}
+
+/* ==========================================
+   PROGRESS BAR SECTION
+   ========================================== */
+.progress {
+	position: fixed;
+	left: 50%;
+	bottom: 120px;
+	transform: translateX(-50%);
+	width: 290px;
+	padding: 12px 18px;
+	background: var(--glass-bg-strong);
+	border: 1px solid var(--glass-border-light);
+	border-radius: 20px;
+	box-shadow: 
+		inset 0 1px 0 rgba(255, 255, 255, 0.12),
+		0 12px 40px rgba(0, 0, 0, 0.45);
+	backdrop-filter: blur(25px);
+	-webkit-backdrop-filter: blur(25px);
+}
+
+.progress-heading {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.progress-heading span {
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+}
+
+.progress-heading small {
+	color: var(--muted);
+	font-size: 8px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+}
+
+.progress-track {
+	height: 3px;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 1.5px;
+	overflow: hidden;
+}
+
+.progress-track span {
+	display: block;
+	height: 100%;
+	width: 0;
+	background: var(--gold);
+	border-radius: 1.5px;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+@keyframes slideDown {
+	from { transform: translateY(-30px); opacity: 0; }
+	to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideUp {
+	from { transform: translateY(40px); opacity: 0; }
+	to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+	from { transform: translateX(30px); opacity: 0; }
+	to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes pulseRed {
+	0%, 100% { 
+		color: rgba(255, 69, 58, 0.4); 
+		border-color: rgba(255, 69, 58, 0.1);
+		background: rgba(255, 69, 58, 0.02);
+	}
+	50% { 
+		color: #ff453a; 
+		border-color: rgba(255, 69, 58, 0.35);
+		background: rgba(255, 69, 58, 0.12);
+		box-shadow: 0 0 8px rgba(255, 69, 58, 0.2);
+	}
+}
+
+/* RWD Layout */
+@media (max-width: 1366px) {
+	.scene-header { top: 20px; }
+	.location { display: none; }
+	.bottom-ui { gap: 18px; padding: 10px 18px; }
+}

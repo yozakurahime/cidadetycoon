@@ -1,0 +1,976 @@
+/*=========================*/
+/*========= GLOBAL =========*/
+/*=========================*/
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.main {
+    width: 1050px;
+    height: 620px;
+    max-width: 95vw;
+    max-height: 90vh;
+    background-color: #f4f6f8;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+h4.text-uppercase {
+    font-size: 1rem;
+    font-weight: 900;
+    color: #1a1c23;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+}
+
+p.page-desc {
+    color: #718096;
+    font-size: 11px;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+/*===========================*/
+/*========= SIDEBAR =========*/
+/*===========================*/
+
+.sidebar-navigation {
+    height: 100%;
+    width: 70px;
+    background-color: #1a1c23;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar-navigation ul {
+    list-style: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-navigation ul li {
+    padding: 18px 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    text-align: center;
+}
+
+.sidebar-navigation ul li svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+    margin: 0 auto;
+    fill: #718096;
+    transition: all 0.2s ease;
+}
+
+.sidebar-navigation ul li:hover svg,
+.sidebar-navigation ul li.active svg {
+    fill: #63d19e;
+    transform: scale(1.1);
+}
+
+.sidebar-navigation ul li.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20%;
+    height: 60%;
+    width: 3px;
+    background: #63d19e;
+    border-radius: 0 4px 4px 0;
+}
+
+.sidebar-navigation ul li .tooltip {
+    position: absolute;
+    background-color: #1a1c23;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    left: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    visibility: hidden;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 10px 10px 20px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+.sidebar-navigation ul li:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+    left: 75px;
+}
+
+/*=========================*/
+/*========= PAGES =========*/
+/*=========================*/
+
+.container-pages {
+    height: 100%;
+    overflow: hidden;
+    background: #f4f6f8;
+}
+
+.pages {
+    display: none;
+    padding: 20px 25px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.pages::-webkit-scrollbar {
+    width: 4px;
+}
+
+.pages::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 10px;
+}
+
+/*=========================*/
+/*========= PROFILE =========*/
+/*=========================*/
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.stat-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.stat-icon-box svg {
+    width: 18px;
+    height: 18px;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #1a1c23;
+    display: block;
+}
+
+.stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #718096;
+    text-transform: uppercase;
+}
+
+.bg-light-success { background: #f0fff4; color: #38a169; }
+.bg-light-primary { background: #ebf4ff; color: #3182ce; }
+.bg-light-warning { background: #fffaf0; color: #dd6b20; }
+.bg-light-info { background: #e6fffa; color: #319795; }
+
+/*========================*/
+/*========= JOBS =========*/
+/*========================*/
+
+.job-card {
+    background: white;
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 8px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.job-card:hover {
+    border-color: #63d19e;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.job-info-main h6 {
+    font-weight: 800;
+    color: #1a1c23;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+}
+
+.job-details-row {
+    display: flex;
+    gap: 15px;
+}
+
+.job-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #4a5568;
+}
+
+.job-detail-item svg {
+    width: 14px;
+    height: 14px;
+    fill: #a0aec0;
+}
+
+.cargo-icons-wrapper {
+    display: flex;
+    gap: 4px;
+    background: #edf2f7;
+    padding: 5px;
+    border-radius: 6px;
+}
+
+.cargo-svg {
+    width: 18px;
+    height: 18px;
+}
+
+.locked-job {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+.locked-tag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #e53e3e;
+    color: white;
+    font-size: 8px;
+    padding: 2px 8px;
+    border-radius: 0 0 6px 0;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+/*=========================*/
+/*========= SKILL =========*/
+/*=========================*/
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.skill-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+}
+
+.skill-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.skill-icon-container {
+    width: 32px;
+    height: 32px;
+    background: #edf2f7;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+}
+
+.skill-icon-container svg {
+    width: 16px;
+    height: 16px;
+    fill: #1a1c23;
+}
+
+.skill-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #1a1c23;
+    text-transform: uppercase;
+}
+
+.progresses {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.line, .redline {
+    width: 20px;
+    height: 2px;
+}
+.line { background: #63d19e; }
+.redline { background: #e2e8f0; }
+
+.steps, .redsteps {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+.steps { background: #63d19e; color: white; }
+.redsteps { background: #f7fafc; color: #a0aec0; border: 1px solid #e2e8f0; cursor: pointer; }
+
+.collapsible {
+	background-color: #f8f9fa;
+	color: #313443;
+	cursor: pointer;
+	padding: 8px 12px;
+	width: 100%;
+	border: 1px solid #eee;
+	text-align: left;
+	outline: none;
+	font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+}
+
+.content {
+	padding: 0 10px;
+	display: none;
+	font-size: 10px;
+    color: #6c757d;
+}
+
+/*==============================*/
+/*========= DIAGNOSTIC =========*/
+/*==============================*/
+
+.diagnostic-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.diagnostic-list {
+    flex: 1;
+    display: grid;
+    gap: 6px;
+}
+
+.diagnostic-card {
+    background: white;
+    border-radius: 8px;
+    padding: 10px 15px;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+}
+
+.diagnostic-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.diagnostic-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    color: #1a1c23;
+    font-size: 9px;
+    text-transform: uppercase;
+}
+
+.diagnostic-status-badge {
+    font-size: 7px;
+    font-weight: 900;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.status-excellent { background: #e8f5e9; color: #2e7d32; }
+.status-good { background: #e3f2fd; color: #1565c0; }
+.status-fair { background: #fff3e0; color: #ef6c00; }
+.status-critical { background: #ffebee; color: #c62828; }
+
+.diagnostic-percentage {
+    font-size: 0.9rem;
+    font-weight: 900;
+}
+
+.diag-progress {
+    height: 3px;
+    background: #edf2f7;
+    margin-top: 4px;
+    border-radius: 2px;
+}
+
+.diag-progress-bar { height: 100%; border-radius: 2px; }
+
+.truck-display {
+    flex: 1;
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+}
+
+.truck-display img {
+    max-width: 100%;
+    max-height: 150px;
+    object-fit: contain;
+}
+
+/*==========================*/
+/*========= DEALER =========*/
+/*==========================*/
+
+.dealer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.truck-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+.truck-card-img {
+    height: 100px;
+    background: #f7fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.truck-card-img img { max-height: 100%; max-width: 100%; }
+
+.truck-card-content { padding: 12px; }
+
+.truck-card-title { font-weight: 800; font-size: 0.8rem; color: #1a1c23; margin-bottom: 2px; }
+
+.truck-card-price { font-weight: 800; color: #38a169; font-size: 0.9rem; margin-bottom: 8px; display: block; }
+
+.spec-item { background: #f7fafc; padding: 4px 8px; border-radius: 4px; }
+.spec-label { font-size: 6px; color: #718096; font-weight: 800; text-transform: uppercase; }
+.spec-value { font-size: 9px; color: #1a1c23; font-weight: 700; }
+
+/*==========================*/
+/*========= BANK =========*/
+/*==========================*/
+
+.bank-wallet-actions {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.loan-card {
+    background: white;
+    border-radius: 8px;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    margin-bottom: 8px;
+}
+
+.loan-card:hover { background: #3182ce; color: white !important; }
+.loan-card:hover * { color: white !important; fill: white !important; }
+
+/*=============================*/
+/*========= UTILS =========*/
+/*=============================*/
+
+.btn {
+    border-radius: 4px !important;
+    font-weight: 800 !important;
+    font-size: 9px !important;
+    padding: 6px 12px !important;
+    text-transform: uppercase;
+    border: none !important;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn:hover { opacity: 0.9; }
+
+.btn-blue { background: #3182ce !important; color: white; }
+.btn-red { background: #e53e3e !important; color: white; }
+.btn-success { background: #38a169 !important; color: white; }
+.btn-warning { background: #ffa000 !important; color: white !important; }
+
+.progress { background: #edf2f7; border-radius: 10px; height: 8px; }
+.bg-success { background-color: #38a169 !important; }
+.bg-danger { background-color: #e53e3e !important; }
+
+[data-tooltip] { position: relative; }
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1c23;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 9px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    z-index: 1000;
+}
+[data-tooltip]:hover:before { opacity: 1; visibility: visible; }
+
+/* ANIMATIONS */
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(209, 99, 99, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(209, 99, 99, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(209, 99, 99, 0); }
+}
+
+@keyframes success-glow {
+    0% { border-color: #63d19e; box-shadow: 0 0 0 0 rgba(99, 209, 158, 0.4); }
+    70% { border-color: #63d19e; box-shadow: 0 0 0 15px rgba(99, 209, 158, 0); }
+    100% { border-color: #e2e8f0; box-shadow: 0 0 0 0 rgba(99, 209, 158, 0); }
+}
+
+.success-trained {
+    animation: success-glow 1.5s ease-out !important;
+}
+
+/* TABLET MODE (IFRAME) */
+
+body.iframe-mode {
+    background-color: transparent !important;
+}
+
+body.iframe-mode .main {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Mobile/Tablet adjustment (window mode) */
+@media (max-width: 1200px) {
+    .main { width: 95vw; height: 90vh; }
+}
+
+/* PREMIUM UX POLISH */
+
+:root {
+    --tycoon-bg: #eef2f7;
+    --tycoon-panel: rgba(255, 255, 255, 0.92);
+    --tycoon-panel-solid: #ffffff;
+    --tycoon-ink: #172033;
+    --tycoon-muted: #6d7890;
+    --tycoon-soft: #e8edf5;
+    --tycoon-primary: #63d19e;
+    --tycoon-primary-strong: #34b47d;
+    --tycoon-blue: #5c6bc0;
+    --tycoon-danger: #d16363;
+    --tycoon-shadow: 0 16px 40px rgba(23, 32, 51, 0.14);
+    --tycoon-shadow-soft: 0 8px 24px rgba(23, 32, 51, 0.08);
+    --tycoon-radius: 18px;
+}
+
+body {
+    color: var(--tycoon-ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+}
+
+.main {
+    background:
+        radial-gradient(circle at top left, rgba(99, 209, 158, 0.18), transparent 32%),
+        linear-gradient(135deg, #f8fafc 0%, var(--tycoon-bg) 100%);
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: var(--tycoon-shadow);
+}
+
+.sidebar-navigation {
+    background:
+        linear-gradient(180deg, rgba(25, 32, 48, 0.98) 0%, rgba(18, 23, 35, 0.98) 100%);
+}
+
+.sidebar-navigation ul li {
+    margin: 4px 8px;
+    padding: 14px 0;
+    border-radius: 14px;
+}
+
+.sidebar-navigation ul li:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-navigation ul li.active {
+    background: rgba(99, 209, 158, 0.12);
+}
+
+.sidebar-navigation ul li.active::before {
+    left: -8px;
+    height: 52%;
+    top: 24%;
+    background: linear-gradient(180deg, #88e8bc, var(--tycoon-primary));
+}
+
+.sidebar-navigation ul li svg {
+    fill: #8f9bb3;
+}
+
+.sidebar-navigation ul li:hover svg,
+.sidebar-navigation ul li.active svg {
+    fill: var(--tycoon-primary);
+    filter: drop-shadow(0 4px 10px rgba(99, 209, 158, 0.25));
+}
+
+.sidebar-navigation ul li .tooltip {
+    border-radius: 10px;
+    background: rgba(23, 32, 51, 0.96);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.container-pages {
+    background: transparent;
+}
+
+.pages {
+    padding: 24px 28px;
+    scrollbar-gutter: stable;
+}
+
+h4.text-uppercase {
+    color: var(--tycoon-ink);
+    font-size: 1.08rem;
+    letter-spacing: 0.08em;
+}
+
+p.page-desc {
+    color: var(--tycoon-muted);
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 18px;
+}
+
+.stats-grid,
+.dealer-grid,
+.skills-grid {
+    gap: 14px;
+}
+
+.stat-card,
+.job-card,
+.skill-card,
+.diagnostic-card,
+.truck-card,
+.truck-display,
+.bank-wallet-actions,
+.loan-card {
+    background: var(--tycoon-panel);
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    box-shadow: var(--tycoon-shadow-soft);
+    backdrop-filter: blur(10px);
+}
+
+.stat-card,
+.skill-card,
+.bank-wallet-actions,
+.truck-display {
+    border-radius: var(--tycoon-radius);
+}
+
+.job-card,
+.diagnostic-card,
+.truck-card,
+.loan-card {
+    border-radius: 15px;
+}
+
+.job-card,
+.truck-card,
+.loan-card,
+.diagnostic-card {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.job-card:hover,
+.truck-card:hover,
+.loan-card:hover,
+.diagnostic-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 209, 158, 0.7);
+    box-shadow: 0 14px 32px rgba(23, 32, 51, 0.13);
+}
+
+.stat-icon-box,
+.skill-icon-container {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+.stat-value {
+    color: var(--tycoon-ink);
+    letter-spacing: -0.03em;
+}
+
+.stat-label,
+.spec-label {
+    color: var(--tycoon-muted);
+}
+
+.btn-premium,
+button.btn-premium,
+.collapsible {
+    border: 0;
+    border-radius: 12px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    box-shadow: 0 8px 18px rgba(99, 209, 158, 0.22);
+    transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+.btn-premium:hover,
+button.btn-premium:hover,
+.collapsible:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow: 0 12px 24px rgba(99, 209, 158, 0.28);
+}
+
+.btn-premium:active,
+button.btn-premium:active,
+.collapsible:active {
+    transform: translateY(0);
+}
+
+.btn-premium:disabled,
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    filter: grayscale(0.2);
+    box-shadow: none;
+}
+
+.progress,
+.diag-progress {
+    overflow: hidden;
+    background: #dfe7f1;
+}
+
+.progress-bar,
+.diag-progress-bar {
+    background: linear-gradient(90deg, var(--tycoon-primary-strong), var(--tycoon-primary));
+}
+
+.truck-card-img {
+    background:
+        radial-gradient(circle at center, rgba(99, 209, 158, 0.14), transparent 58%),
+        linear-gradient(180deg, #f8fafc, #edf2f7);
+}
+
+.truck-card-title {
+    color: var(--tycoon-ink);
+}
+
+.truck-card-price {
+    color: var(--tycoon-primary-strong);
+}
+
+.spec-item,
+.content,
+.deposit-input-group input,
+#input-deposit-money {
+    border: 1px solid var(--tycoon-soft);
+    background: rgba(248, 250, 252, 0.86);
+    border-radius: 12px;
+}
+
+.content {
+    margin-top: 8px;
+    padding: 10px 12px;
+    color: var(--tycoon-muted);
+}
+
+.diagnostic-container {
+    align-items: stretch;
+}
+
+.diagnostic-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.diagnostic-status-badge {
+    border-radius: 999px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+}
+
+.modal-content {
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.26);
+}
+
+.empty-state,
+.muted-empty,
+[data-empty="true"] {
+    color: var(--tycoon-muted);
+    border: 1px dashed #c7d2e2;
+    background: rgba(255, 255, 255, 0.65);
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    font-weight: 700;
+}
+
+body.iframe-mode .main {
+    border-radius: 18px !important;
+    background:
+        radial-gradient(circle at top right, rgba(92, 107, 192, 0.12), transparent 34%),
+        linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+body.iframe-mode .pages {
+    padding: 18px 20px;
+}
+
+body.iframe-mode .sidebar-navigation {
+    width: 58px;
+}
+
+body.iframe-mode .main {
+    grid-template-columns: 58px 1fr;
+}
+
+body.iframe-mode .sidebar-navigation ul li {
+    margin: 3px 6px;
+    padding: 11px 0;
+}
+
+body.iframe-mode .sidebar-navigation ul li svg {
+    width: 20px;
+    height: 20px;
+}
+
+body.iframe-mode .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.iframe-mode .dealer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.iframe-mode .diagnostic-container {
+    gap: 10px;
+}
+
+body.iframe-mode .truck-display img {
+    max-height: 120px;
+}
+
+@media (max-width: 900px) {
+    .stats-grid,
+    .dealer-grid,
+    body.iframe-mode .stats-grid,
+    body.iframe-mode .dealer-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .diagnostic-container {
+        flex-direction: column;
+    }
+}
+
+/* Standalone NPC mode: keep the panel as a modal, not a near-fullscreen app. */
+body:not(.iframe-mode) {
+    padding: 32px;
+    background:
+        radial-gradient(circle at center, rgba(99, 209, 158, 0.12), transparent 42%),
+        rgba(7, 10, 18, 0.42) !important;
+    backdrop-filter: blur(4px);
+}
+
+body:not(.iframe-mode) .main {
+    width: min(920px, calc(100vw - 96px)) !important;
+    height: min(560px, calc(100vh - 96px)) !important;
+    max-width: calc(100vw - 96px) !important;
+    max-height: calc(100vh - 96px) !important;
+    border-radius: 24px !important;
+}
+
+body:not(.iframe-mode) .pages {
+    padding: 20px 24px;
+}
+
+body:not(.iframe-mode) .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body:not(.iframe-mode) .dealer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body:not(.iframe-mode) .truck-display img {
+    max-height: 120px;
+}
