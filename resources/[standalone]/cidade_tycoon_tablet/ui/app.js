@@ -386,6 +386,8 @@ window.addEventListener('message', (event) => {
     }
   } else if (data.action === 'closeTablet') {
     document.getElementById('app').classList.add('hidden');
+  } else if (data.action === 'showToast') {
+    window.showToast(data.title || 'Notificação', data.message || '', data.duration || 3500);
   } else if (data.action === 'truckLogisticsMessage') {
     postTruckLogisticsToIframe(data.payload || {});
   } else if (data.action === 'updateTime') {

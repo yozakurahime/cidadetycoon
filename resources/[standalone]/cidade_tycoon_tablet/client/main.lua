@@ -248,6 +248,15 @@ RegisterNetEvent('cidade_tycoon_tablet:client:forceCloseTablet', function()
     forceCloseTabletUi()
 end)
 
+RegisterNetEvent('cidade_tycoon_tablet:client:showToast', function(title, message, duration)
+    SendNUIMessage({
+        action = 'showToast',
+        title = title,
+        message = message,
+        duration = duration or 3500
+    })
+end)
+
 -- Sincronização de Relógio delegada nativamente ao JavaScript da interface CEF (app.js)
 
 AddEventHandler('onResourceStop', function(res)

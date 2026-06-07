@@ -217,12 +217,18 @@ CreateThread(function()
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Bloqueio PRF"
                                     pendingEventData = json.encode({ type = 'PRF' })
                                     table.insert(routeEvents, { name = "Retido PRF", time = 12 })
-                                    if source then notify(source, ("🚔 PRF: %s parado!"):format(driver.name), 'error') end
+                                    if source then 
+                                        notify(source, ("🚔 PRF: %s parado! Instruções pendentes no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 EMERGÊNCIA LOGÍSTICA', ('O motorista %s foi parado pela PRF e aguarda ordens.'):format(driver.name), 10000)
+                                    end
                                 elseif eventRoll > 80 then -- Breakdown (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Falha Mecânica"
                                     pendingEventData = json.encode({ type = 'BREAKDOWN' })
                                     table.insert(routeEvents, { name = "Pane Mecânica", time = 15 })
-                                    if source then notify(source, ("⚠️ ALERTA: Quebra com %s!"):format(driver.name), 'error') end
+                                    if source then 
+                                        notify(source, ("⚠️ ALERTA: Quebra com %s! Instruções pendentes no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🛠️ FALHA MECÂNICA', ('O veículo de %s quebrou. Decida o tipo de reparo no Tablet.'):format(driver.name), 10000)
+                                    end
                                 elseif eventRoll > 65 then -- Accident
                                     activeEvent = "Colisão Leve"
                                     cargoModifier, penaltyCost = cargoModifier + 15, math.random(3000, 7000)
@@ -261,7 +267,16 @@ CreateThread(function()
                             local routeKm = math.random(15, 45)
                             if companyDebit(driver.user_id, number(driver.price_per_km)) then
                                 companyCredit(driver.user_id, currentJobReward)
-                                MySQL.update.await([[UPDATE trucker_drivers SET total_profit = total_profit + ?, total_spent = total_spent + ?, finished_deliveries = finished_deliveries + 1, traveled_distance = traveled_distance + ? WHERE driver_id = ?]], { currentJobReward, number(driver.price_per_km), routeKm, driver.driver_id })
+                                local netProfit = currentJobReward - number(driver.price_per_km)
+                                if source then
+                                    TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📦 ENTREGA CONCLUÍDA', ('O motorista %s finalizou a rota. Lucro Líquido: %s'):format(driver.name, formatCurrency(netProfit, Config)), 7000)
+                                end
+                                MySQL.update.await([[UPDATE trucker_drivers SET 
+                                    total_profit = total_profit + ?, 
+                                    total_spent = total_spent + ?,
+                                    finished_deliveries = finished_deliveries + 1,
+                                    traveled_distance = traveled_distance + ?
+                                    WHERE driver_id = ?]], { currentJobReward, number(driver.price_per_km), routeKm, driver.driver_id })
                                 local wear = math.random(20, 50)
                                 MySQL.update.await([[UPDATE trucker_trucks SET engine = GREATEST(0, engine - ?), transmission = GREATEST(0, transmission - ?), body = GREATEST(0, body - ?), wheels = GREATEST(0, wheels - ?) WHERE truck_id = ?]], { wear, wear, math.floor(wear/2), wear * 2, driver.truck_id })
                             else
