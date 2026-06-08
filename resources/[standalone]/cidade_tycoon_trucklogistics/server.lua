@@ -229,7 +229,7 @@ CreateThread(function()
                                         notify(source, ("⚠️ ALERTA: Quebra com %s! Instruções pendentes no Tablet."):format(driver.name), 'error') 
                                         TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🛠️ FALHA MECÂNICA', ('O veículo de %s quebrou. Decida o tipo de reparo no Tablet.'):format(driver.name), 10000)
                                     end
-                                elseif eventRoll > 55 then -- Robbery (Interactive)
+                                elseif eventRoll > 60 then -- Robbery (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Tentativa de Assalto"
                                     pendingEventData = json.encode({ type = 'ROBBERY' })
                                     table.insert(routeEvents, { name = "Abordagem Armada", time = 20 })
@@ -237,17 +237,41 @@ CreateThread(function()
                                         notify(source, ("🚨 ALERTA: Assalto em andamento com %s! Instruções no Tablet."):format(driver.name), 'error') 
                                         TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 ROUBO EM ANDAMENTO', ('O motorista %s foi abordado por assaltantes armados!'):format(driver.name), 10000)
                                     end
-                                elseif eventRoll > 40 then -- Accident
+                                elseif eventRoll > 50 then -- Protest (Interactive)
+                                    nextStatus, activeEvent = 'WAITING_DECISION', "Bloqueio de Pista"
+                                    pendingEventData = json.encode({ type = 'PROTEST' })
+                                    table.insert(routeEvents, { name = "Manifestação na Pista", time = 25 })
+                                    if source then 
+                                        notify(source, ("⚠️ PROTESTO: %s parou em um bloqueio! Instruções no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '⚠️ ROTA BLOQUEADA', ('O motorista %s parou devido a um protesto na pista.'):format(driver.name), 10000)
+                                    end
+                                elseif eventRoll > 40 then -- Contraband (Interactive)
+                                    nextStatus, activeEvent = 'WAITING_DECISION', "Carga Clandestina"
+                                    pendingEventData = json.encode({ type = 'CONTRABAND' })
+                                    table.insert(routeEvents, { name = "Oferta Suspeita", time = 5 })
+                                    if source then 
+                                        notify(source, ("🤫 ALERTA: %s recebeu uma oferta suspeita! Decida no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🤫 OFERTA Suspeita', ('Ofereceram um frete clandestino valioso para o motorista %s.'):format(driver.name), 10000)
+                                    end
+                                elseif eventRoll > 30 then -- Blizzard (Interactive)
+                                    nextStatus, activeEvent = 'WAITING_DECISION', "Clima Extremo"
+                                    pendingEventData = json.encode({ type = 'BLIZZARD' })
+                                    table.insert(routeEvents, { name = "Clima Severo", time = 15 })
+                                    if source then 
+                                        notify(source, ("❄️ CLIMA: %s preso em tempestade severa! Instruções no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '❄️ CLIMA EXTREMO', ('O motorista %s enfrenta tempestade severa na pista.'):format(driver.name), 10000)
+                                    end
+                                elseif eventRoll > 20 then -- Accident
                                     activeEvent = "Colisão Leve"
                                     cargoModifier, penaltyCost = cargoModifier + 15, math.random(3000, 7000)
                                     damageData.body, damageData.engine = 350, 60
                                     table.insert(routeEvents, { name = "Acidente", time = 15 })
-                                elseif eventRoll > 25 then -- Tire
+                                elseif eventRoll > 10 then -- Tire
                                     activeEvent = "Pneu Furado"
                                     cargoModifier, penaltyCost = cargoModifier + 6, 800
                                     damageData.wheels = 250
                                     table.insert(routeEvents, { name = "Troca Pneu", time = 6 })
-                                elseif eventRoll > 10 then -- Storm
+                                elseif eventRoll > 5 then -- Storm
                                     activeEvent = "Tempestade"
                                     cargoModifier = cargoModifier + 10
                                     damageData.wheels = 50
@@ -494,6 +518,67 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:resolveCrisis', function(data)
                 damageData.body = 300
                 nextWait = 25 * 60
                 MySQL.update.await('UPDATE trucker_drivers SET current_job_reward = current_job_reward * 0.7 WHERE driver_id = ?', { driverId })
+            end
+        end
+    elseif eventData.type == 'PROTEST' then
+        if option == 'detour' then
+            resultMessage = "🚜 PROTESTO: O motorista pegou um desvio de terra. Danos leves de 20% nas rodas, diesel extra de R$500 e 15 min de atraso."
+            penaltyCost = 500
+            damageData.wheels = 200
+            nextWait = 15 * 60
+        elseif option == 'wait_out' then
+            resultMessage = "😴 PROTESTO: O motorista esperou a liberação da pista. Viagem atrasada em 40 min, mas sem danos ou custos."
+            nextWait = 40 * 60
+        elseif option == 'ram' then
+            if math.random(100) > 60 then
+                resultMessage = "🚚 PROTESTO: O motorista acelerou e furou o bloqueio com sucesso! Sem atrasos ou danos!"
+                nextWait = 1 * 60
+            else
+                resultMessage = "👮 PROTESTO: Furar bloqueio falhou! Manifestantes atacaram o veículo. Danos de 40% na lataria, multa de R$4.000 por distúrbio e 30 min de atraso."
+                penaltyCost = 4000
+                damageData.body = 400
+                nextWait = 30 * 60
+            end
+        end
+    elseif eventData.type == 'CONTRABAND' then
+        if option == 'decline' then
+            resultMessage = "😇 CLANDESTINO: O motorista recusou a proposta suspeita. Viagem prossegue normalmente."
+            nextWait = 1 * 60
+        elseif option == 'accept_smuggle' then
+            if math.random(100) > 50 then
+                resultMessage = "🤫 CLANDESTINO: Entrega clandestina feita com sucesso! A empresa faturou um bônus extra de R$12.000 limpos!"
+                companyCredit(userId, 12000)
+                nextWait = 10 * 60
+            else
+                resultMessage = "🚓 CLANDESTINO: O motorista caiu em uma blitz minuciosa. Carga ilegal apreendida, multa federal de R$25.000 e retenção de 50 min!"
+                penaltyCost = 25000
+                nextWait = 50 * 60
+                MySQL.update.await('UPDATE trucker_drivers SET current_job_reward = 0 WHERE driver_id = ?', { driverId })
+            end
+        end
+    elseif eventData.type == 'BLIZZARD' then
+        if option == 'shelter' then
+            resultMessage = "⛽ CLIMA: O motorista encostou em um posto seguro e aguardou. 20 min de atraso, mas carga e caminhão protegidos."
+            nextWait = 20 * 60
+        elseif option == 'slow_drive' then
+            if math.random(100) > 75 then
+                resultMessage = "🥶 CLIMA: O motorista derrapou levemente na pista congelada. Danos de 15% na lataria e 10 min de atraso."
+                damageData.body = 150
+                nextWait = 10 * 60
+            else
+                resultMessage = "👍 CLIMA: O motorista dirigiu devagar e passou com segurança, com 10 min de atraso."
+                nextWait = 10 * 60
+            end
+        elseif option == 'speed_up' then
+            if math.random(100) > 30 then
+                resultMessage = "💥 CLIMA: Imprudência! O caminhão deslizou e bateu forte na mureta. Rodas sofreram 45% de dano, lataria 35%, multa médica de R$3.000 e 35 min de atraso."
+                penaltyCost = 3000
+                damageData.wheels = 450
+                damageData.body = 350
+                nextWait = 35 * 60
+            else
+                resultMessage = "⚡ CLIMA: Sorte! O motorista acelerou na tempestade e compensou 5 min de atraso da rota!"
+                nextWait = -5 * 60
             end
         end
     end
