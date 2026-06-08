@@ -131,7 +131,7 @@ function generateContract()
     MySQL.insert.await([[INSERT INTO trucker_available_contracts 
         (contract_type, contract_name, coords_index, price_per_km, cargo_type, fragile, valuable, fast, truck, trailer) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]], {
-        type, cargo.nome, coordsIndex - 1, pricePerKm, cargo.def[1], cargo.def[2], cargo.def[3], isUrgente, truck, cargo.carga
+        type, cargo.nome, coordsIndex, pricePerKm, cargo.def[1], cargo.def[2], cargo.def[3], isUrgente, truck, cargo.carga
     })
 end
 
@@ -250,7 +250,7 @@ CreateThread(function()
                                     table.insert(routeEvents, { name = "Atalho", time = -7 })
                                 end
                                 if nextStatus ~= 'WAITING_DECISION' and (damageData.engine > 0 or damageData.body > 0 or damageData.wheels > 0) then
-                                    MySQL.update.await([[UPDATE trucker_trucks SET engine = GREATEST(0, engine - ?), transmission = GREATEST(0, transmission - ?), body = GREATEST(0, body - ?), wheels = GREATEST(0, wheels - ?) WHERE truck_id = ?]], { damageData.engine, damageData.transmission, damageData.body, damageData.wheels, driver.truck_id })
+                                    MySQL.update.await([[UPDATE trucker_trucks SET engine = IF(engine > ?, engine - ?, 0), transmission = IF(transmission > ?, transmission - ?, 0), body = IF(body > ?, body - ?, 0), wheels = IF(wheels > ?, wheels - ?, 0) WHERE truck_id = ?]], { damageData.engine, damageData.engine, damageData.transmission, damageData.transmission, damageData.body, damageData.body, damageData.wheels, damageData.wheels, driver.truck_id })
                                 end
                             end
                             if penaltyCost > 0 then
@@ -269,6 +269,7 @@ CreateThread(function()
                                 companyCredit(driver.user_id, currentJobReward)
                                 local netProfit = currentJobReward - number(driver.price_per_km)
                                 if source then
+                                    notify(source, ("📦 %s concluiu a entrega! Lucro: %s"):format(driver.name, formatCurrency(netProfit, Config)), 'success')
                                     TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📦 ENTREGA CONCLUÍDA', ('O motorista %s finalizou a rota. Lucro Líquido: %s'):format(driver.name, formatCurrency(netProfit, Config)), 7000)
                                 end
                                 MySQL.update.await([[UPDATE trucker_drivers SET 
@@ -278,7 +279,7 @@ CreateThread(function()
                                     traveled_distance = traveled_distance + ?
                                     WHERE driver_id = ?]], { currentJobReward, number(driver.price_per_km), routeKm, driver.driver_id })
                                 local wear = math.random(20, 50)
-                                MySQL.update.await([[UPDATE trucker_trucks SET engine = GREATEST(0, engine - ?), transmission = GREATEST(0, transmission - ?), body = GREATEST(0, body - ?), wheels = GREATEST(0, wheels - ?) WHERE truck_id = ?]], { wear, wear, math.floor(wear/2), wear * 2, driver.truck_id })
+                                MySQL.update.await([[UPDATE trucker_trucks SET engine = IF(engine > ?, engine - ?, 0), transmission = IF(transmission > ?, transmission - ?, 0), body = IF(body > ?, body - ?, 0), wheels = IF(wheels > ?, wheels - ?, 0) WHERE truck_id = ?]], { wear, wear, wear, wear, math.floor(wear/2), math.floor(wear/2), wear * 2, wear * 2, driver.truck_id })
                             else
                                 nextStatus, nextWait = 'IDLE', 60 * 60
                                 if source then notify(source, Lang[Config.lang].driver_failed:format(driver.name), 'error') end
@@ -433,7 +434,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:resolveCrisis', function(data)
         elseif option == 'cheap' then resultMessage, penaltyCost, damageData.engine, nextWait = "Gambiarra feita.", 2000, 350, 8*60 end
     end
     if penaltyCost > 0 then companyDebit(userId, penaltyCost) MySQL.update.await('UPDATE trucker_drivers SET total_spent = total_spent + ? WHERE driver_id = ?', { penaltyCost, driverId }) end
-    MySQL.update.await([[UPDATE trucker_trucks SET engine = GREATEST(0, engine - ?), transmission = GREATEST(0, transmission - ?), body = GREATEST(0, body - ?), wheels = GREATEST(0, wheels - ?) WHERE truck_id = ?]], { damageData.engine, damageData.transmission, damageData.body, damageData.wheels, driver.truck_id })
+    MySQL.update.await([[UPDATE trucker_trucks SET engine = IF(engine > ?, engine - ?, 0), transmission = IF(transmission > ?, transmission - ?, 0), body = IF(body > ?, body - ?, 0), wheels = IF(wheels > ?, wheels - ?, 0) WHERE truck_id = ?]], { damageData.engine, damageData.engine, damageData.transmission, damageData.transmission, damageData.body, damageData.body, damageData.wheels, damageData.wheels, driver.truck_id })
     MySQL.update.await([[UPDATE trucker_drivers SET status = 'TRANSIT', timer = ?, pending_event_data = NULL, active_event = ? WHERE driver_id = ?]], { os.time() + nextWait, "Crise Resolvida", driverId })
     notify(source, resultMessage, "inform")
     openUI(source, true)
@@ -467,7 +468,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:repairTruck', function(item)
     local source = source
     local userId = citizenId(source)
     if not userId then return end
-    local truck = MySQL.single.await('SELECT * FROM trucker_trucks WHERE user_id = ? AND (driver IS NULL OR driver = 0) LIMIT 1', { userId })
+    local truck = MySQL.single.await('SELECT * FROM trucker_trucks WHERE user_id = ? AND driver = 0 LIMIT 1', { userId })
     if not truck then return end
     local amount = math.floor((100 - number(truck[item]) / 10) * number(Config.valor_reparo[item]))
     if amount <= 0 then return end
@@ -529,9 +530,17 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:setDriver', function(data)
     local driverId = type(data) == 'table' and tonumber(data.driver_id) or nil
     local truckId = type(data) == 'table' and integer(data.truck_id, 1) or nil
     if not userId or not truckId then return end
-    if driverId == 0 or driverId == nil then
+    
+    if driverId == 0 then
+        -- Primeiro, desvincula qualquer outro caminhão do usuário marcado como Uso Pessoal (driver = 0)
+        MySQL.update.await('UPDATE trucker_trucks SET driver = NULL WHERE user_id = ? AND driver = 0', { userId })
+        -- Agora define o caminhão selecionado como Uso Pessoal (driver = 0)
         MySQL.update.await('UPDATE trucker_trucks SET driver = 0 WHERE truck_id = ? AND user_id = ?', { truckId, userId })
+    elseif data.driver_id == nil or data.driver_id == null or data.driver_id == 'null' then
+        -- Se for para desmarcar (driver_id nulo/nil):
+        MySQL.update.await('UPDATE trucker_trucks SET driver = NULL WHERE truck_id = ? AND user_id = ?', { truckId, userId })
     else
+        -- Atribui ao motorista NPC contratado
         MySQL.update.await('UPDATE trucker_trucks SET driver = ? WHERE truck_id = ? AND user_id = ?', { driverId, truckId, userId })
         MySQL.update.await('UPDATE trucker_trucks SET driver = NULL WHERE driver = ? AND truck_id <> ?', { driverId, truckId })
     end
