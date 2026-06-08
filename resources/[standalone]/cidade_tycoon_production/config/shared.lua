@@ -59,47 +59,89 @@ Config.Levels = {
 }
 
 -- ==========================================
--- PRODUTOS FABRICÁVEIS
+-- PRODUTOS FABRICÁVEIS — Cadeia de Produção Realista
+-- Matérias-primas do mundo: iron_ore, aluminum, copper_wire, plastic,
+--   rubber, glass, steel, raw_chemicals
 -- ==========================================
 Config.Products = {
-    -- ─── LEGAIS (Setor Esquerdo: tool_bench02 / tool_bench03) ───
+    -- ╔══════════════════════════════════════════════════════════════╗
+    -- ║ TIER 1 — MATERIAIS BÁSICOS (Legal, Nível 1)                ║
+    -- ╚══════════════════════════════════════════════════════════════╝
     ["steel_plate"] = {
         label = "Chapa de Aço",
         type = "legal",
         minLevel = 1,
-        requirements = { { item = "iron_ore", count = 10 } },
+        requirements = { { item = "iron_ore", count = 8 }, { item = "steel", count = 2 } },
         processTime = 15000,
     },
+    ["aluminum_plate"] = {
+        label = "Chapa de Alumínio",
+        type = "legal",
+        minLevel = 1,
+        requirements = { { item = "aluminum", count = 8 } },
+        processTime = 12000,
+    },
+    ["copper_coil"] = {
+        label = "Bobina de Cobre",
+        type = "legal",
+        minLevel = 1,
+        requirements = { { item = "copper_wire", count = 6 } },
+        processTime = 12000,
+    },
+    ["plastic_sheet"] = {
+        label = "Chapa Plástica",
+        type = "legal",
+        minLevel = 1,
+        requirements = { { item = "plastic", count = 8 } },
+        processTime = 12000,
+    },
+
+    -- ╔══════════════════════════════════════════════════════════════╗
+    -- ║ TIER 2 — COMPONENTES (Legal, Nível 3-7)                    ║
+    -- ╚══════════════════════════════════════════════════════════════╝
     ["mechanical_parts"] = {
         label = "Peças Mecânicas",
         type = "legal",
         minLevel = 3,
-        requirements = { { item = "iron_ore", count = 5 }, { item = "aluminum", count = 5 } },
+        requirements = { { item = "steel_plate", count = 4 }, { item = "aluminum_plate", count = 3 }, { item = "rubber", count = 2 } },
         processTime = 25000,
     },
     ["electronic_circuit"] = {
         label = "Circuito Eletrônico",
         type = "legal",
         minLevel = 5,
-        requirements = { { item = "copper_wire", count = 8 }, { item = "plastic", count = 5 }, { item = "aluminum", count = 3 } },
+        requirements = { { item = "copper_coil", count = 4 }, { item = "plastic_sheet", count = 3 }, { item = "glass", count = 2 } },
         processTime = 30000,
     },
     ["reinforced_frame"] = {
         label = "Chassi Reforçado",
         type = "legal",
         minLevel = 7,
-        requirements = { { item = "steel_plate", count = 8 }, { item = "mechanical_parts", count = 4 } },
+        requirements = { { item = "steel_plate", count = 6 }, { item = "mechanical_parts", count = 4 } },
         processTime = 35000,
     },
+
+    -- ╔══════════════════════════════════════════════════════════════╗
+    -- ║ TIER 3 — COMPONENTES AVANÇADOS (Legal, Nível 10-13)        ║
+    -- ╚══════════════════════════════════════════════════════════════╝
     ["engine_block"] = {
         label = "Bloco de Motor",
         type = "legal",
         minLevel = 10,
-        requirements = { { item = "steel_plate", count = 15 }, { item = "mechanical_parts", count = 10 }, { item = "aluminum", count = 5 } },
+        requirements = { { item = "steel_plate", count = 10 }, { item = "mechanical_parts", count = 8 }, { item = "aluminum_plate", count = 5 } },
         processTime = 50000,
     },
+    ["turbo_kit"] = {
+        label = "Kit Turbo",
+        type = "legal",
+        minLevel = 13,
+        requirements = { { item = "mechanical_parts", count = 8 }, { item = "steel_plate", count = 5 }, { item = "electronic_circuit", count = 3 }, { item = "rubber", count = 3 } },
+        processTime = 55000,
+    },
 
-    -- ─── ILEGAIS (Setor Direito: meth_table01a / heist_cut_table) ───
+    -- ╔══════════════════════════════════════════════════════════════╗
+    -- ║ ILEGAIS — ARMAS, MUNIÇÃO E EXPLOSIVOS (Nível 10-17)       ║
+    -- ╚══════════════════════════════════════════════════════════════╝
     ["refined_powder"] = {
         label = "Pó Refinado",
         type = "illegal",
@@ -107,70 +149,58 @@ Config.Products = {
         requirements = { { item = "raw_chemicals", count = 5 } },
         processTime = 40000,
     },
-    ["blueprint_weapon"] = {
-        label = "Projeto de Armamento",
+    ["weapon_parts"] = {
+        label = "Peças de Arma",
         type = "illegal",
         minLevel = 10,
-        requirements = { { item = "steel_plate", count = 20 }, { item = "mechanical_parts", count = 10 } },
+        requirements = { { item = "steel_plate", count = 8 }, { item = "mechanical_parts", count = 5 }, { item = "refined_powder", count = 2 } },
         processTime = 60000,
-    },
-    ["counterfeit_chip"] = {
-        label = "Chip Falsificado",
-        type = "illegal",
-        minLevel = 13,
-        requirements = { { item = "electronic_circuit", count = 5 }, { item = "plastic", count = 10 }, { item = "raw_chemicals", count = 3 } },
-        processTime = 45000,
     },
     ["explosive_compound"] = {
         label = "Composto Explosivo",
         type = "illegal",
-        minLevel = 15,
-        requirements = { { item = "raw_chemicals", count = 12 }, { item = "refined_powder", count = 3 } },
+        minLevel = 13,
+        requirements = { { item = "raw_chemicals", count = 10 }, { item = "refined_powder", count = 3 } },
         processTime = 55000,
     },
-    ["military_grade_weapon"] = {
-        label = "Armamento de Grau Militar",
+    ["ammo_pack"] = {
+        label = "Pacote de Munição",
         type = "illegal",
-        minLevel = 17,
-        requirements = { { item = "blueprint_weapon", count = 3 }, { item = "steel_plate", count = 25 }, { item = "explosive_compound", count = 2 } },
-        processTime = 90000,
+        minLevel = 15,
+        requirements = { { item = "weapon_parts", count = 4 }, { item = "explosive_compound", count = 3 }, { item = "copper_coil", count = 5 } },
+        processTime = 70000,
     },
-
-    -- ─── ESPECIAIS (Fundo + Ilha Central: prop_bench_01a / v_serv_tray01 / tool_bench03) ───
-    ["turbo_kit"] = {
-        label = "Kit Turbo Artesanal",
-        type = "special",
-        minLevel = 8,
-        requirements = { { item = "mechanical_parts", count = 10 }, { item = "steel_plate", count = 5 }, { item = "electronic_circuit", count = 3 } },
+    ["counterfeit_chip"] = {
+        label = "Chip Falsificado",
+        type = "illegal",
+        minLevel = 10,
+        requirements = { { item = "electronic_circuit", count = 5 }, { item = "plastic_sheet", count = 8 }, { item = "raw_chemicals", count = 3 } },
         processTime = 45000,
     },
-    ["drone_module"] = {
-        label = "Módulo de Drone",
+
+    -- ╔══════════════════════════════════════════════════════════════╗
+    -- ║ ESPECIAIS — FERRAMENTAS E BLINDAGEM (Nível 15-20)          ║
+    -- ╚══════════════════════════════════════════════════════════════╝
+    ["advanced_lockpick"] = {
+        label = "Lockpick Avançado",
         type = "special",
         minLevel = 15,
-        requirements = { { item = "electronic_circuit", count = 8 }, { item = "aluminum", count = 5 }, { item = "plastic", count = 5 } },
-        processTime = 50000,
+        requirements = { { item = "steel_plate", count = 5 }, { item = "electronic_circuit", count = 5 }, { item = "counterfeit_chip", count = 2 } },
+        processTime = 60000,
     },
-    ["experimental_alloy"] = {
-        label = "Liga Experimental",
+    ["vehicle_armor"] = {
+        label = "Blindagem Veicular",
         type = "special",
         minLevel = 18,
-        requirements = { { item = "steel_plate", count = 20 }, { item = "aluminum", count = 10 }, { item = "copper_wire", count = 5 } },
-        processTime = 65000,
+        requirements = { { item = "reinforced_frame", count = 8 }, { item = "steel_plate", count = 6 }, { item = "turbo_kit", count = 3 } },
+        processTime = 90000,
     },
-    ["quantum_processor"] = {
-        label = "Processador Quântico",
+    ["advanced_repair_kit"] = {
+        label = "Kit de Reparo Avançado",
         type = "special",
         minLevel = 20,
-        requirements = { { item = "electronic_circuit", count = 15 }, { item = "counterfeit_chip", count = 5 }, { item = "experimental_alloy", count = 3 } },
-        processTime = 120000,
-    },
-    ["prototype_weapon"] = {
-        label = "Arma Protótipo",
-        type = "special",
-        minLevel = 25,
-        requirements = { { item = "military_grade_weapon", count = 2 }, { item = "quantum_processor", count = 1 }, { item = "experimental_alloy", count = 5 } },
-        processTime = 180000,
+        requirements = { { item = "mechanical_parts", count = 6 }, { item = "electronic_circuit", count = 4 }, { item = "engine_block", count = 2 } },
+        processTime = 75000,
     },
 }
 
