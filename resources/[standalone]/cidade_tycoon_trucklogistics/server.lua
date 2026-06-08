@@ -213,7 +213,7 @@ CreateThread(function()
                             if math.random(100) <= actualRisk then
                                 local eventRoll = math.random(0, 100)
                                 local damageData = { engine = 0, transmission = 0, body = 0, wheels = 0 }
-                                if eventRoll > 90 then -- PRF (Interactive)
+                                if eventRoll > 85 then -- PRF (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Bloqueio PRF"
                                     pendingEventData = json.encode({ type = 'PRF' })
                                     table.insert(routeEvents, { name = "Retido PRF", time = 12 })
@@ -221,7 +221,7 @@ CreateThread(function()
                                         notify(source, ("🚔 PRF: %s parado! Instruções pendentes no Tablet."):format(driver.name), 'error') 
                                         TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 EMERGÊNCIA LOGÍSTICA', ('O motorista %s foi parado pela PRF e aguarda ordens.'):format(driver.name), 10000)
                                     end
-                                elseif eventRoll > 80 then -- Breakdown (Interactive)
+                                elseif eventRoll > 70 then -- Breakdown (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Falha Mecânica"
                                     pendingEventData = json.encode({ type = 'BREAKDOWN' })
                                     table.insert(routeEvents, { name = "Pane Mecânica", time = 15 })
@@ -229,17 +229,25 @@ CreateThread(function()
                                         notify(source, ("⚠️ ALERTA: Quebra com %s! Instruções pendentes no Tablet."):format(driver.name), 'error') 
                                         TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🛠️ FALHA MECÂNICA', ('O veículo de %s quebrou. Decida o tipo de reparo no Tablet.'):format(driver.name), 10000)
                                     end
-                                elseif eventRoll > 65 then -- Accident
+                                elseif eventRoll > 55 then -- Robbery (Interactive)
+                                    nextStatus, activeEvent = 'WAITING_DECISION', "Tentativa de Assalto"
+                                    pendingEventData = json.encode({ type = 'ROBBERY' })
+                                    table.insert(routeEvents, { name = "Abordagem Armada", time = 20 })
+                                    if source then 
+                                        notify(source, ("🚨 ALERTA: Assalto em andamento com %s! Instruções no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 ROUBO EM ANDAMENTO', ('O motorista %s foi abordado por assaltantes armados!'):format(driver.name), 10000)
+                                    end
+                                elseif eventRoll > 40 then -- Accident
                                     activeEvent = "Colisão Leve"
                                     cargoModifier, penaltyCost = cargoModifier + 15, math.random(3000, 7000)
                                     damageData.body, damageData.engine = 350, 60
                                     table.insert(routeEvents, { name = "Acidente", time = 15 })
-                                elseif eventRoll > 50 then -- Tire
+                                elseif eventRoll > 25 then -- Tire
                                     activeEvent = "Pneu Furado"
                                     cargoModifier, penaltyCost = cargoModifier + 6, 800
                                     damageData.wheels = 250
                                     table.insert(routeEvents, { name = "Troca Pneu", time = 6 })
-                                elseif eventRoll > 35 then -- Storm
+                                elseif eventRoll > 10 then -- Storm
                                     activeEvent = "Tempestade"
                                     cargoModifier = cargoModifier + 10
                                     damageData.wheels = 50
@@ -420,23 +428,89 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:resolveCrisis', function(data)
     if not driver or driver.status ~= 'WAITING_DECISION' then return end
     local eventData = json.decode(driver.pending_event_data)
     local penaltyCost, damageData, nextWait, resultMessage = 0, {engine=0,transmission=0,body=0,wheels=0}, 5*60, ""
+    
     if eventData.type == 'PRF' then
-        if option == 'cooperate' then resultMessage, penaltyCost, nextWait = "Cooperou: Multa aplicada.", 3500, 10*60
+        if option == 'cooperate' then
+            resultMessage = "🚨 PRF: O motorista cooperou. Multa de R$3.500 paga pela empresa. Atraso de 10 min na rota."
+            penaltyCost = 3500
+            nextWait = 10*60
         elseif option == 'bribe' then
-            if math.random(100) > 40 then resultMessage, penaltyCost, nextWait = "Suborno aceito!", 7000, 1*60
-            else resultMessage, penaltyCost, nextWait = "Suborno falhou! Multa triplicada.", 21000, 30*60 end
+            if math.random(100) > 40 then
+                resultMessage = "🤫 PRF: Suborno de R$7.000 aceito! O motorista foi liberado com apenas 1 min de atraso."
+                penaltyCost = 7000
+                nextWait = 1*60
+            else
+                resultMessage = "👮 PRF: O suborno falhou! Multa de R$21.000 aplicada e o motorista ficou retido por 30 min!"
+                penaltyCost = 21000
+                nextWait = 30*60
+            end
         elseif option == 'flee' then
-            if math.random(100) > 70 then resultMessage, damageData.wheels = "Fugiu com sucesso!", 100
-            else resultMessage, penaltyCost, damageData.body, nextWait = "Capturado! Danos graves.", 15000, 500, 45*60 end
+            if math.random(100) > 70 then
+                resultMessage = "💨 PRF: O motorista deu fuga com sucesso! Sem multas, mas as rodas foram destruídas (100% de desgaste)."
+                damageData.wheels = 1000
+            else
+                resultMessage = "🚨 PRF: A fuga falhou! O motorista foi capturado, chassi sofreu danos graves (50% de desgaste) e uma multa de R$15.000 foi aplicada, com 45 min de atraso!"
+                penaltyCost = 15000
+                damageData.body = 500
+                nextWait = 45*60
+            end
         end
     elseif eventData.type == 'BREAKDOWN' then
-        if option == 'official' then resultMessage, penaltyCost, damageData.transmission, nextWait = "Reparo oficial feito.", 9000, 100, 15*60
-        elseif option == 'cheap' then resultMessage, penaltyCost, damageData.engine, nextWait = "Gambiarra feita.", 2000, 350, 8*60 end
+        if option == 'official' then
+            resultMessage = "🛠️ MECÂNICA: Reparo oficial concluído por R$9.000. Transmissão 100% reparada, atraso de 15 min."
+            penaltyCost = 9000
+            MySQL.update.await('UPDATE trucker_trucks SET transmission = 1000 WHERE truck_id = ?', { driver.truck_id })
+            nextWait = 15*60
+        elseif option == 'cheap' then
+            resultMessage = "🔧 MECÂNICA: Gambiarra concluída por R$2.000. O motor sofreu 35% de desgaste, mas o atraso foi de apenas 8 min."
+            penaltyCost = 2000
+            damageData.engine = 350
+            nextWait = 8*60
+        end
+    elseif eventData.type == 'ROBBERY' then
+        if option == 'surrender' then
+            resultMessage = "🚨 ASSALTO: Carga entregue. Ninguém se feriu, mas houve perda total da recompensa e multa contratual de R$5.000."
+            penaltyCost = 5000
+            nextWait = 10 * 60
+            MySQL.update.await('UPDATE trucker_drivers SET current_job_reward = 0 WHERE driver_id = ?', { driverId })
+        elseif option == 'reag' then
+            if math.random(100) > 50 then
+                resultMessage = "💪 REAGIU: O motorista acelerou por cima e escapou dos assaltantes com sucesso! Carga e caminhão intactos!"
+                nextWait = 2 * 60
+            else
+                resultMessage = "💥 REAGIU: Fuga falhou! Caminhão foi alvejado, sofreu danos graves no motor/chassi (60% de desgaste), 50% da carga foi perdida e multa médica de R$8.000 cobrada."
+                penaltyCost = 8000
+                damageData.engine = 600
+                damageData.body = 600
+                nextWait = 40 * 60
+                MySQL.update.await('UPDATE trucker_drivers SET current_job_reward = current_job_reward * 0.5 WHERE driver_id = ?', { driverId })
+            end
+        elseif option == 'police' then
+            if math.random(100) > 40 then
+                resultMessage = "🚔 POLÍCIA: Polícia interceptou a quadrilha! Assaltantes fugiram e a carga foi salva com 15 min de atraso."
+                nextWait = 15 * 60
+            else
+                resultMessage = "🚑 POLÍCIA: Polícia demorou! Motorista agredido, criminosos roubaram 30% da carga. Danos de 30% no chassi e atraso de 25 min."
+                damageData.body = 300
+                nextWait = 25 * 60
+                MySQL.update.await('UPDATE trucker_drivers SET current_job_reward = current_job_reward * 0.7 WHERE driver_id = ?', { driverId })
+            end
+        end
     end
-    if penaltyCost > 0 then companyDebit(userId, penaltyCost) MySQL.update.await('UPDATE trucker_drivers SET total_spent = total_spent + ? WHERE driver_id = ?', { penaltyCost, driverId }) end
+    
+    if penaltyCost > 0 then 
+        companyDebit(userId, penaltyCost) 
+        MySQL.update.await('UPDATE trucker_drivers SET total_spent = total_spent + ? WHERE driver_id = ?', { penaltyCost, driverId }) 
+    end
+    
     MySQL.update.await([[UPDATE trucker_trucks SET engine = IF(engine > ?, engine - ?, 0), transmission = IF(transmission > ?, transmission - ?, 0), body = IF(body > ?, body - ?, 0), wheels = IF(wheels > ?, wheels - ?, 0) WHERE truck_id = ?]], { damageData.engine, damageData.engine, damageData.transmission, damageData.transmission, damageData.body, damageData.body, damageData.wheels, damageData.wheels, driver.truck_id })
     MySQL.update.await([[UPDATE trucker_drivers SET status = 'TRANSIT', timer = ?, pending_event_data = NULL, active_event = ? WHERE driver_id = ?]], { os.time() + nextWait, "Crise Resolvida", driverId })
     notify(source, resultMessage, "inform")
+    
+    if source then
+        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📉 EVENTO RESOLVIDO', resultMessage, 10000)
+    end
+    
     openUI(source, true)
 end)
 
