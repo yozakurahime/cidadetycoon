@@ -244,6 +244,7 @@ function getCrisisOptionsHTML(driver) {
         const d = JSON.parse(driver.pending_event_data);
         if (d.type == 'PRF') return `<button onclick="resolveCrisis(${driver.driver_id}, 'cooperate')" class="btn btn-success white flex-grow-1">Cooperar</button><button onclick="resolveCrisis(${driver.driver_id}, 'bribe')" class="btn btn-warning white flex-grow-1">Subornar</button><button onclick="resolveCrisis(${driver.driver_id}, 'flee')" class="btn btn-red white flex-grow-1">Fugir</button>`;
         if (d.type == 'BREAKDOWN') return `<button onclick="resolveCrisis(${driver.driver_id}, 'official')" class="btn btn-blue white flex-grow-1">Oficial</button><button onclick="resolveCrisis(${driver.driver_id}, 'cheap')" class="btn btn-warning white flex-grow-1">Gambiarra</button>`;
+        if (d.type == 'ROBBERY') return `<button onclick="resolveCrisis(${driver.driver_id}, 'surrender')" class="btn btn-red white flex-grow-1">Entregar Carga</button><button onclick="resolveCrisis(${driver.driver_id}, 'reag')" class="btn btn-warning white flex-grow-1">Acelerar</button><button onclick="resolveCrisis(${driver.driver_id}, 'police')" class="btn btn-success white flex-grow-1">Ligar Polícia</button>`;
     } catch(e) { console.error(e); }
 	return "";
 }
