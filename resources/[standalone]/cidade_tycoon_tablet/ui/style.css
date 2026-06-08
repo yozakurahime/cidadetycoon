@@ -1435,24 +1435,83 @@ input:checked + .slider:before {
 /* Truck Logistics embedded app polish */
 #app-trucker {
   background:
-    radial-gradient(circle at top right, rgba(99, 209, 158, 0.12), transparent 30%),
-    var(--bg-os);
+    radial-gradient(circle at 12% 0%, rgba(255, 152, 0, 0.18), transparent 30%),
+    radial-gradient(circle at 92% 8%, rgba(99, 209, 158, 0.15), transparent 34%),
+    linear-gradient(135deg, rgba(19, 15, 20, 0.98), rgba(12, 16, 22, 0.96));
+}
+
+#app-trucker .app-header {
+  border-bottom-color: rgba(255, 152, 0, 0.18);
+  background:
+    linear-gradient(90deg, rgba(255, 152, 0, 0.08), transparent 45%),
+    rgba(255, 255, 255, 0.025);
+}
+
+#app-trucker .app-header-title h1 {
+  color: #fff7ed;
+}
+
+#app-trucker .app-header-title p {
+  color: rgba(255, 237, 213, 0.72);
+}
+
+.trucker-header-meta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border: 1px solid rgba(99, 209, 158, 0.26);
+  border-radius: 999px;
+  background: rgba(99, 209, 158, 0.08);
+  color: #a7f3d0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.trucker-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #63d19e;
+  box-shadow: 0 0 12px rgba(99, 209, 158, 0.85);
 }
 
 #app-trucker .app-body {
-  margin: 0 18px 18px;
-  height: calc(100% - 88px) !important;
+  margin: 12px 16px 16px;
+  height: calc(100% - var(--tablet-app-header-height) - 28px) !important;
   overflow: hidden;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 18px 48px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025)),
+    rgba(12, 14, 19, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 20px 52px rgba(0, 0, 0, 0.32);
+  position: relative;
+}
+
+#app-trucker .app-body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(255, 152, 0, 0.18), transparent 24%, transparent 76%, rgba(99, 209, 158, 0.16));
+  opacity: 0.65;
+  z-index: 1;
 }
 
 #trucker-iframe {
   display: block;
-  border-radius: 22px;
+  position: relative;
+  z-index: 2;
+  border-radius: 24px;
   background: transparent;
 }
 
@@ -1705,8 +1764,6 @@ input:checked + .slider:before {
 
 #app-trucker .app-body,
 .trucker-frame-body {
-  height: 100% !important;
-  margin: 0 14px 14px;
   overflow: hidden;
   padding: 0;
 }

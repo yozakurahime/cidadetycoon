@@ -974,3 +974,327 @@ body:not(.iframe-mode) .dealer-grid {
 body:not(.iframe-mode) .truck-display img {
     max-height: 120px;
 }
+
+/* TycoonOS embedded theme. Standalone NPC mode remains unchanged. */
+body.iframe-mode {
+    --truck-bg: #0b0f16;
+    --truck-surface: rgba(24, 28, 38, 0.88);
+    --truck-surface-strong: #171b25;
+    --truck-surface-hover: rgba(37, 43, 57, 0.96);
+    --truck-border: rgba(255, 255, 255, 0.09);
+    --truck-text: #f5f5f7;
+    --truck-muted: #9198aa;
+    --truck-primary: #ff9f43;
+    --truck-success: #63d19e;
+    --truck-purple: #b45ac5;
+    align-items: stretch;
+    justify-content: stretch;
+    color: var(--truck-text);
+    background: transparent !important;
+    font-family: Inter, "Segoe UI", sans-serif;
+}
+
+body.iframe-mode .main {
+    grid-template-columns: 62px minmax(0, 1fr);
+    border: 0 !important;
+    border-radius: 22px !important;
+    background:
+        radial-gradient(circle at 10% 0%, rgba(255, 159, 67, 0.14), transparent 30%),
+        radial-gradient(circle at 95% 10%, rgba(99, 209, 158, 0.1), transparent 32%),
+        linear-gradient(135deg, #12151d 0%, var(--truck-bg) 100%) !important;
+}
+
+body.iframe-mode .sidebar-navigation {
+    width: 62px;
+    border-right: 1px solid var(--truck-border);
+    background:
+        linear-gradient(180deg, rgba(24, 20, 27, 0.98), rgba(13, 16, 23, 0.98));
+}
+
+body.iframe-mode .sidebar-navigation ul {
+    padding: 8px 6px;
+    gap: 2px;
+}
+
+body.iframe-mode .sidebar-navigation ul li {
+    min-height: 43px;
+    margin: 0;
+    padding: 11px 0;
+    border-radius: 13px;
+}
+
+body.iframe-mode .sidebar-navigation ul li:hover {
+    background: rgba(255, 255, 255, 0.055);
+}
+
+body.iframe-mode .sidebar-navigation ul li.active {
+    background:
+        linear-gradient(135deg, rgba(255, 159, 67, 0.18), rgba(180, 90, 197, 0.12));
+    box-shadow: inset 0 0 0 1px rgba(255, 159, 67, 0.12);
+}
+
+body.iframe-mode .sidebar-navigation ul li.active::before {
+    left: -6px;
+    top: 24%;
+    width: 3px;
+    height: 52%;
+    background: linear-gradient(180deg, #ffc078, var(--truck-primary));
+}
+
+body.iframe-mode .sidebar-navigation ul li svg {
+    width: 19px;
+    height: 19px;
+    fill: #7d8497;
+}
+
+body.iframe-mode .sidebar-navigation ul li:hover svg,
+body.iframe-mode .sidebar-navigation ul li.active svg {
+    fill: var(--truck-primary);
+    filter: drop-shadow(0 4px 10px rgba(255, 159, 67, 0.32));
+}
+
+body.iframe-mode .sidebar-navigation ul li .tooltip {
+    left: 66px;
+    border: 1px solid var(--truck-border);
+    border-radius: 10px;
+    color: var(--truck-text);
+    background: rgba(19, 23, 32, 0.98);
+}
+
+body.iframe-mode .sidebar-navigation ul li:hover .tooltip {
+    left: 62px;
+}
+
+body.iframe-mode .container-pages {
+    min-width: 0;
+    background: transparent;
+}
+
+body.iframe-mode .pages {
+    padding: 18px 20px;
+    color: var(--truck-text);
+    scrollbar-width: none;
+}
+
+body.iframe-mode .pages::-webkit-scrollbar {
+    display: none;
+}
+
+body.iframe-mode h4.text-uppercase,
+body.iframe-mode .job-info-main h6,
+body.iframe-mode .skill-title,
+body.iframe-mode .truck-card-title,
+body.iframe-mode #truck-name-display {
+    color: var(--truck-text) !important;
+}
+
+body.iframe-mode h4.text-uppercase {
+    font-size: 0.96rem;
+    letter-spacing: 0.08em;
+}
+
+body.iframe-mode p.page-desc,
+body.iframe-mode .text-muted,
+body.iframe-mode .stat-label,
+body.iframe-mode .spec-label,
+body.iframe-mode .diagnostic-cost {
+    color: var(--truck-muted) !important;
+}
+
+body.iframe-mode p.page-desc {
+    margin-bottom: 14px;
+    font-size: 10px;
+}
+
+body.iframe-mode .stats-grid,
+body.iframe-mode .dealer-grid,
+body.iframe-mode .skills-grid {
+    gap: 10px;
+}
+
+body.iframe-mode .stat-card,
+body.iframe-mode .job-card,
+body.iframe-mode .skill-card,
+body.iframe-mode .diagnostic-card,
+body.iframe-mode .truck-card,
+body.iframe-mode .truck-display,
+body.iframe-mode .bank-wallet-actions,
+body.iframe-mode .loan-card {
+    border: 1px solid var(--truck-border);
+    color: var(--truck-text);
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)),
+        var(--truck-surface);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.035),
+        0 10px 28px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(12px);
+}
+
+body.iframe-mode .stat-card,
+body.iframe-mode .skill-card,
+body.iframe-mode .bank-wallet-actions,
+body.iframe-mode .truck-display {
+    border-radius: 15px;
+}
+
+body.iframe-mode .job-card,
+body.iframe-mode .diagnostic-card,
+body.iframe-mode .truck-card,
+body.iframe-mode .loan-card {
+    border-radius: 13px;
+}
+
+body.iframe-mode .job-card:hover,
+body.iframe-mode .diagnostic-card:hover,
+body.iframe-mode .truck-card:hover,
+body.iframe-mode .loan-card:hover {
+    border-color: rgba(255, 159, 67, 0.38);
+    background: var(--truck-surface-hover);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.26);
+}
+
+body.iframe-mode .stat-card {
+    padding: 12px 14px;
+}
+
+body.iframe-mode .stat-value {
+    color: var(--truck-text);
+    font-size: 1rem;
+}
+
+body.iframe-mode .stat-icon-box,
+body.iframe-mode .skill-icon-container {
+    background: rgba(255, 255, 255, 0.055);
+    color: var(--truck-primary);
+    box-shadow: inset 0 0 0 1px var(--truck-border);
+}
+
+body.iframe-mode .stat-icon-box svg,
+body.iframe-mode .skill-icon-container svg {
+    fill: currentColor;
+}
+
+body.iframe-mode .job-detail-item,
+body.iframe-mode .diagnostic-label,
+body.iframe-mode .spec-value {
+    color: #c8cdd8;
+}
+
+body.iframe-mode .job-detail-item svg {
+    fill: #747d91;
+}
+
+body.iframe-mode .cargo-icons-wrapper,
+body.iframe-mode .spec-item,
+body.iframe-mode .content,
+body.iframe-mode .deposit-input-group input,
+body.iframe-mode #input-deposit-money,
+body.iframe-mode .driver-stats-grid,
+body.iframe-mode .driver-expanded-content {
+    border-color: var(--truck-border) !important;
+    color: var(--truck-text) !important;
+    background: rgba(255, 255, 255, 0.045) !important;
+}
+
+body.iframe-mode .content p,
+body.iframe-mode .driver-stats-grid span,
+body.iframe-mode .driver-expanded-content span,
+body.iframe-mode .driver-expanded-content h6 {
+    color: inherit !important;
+}
+
+body.iframe-mode .collapsible,
+body.iframe-mode select.btn-premium {
+    border: 1px solid var(--truck-border) !important;
+    color: var(--truck-text) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    box-shadow: none;
+}
+
+body.iframe-mode .collapsible:hover,
+body.iframe-mode select.btn-premium:hover {
+    border-color: rgba(255, 159, 67, 0.4) !important;
+    background: rgba(255, 159, 67, 0.1) !important;
+}
+
+body.iframe-mode select option {
+    color: var(--truck-text);
+    background: var(--truck-surface-strong);
+}
+
+body.iframe-mode .btn-blue,
+body.iframe-mode .btn-premium {
+    color: #10131a !important;
+    background: linear-gradient(135deg, #ffb25f, var(--truck-primary)) !important;
+    box-shadow: 0 7px 18px rgba(255, 159, 67, 0.18);
+}
+
+body.iframe-mode .btn-success {
+    color: #0b1712 !important;
+    background: var(--truck-success) !important;
+}
+
+body.iframe-mode .progress,
+body.iframe-mode .diag-progress {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+body.iframe-mode .progress-bar,
+body.iframe-mode .diag-progress-bar {
+    background: linear-gradient(90deg, var(--truck-primary), var(--truck-success));
+}
+
+body.iframe-mode .truck-card-img {
+    background:
+        radial-gradient(circle at center, rgba(255, 159, 67, 0.12), transparent 58%),
+        rgba(255, 255, 255, 0.025);
+}
+
+body.iframe-mode .truck-card-price,
+body.iframe-mode #bank-money {
+    color: var(--truck-success) !important;
+}
+
+body.iframe-mode .locked-job {
+    opacity: 0.48;
+}
+
+body.iframe-mode .locked-tag {
+    background: #d16363;
+}
+
+body.iframe-mode #myModal {
+    background: rgba(4, 6, 10, 0.76) !important;
+    backdrop-filter: blur(8px);
+}
+
+body.iframe-mode #myModal .modal-content {
+    border: 1px solid var(--truck-border) !important;
+    color: var(--truck-text);
+    background: var(--truck-surface-strong) !important;
+}
+
+body.iframe-mode #myModal .modal-content h4 {
+    color: var(--truck-text);
+}
+
+body.iframe-mode #myModal .modal-content p {
+    color: var(--truck-muted) !important;
+}
+
+@media (max-height: 520px) {
+    body.iframe-mode .sidebar-navigation ul {
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    body.iframe-mode .sidebar-navigation ul li {
+        min-height: 39px;
+        padding: 9px 0;
+    }
+
+    body.iframe-mode .pages {
+        padding: 14px 16px;
+    }
+}

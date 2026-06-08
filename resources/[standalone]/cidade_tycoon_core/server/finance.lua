@@ -102,7 +102,7 @@ end)
 CreateThread(function()
     while true do
         Wait(30 * 60000) -- Check every 30 minutes
-        local players = exports.qbx_core:GetVehicles() -- Just a placeholder to iterate, better to use a player list
+        local players = GetPlayers()
         -- In a real scenario, we'd query the DB for all players who are past due and not suspended
         MySQL.query('SELECT citizenid FROM tycoon_players WHERE last_upkeep_at < NOW() - INTERVAL 7 DAY AND is_suspended = 0', {}, function(result)
             if result then

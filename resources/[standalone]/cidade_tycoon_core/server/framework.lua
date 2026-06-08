@@ -187,9 +187,24 @@ local function hasPermission(source, permission)
     return false
 end
 
+local function getPlayerFromCitizenId(citizenId)
+    if not citizenId then return nil end
+
+    if isResourceReady('qbx_core') then
+        return exports.qbx_core:GetPlayerByCitizenId(citizenId)
+    end
+
+    if QBCore then
+        return QBCore.Functions.GetPlayerByCitizenId(citizenId)
+    end
+
+    return nil
+end
+
 -- Exports
 exports('GetFrameworkPlayer', getFrameworkPlayer)
 exports('GetCitizenId', getCitizenId)
+exports('GetPlayerFromCitizenId', getPlayerFromCitizenId)
 exports('GetMoneyBalance', getMoneyBalance)
 exports('RemoveMoney', removeMoney)
 exports('AddMoney', addMoney)

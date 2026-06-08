@@ -1,26 +1,24 @@
 # 📑 Module Specification: cidade_tycoon_production
 
 ## 🎯 Purpose
-Manages the industrial manufacturing process. It allows company owners to convert raw materials into finished goods (high-end parts, luxury cargo) using timed recipes and physical interaction terminals.
+The advanced manufacturing layer of the Tycoon ecosystem. It allows players to transition from simple logistics to industrial production through instanced warehouses. Players can refine raw materials into high-tier legal and illegal goods.
 
 ## 📥 Inbound (Inputs)
 - **Exports/Events consumed:**
-    - `cidade_tycoon_core`: To verify profiles and process material purchase payments.
-    - `cidade_tycoon_logistics`: To verify company ownership and warehouse capacity.
-- **Database:** Relies on `tycoon_warehouse_inventory` for raw material stocks.
+    - `cidade_tycoon_core`: GetFrameworkPlayer, RemoveMoney, AddMoney.
+    - `ox_inventory`: For checking raw materials and giving finished products.
+    - `ox_lib`: For context menus, dialogs, and point management.
 
 ## 📤 Outbound (Outputs)
-- **Callbacks:** `startProduction`, `getWarehouseInventory`, `buyMaterials`.
-- **Database:** Directly updates item counts in the `tycoon_warehouse_inventory` table.
+- **Exports provided:**
+    - `GetPlayerCompany`: Returns company data and player role.
+- **Database Tables:**
+    - `tycoon_companies`: Stores company levels, experience, and products.
+    - `tycoon_company_members`: Stores employee ranks and permissions.
 
-## 🌍 World & Entity Management
-- **Spawns:**
-    - `prop_toolchest_01`: Physical terminal spawned at the `productionCoords` of each warehouse.
-    - **Visuals:** Floating "Terminal de Produção" labels.
-- **Deletions/Cleanup:** Removes all spawned benches on resource stop.
-
-## 🛠️ Internal Logic
-1. **Recipe System:** Uses a time-based queue. Inputs are removed from the warehouse inventory when production starts.
-2. **Cron Job:** A server-side thread runs every 30 seconds to check for completed batches and deliver output goods to the warehouse.
-3. **Material Sourcing:** Owners can buy raw materials directly via the terminal using the company's vault balance (integrated with okokBanking).
-4. **Integration:** Consumes "Scrap" items recycled in the `autoparts` module as cheap raw materials.
+## 🛠️ Key Logic & Mechanics
+1. **Dimensions (Instancing):** Uses FiveM Routing Buckets to isolate each company within the same physical warehouse near Garage 7.
+2. **Interactive Production:** No passive income. Players must engage in manual tasks/minigames inside the warehouse.
+3. **Hierarchy System:** Leaders manage their team via the Tablet (Tycoon Business App), setting custom ranks and permissions.
+4. **Progression:** Leveling up the company unlocks the 2nd production line (Illegal) and higher employee limits.
+5. **Physical Logistics:** Produced items go to the inventory and must be transported manually, integrating with the Logistics module.

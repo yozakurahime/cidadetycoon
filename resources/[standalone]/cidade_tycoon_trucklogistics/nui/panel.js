@@ -77,7 +77,7 @@ window.addEventListener('message', function (event) {
 		['product_type', 'distance', 'valuable', 'fragile', 'fast'].forEach(s => setSkill(s, users[s] || 0));
 
 		// --- DIAGNOSTICS ---
-		updateDiagnostics(myFrota.find(t => t.driver == 0), config);
+		updateDiagnostics(myFrota.find(t => t.driver === 0 || t.driver === '0'), config);
 
 		// --- DEALERSHIP ---
 		$('#dealership-page-list').empty();
@@ -103,7 +103,7 @@ window.addEventListener('message', function (event) {
 			var truckData = config.concessionaria[truck.truck_name];
 			if (!truckData) return;
 			var driverName = "Nenhum", statusColor = "#919aa3";
-			if (truck.driver == 0) { driverName = "Uso Pessoal"; statusColor = "#5c6bc0"; }
+			if (truck.driver === 0 || truck.driver === '0') { driverName = "Uso Pessoal"; statusColor = "#5c6bc0"; }
 			else if (truck.driver != null && truck.driver > 0) {
 				var d = drivers.find(drv => drv.driver_id == truck.driver);
 				if (d) { driverName = d.name; statusColor = "#63d19e"; }
@@ -314,13 +314,18 @@ function updateDiagnostics(truck, config) {
 	});
 }
 
-function getMyTruckButtons(truck) { if(truck.driver == 0) return `<button onclick="spawnTruck(${truck.truck_id})" class="btn btn-blue white mr-1">Retirar</button><button onclick="setDriver(null, ${truck.truck_id})" class="btn btn-blue white">Desmarcar</button>`; return `<button onclick="setDriver('0', ${truck.truck_id})" class="btn btn-blue white">Selecionar</button>`; }
+function getMyTruckButtons(truck) { if(truck.driver === 0 || truck.driver === '0') return `<button onclick="spawnTruck(${truck.truck_id})" class="btn btn-blue white mr-1">Retirar</button><button onclick="setDriver(null, ${truck.truck_id})" class="btn btn-blue white">Desmarcar</button>`; return `<button onclick="setDriver('0', ${truck.truck_id})" class="btn btn-blue white">Selecionar</button>`; }
 function getDriverLevelHTML(value) { var html = ""; for (var i = 1; i <= 6; i++) html += `<li class="${i <= value ? 'actived' : ''}"></li>`; return html; }
 function getDriverAvailableFrotaHTML(myFrota, driver, config) {
 	var html = "", has_truck = false, assignedTruckId = "";
 	myFrota.forEach(truck => {
-		if (truck.driver == driver.driver_id) { has_truck = true; assignedTruckId = truck.truck_id; html += `<option selected="selected" truck_id="${truck.truck_id}" driver_id="${driver.driver_id}">${config.concessionaria[truck.truck_name].name}</option>`; }
-		else if (truck.driver == null || truck.driver == 0) { if (truck.driver == null) html += `<option truck_id="${truck.truck_id}" driver_id="${driver.driver_id}">${config.concessionaria[truck.truck_name].name}</option>`; }
+		if (truck.driver == driver.driver_id) { 
+			has_truck = true; 
+			assignedTruckId = truck.truck_id; 
+			html += `<option selected="selected" truck_id="${truck.truck_id}" driver_id="${driver.driver_id}">${config.concessionaria[truck.truck_name].name}</option>`; 
+		} else if (truck.driver === null || truck.driver === undefined || truck.driver === false) { 
+			html += `<option truck_id="${truck.truck_id}" driver_id="${driver.driver_id}">${config.concessionaria[truck.truck_name].name}</option>`; 
+		}
 	});
 	return (has_truck ? `<option driver_id="0" truck_id="${assignedTruckId}">Remover Veículo</option>` : `<option selected="selected">Designar Veículo</option>`) + html;
 }

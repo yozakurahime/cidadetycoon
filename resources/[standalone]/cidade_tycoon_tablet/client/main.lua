@@ -49,7 +49,7 @@ local function openTablet(startApp)
     -- Animation: Use tablet (allows movement with flag 49)
     lib.requestAnimDict("amb@world_human_seat_wall_tablet@female@base", 5000)
     TaskPlayAnim(ped, "amb@world_human_seat_wall_tablet@female@base", "base", 8.0, 1.0, -1, 49, 0, false, false, false)
-    
+
     local model = joaat("prop_cs_tablet")
     if lib.requestModel(model, 5000) then
         local coords = GetEntityCoords(ped)
@@ -57,10 +57,6 @@ local function openTablet(startApp)
         -- Attach to Left Hand (60309) with proper offsets for a tablet
         AttachEntityToEntity(tabletProp, ped, GetPedBoneIndex(ped, 60309), 0.03, 0.002, -0.02, 10.0, 160.0, 0.0, true, true, false, true, 1, true)
     end
-
-    -- Visual: Tablet Focus Blur
-    SetTimecycleModifier('hud_def_blur')
-    SetTimecycleModifierStrength(1.5)
 
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'openTablet', payload = res, startApp = startApp })
@@ -87,6 +83,29 @@ end)
 
 -- Callbacks & Events
 RegisterNetEvent('cidade_tycoon_tablet:client:openTablet', openTablet)
+
+RegisterNUICallback('refreshProductionData', function(_, cb)
+    local res = lib.callback.await('cidade_tycoon_production:server:getCompanyDashboard', false)
+    cb(res)
+end)
+
+RegisterNUICallback('inviteCompanyMember', function(data, cb)
+    if not data or not data.targetId then return cb({ ok = false }) end
+    TriggerServerEvent('cidade_tycoon_production:server:invitePlayer', data.targetId)
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('fireCompanyMember', function(data, cb)
+    if not data or not data.citizenid then return cb({ ok = false }) end
+    TriggerServerEvent('cidade_tycoon_production:server:firePlayer', data.citizenid)
+    cb({ ok = true })
+end)
+
+RegisterNUICallback('withdrawWarehouseItem', function(data, cb)
+    if not data or not data.companyId or not data.itemKey then return cb({ ok = false, message = 'Dados incompletos.' }) end
+    local res = lib.callback.await('cidade_tycoon_production:server:withdrawItem', false, data.companyId, data.itemKey, data.amount or 1)
+    cb(res)
+end)
 
 RegisterNUICallback('closeTablet', function(_, cb)
     forceCloseTabletUi()

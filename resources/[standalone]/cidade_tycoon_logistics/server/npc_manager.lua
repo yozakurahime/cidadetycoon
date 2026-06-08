@@ -1,4 +1,4 @@
-local config = require 'shared.config'
+local config = require 'config.shared'
 local activeRoutes = {} -- [deliveryId] = routeData (Memory-first simulation)
 local lastDBFlush = 0
 

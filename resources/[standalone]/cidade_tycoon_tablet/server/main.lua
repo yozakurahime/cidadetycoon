@@ -55,8 +55,8 @@ local function getDashboardForSource(source)
                 local ped = GetPlayerPed(source)
                 if ped and ped > 0 then
                     local coords = GetEntityCoords(ped)
-                    if coords and coords ~= vec3(0.0, 0.0, 0.0) then
-                        local dist = #(coords - vec3(1197.2, -3250.6, 7.1))
+                    if coords and coords ~= vector3(0.0, 0.0, 0.0) then
+                        local dist = #(coords - vector3(1197.2, -3250.6, 7.1))
                         if dist < 50.0 then
                             profile.tutorial.currentStep = 'accept_tutorial_contract'
                             exports.cidade_tycoon_core:UpdateTutorialStep(source, 'accept_tutorial_contract')
@@ -108,6 +108,12 @@ local function getDashboardForSource(source)
     } or { hasCompany = false }
     payload.hasCompany = bizData and bizData.hasCompany or false
     payload.warehouses = getWarehouseList()
+    payload.warehouseStock = {}
+    if payload.hasCompany and payload.company.id then
+        pcall(function()
+            payload.warehouseStock = MySQL.query.await('SELECT item_key, amount FROM tycoon_warehouse_inventory WHERE company_id = ? AND amount > 0', { payload.company.id }) or {}
+        end)
+    end
     payload.staff = bizData and bizData.employees or {}
     payload.production = bizData and bizData.activeDeliveries or {}
     payload.fleet = {}

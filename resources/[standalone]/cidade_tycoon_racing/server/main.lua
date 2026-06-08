@@ -26,12 +26,12 @@ local EventSystemConfiguration = {
     baseCityTaxPercent = 12,
     priorityRewardExperience = 900,
     checkpoints = {
-        vec3(1214.85, -1262.31, 35.23),
-        vec3(-716.41, -915.55, 19.22),
-        vec3(2681.84, 3290.42, 55.25),
-        vec3(1702.93, 4920.61, 42.06),
-        vec3(-42.01, -1749.23, 29.42),
-        vec3(379.43, 323.43, 103.56),
+        vector3(1214.85, -1262.31, 35.23),
+        vector3(-716.41, -915.55, 19.22),
+        vector3(2681.84, 3290.42, 55.25),
+        vector3(1702.93, 4920.61, 42.06),
+        vector3(-42.01, -1749.23, 29.42),
+        vector3(379.43, 323.43, 103.56),
     }
 }
 
@@ -74,9 +74,10 @@ local function startGlobalPriorityEvent()
     if GlobalEventState.isActive then return end
 
     local eligibleParticipants = {}
-    local players = exports.qbx_core:GetPlayers()
+    local players = GetPlayers()
 
-    for _, src in ipairs(players) do
+    for _, srcStr in ipairs(players) do
+        local src = tonumber(srcStr)
         local profile = exports.cidade_tycoon_core:GetPlayerProfile(src)
         if profile then
             table.insert(eligibleParticipants, {

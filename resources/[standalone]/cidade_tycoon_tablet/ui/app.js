@@ -245,8 +245,129 @@ function triggerAppRender(appId) {
     window.renderBusiness(window.OSState.payload);
   } else if (appId === 'jobs' && window.renderJobs) {
     window.renderJobs(window.OSState.payload);
+  } else if (appId === 'production') {
+    window.renderProduction();
   }
 }
+
+window.renderProduction = function() {
+  window.postNUI('refreshProductionData').then(data => {
+    if (!data) {
+        document.getElementById('production-main-view').innerHTML = `
+            <div class="os-card p-5 text-center">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#a0aec0" stroke-width="1.5">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5v-5l-10 5-10-5v5z"/>
+                </svg>
+                <h3 class="mt-3">Nenhuma Indústria</h3>
+                <p class="text-muted">Você não é proprietário nem funcionário de uma indústria. Vá até o Complexo Industrial no Porto para começar.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const { company, role, employees, ranks } = data;
+    
+    document.getElementById('production-company-name').textContent = company.name;
+    document.getElementById('production-level-value').textContent = 'LV ' + company.level;
+    document.getElementById('production-members-count').textContent = company.total_members + ' / 12';
+
+    // Renderiza Lista de Equipe
+    const staffList = document.getElementById('production-staff-list');
+    staffList.innerHTML = employees.map(emp => `
+        <div class="job-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon-box bg-light-primary mr-3"><i class="fas fa-user-tie"></i></div>
+                <div>
+                    <h6 class="mb-0">${emp.citizenid}</h6>
+                    <span class="badge bg-dark white">${emp.rank_label || 'Funcionário'}</span>
+                </div>
+            </div>
+            <div class="job-actions">
+                ${role === 'owner' ? `<button class="btn btn-red" onclick="fireEmployee('${emp.citizenid}')">Demitir</button>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    // Renderiza Estoque
+    const stockList = document.getElementById('production-stock-list');
+    if (stockList) {
+        if (!data.stock || data.stock.length === 0) {
+            stockList.innerHTML = `<p class="empty-state">Estoque do galpão vazio.</p>`;
+        } else {
+            stockList.innerHTML = data.stock.map(item => `
+                <div class="business-row">
+                    <span>${escapeHTML(item.item_key)}</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <strong>${item.amount}x</strong>
+                        <button class="os-btn os-btn-primary btn-withdraw-prod" data-key="${item.item_key}" style="padding: 2px 8px; font-size: 10px;">Retirar</button>
+                    </div>
+                </div>
+            `).join('');
+
+            stockList.querySelectorAll('.btn-withdraw-prod').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const itemKey = btn.getAttribute('data-key');
+                    window.postNUI('withdrawWarehouseItem', { companyId: company.id, itemKey: itemKey, amount: 1 }).then(resp => {
+                        if (resp && resp.message) window.showToast('Galpão', resp.message);
+                        window.renderProduction();
+                    });
+                });
+            });
+        }
+    }
+
+    // Renderiza Linhas de Produção (Exemplos baseado no nível)
+    const prodLines = document.getElementById('production-lines-list');
+    prodLines.innerHTML = `
+        <div class="os-card">
+            <div class="card-header"><h3>Linha de Produção Ativa</h3></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">Chapas de Aço</h4>
+                        <p class="text-muted mb-0">Status: Operacional</p>
+                    </div>
+                    <div class="badge bg-success white">NÍVEL 1</div>
+                </div>
+            </div>
+        </div>
+        ${company.level < 10 ? `
+            <div class="os-card mt-3 locked-job">
+                <span class="locked-tag">Requer Nível 10</span>
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-lock mb-2"></i>
+                    <p class="mb-0">Linha de Produção Secundária (Ilegal)</p>
+                </div>
+            </div>
+        ` : `
+            <div class="os-card mt-3">
+                <div class="card-header"><h3>Linha Secundária</h3></div>
+                <div class="card-body text-center p-4">
+                    <p class="text-success font-weight-bold">Pronto para configurar refino ilegal.</p>
+                </div>
+            </div>
+        `}
+    `;
+  });
+};
+
+// Funções de Ação do App de Produção
+window.fireEmployee = function(cid) {
+    window.showModal('Confirmar Demissão', `Deseja realmente remover o cidadão ${cid} da sua equipe?`, () => {
+        window.postNUI('fireCompanyMember', { citizenid: cid }).then(() => {
+            window.renderProduction();
+        });
+    });
+};
+
+document.getElementById('btn-send-invite').addEventListener('click', () => {
+    const id = document.getElementById('input-invite-id').value;
+    if (!id) return;
+    window.postNUI('inviteCompanyMember', { targetId: id }).then(resp => {
+        document.getElementById('input-invite-id').value = '';
+        window.renderProduction();
+    });
+});
 
 // ==========================================================================
 // Sincronização e Relógio
@@ -856,8 +977,38 @@ window.renderBusiness = function(payload) {
     renderBizFleet(payload.fleet || []);
     renderBizStaff(payload.staff || []);
     renderBizProduction(payload.production || []);
+    renderWarehouseStock(payload.warehouseStock || [], company.id);
   }
 };
+
+function renderWarehouseStock(stock, companyId) {
+  const container = document.getElementById('business-stock-list');
+  if (!container) return;
+  if (!stock || stock.length === 0) {
+    container.innerHTML = `<p class="empty-state">Estoque vazio.</p>`;
+    return;
+  }
+
+  container.innerHTML = stock.map(item => `
+    <div class="business-row">
+      <span>${escapeHTML(item.item_key)}</span>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <strong>${item.amount}x</strong>
+        <button class="os-btn os-btn-primary btn-withdraw-item" data-key="${item.item_key}" style="padding: 2px 8px; font-size: 10px;">Retirar</button>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.btn-withdraw-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const itemKey = btn.getAttribute('data-key');
+      window.postNUI('withdrawWarehouseItem', { companyId: companyId, itemKey: itemKey, amount: 1 }).then(resp => {
+        if (resp && resp.message) window.showToast('Galpão', resp.message);
+        window.refreshOS();
+      });
+    });
+  });
+}
 
 function renderWarehouseList(warehouses) {
   const container = document.getElementById('business-warehouse-list');

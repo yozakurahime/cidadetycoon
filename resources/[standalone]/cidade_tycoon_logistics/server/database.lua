@@ -11,11 +11,24 @@ local function setupLogisticsDatabase()
             warehouse_id INT DEFAULT NULL,
             upgrades LONGTEXT DEFAULT NULL,
             is_active TINYINT(1) DEFAULT 1,
+            in_debt_since TIMESTAMP NULL DEFAULT NULL,
+            foreclosed_at TIMESTAMP NULL DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             UNIQUE KEY (citizenid)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ]])
+
+    -- Ensure missing columns exist (Case table was created by production module)
+    MySQL.query.await([[
+        ALTER TABLE `tycoon_companies` 
+        ADD COLUMN IF NOT EXISTS `warehouse_id` INT DEFAULT NULL AFTER `vault_balance`,
+        ADD COLUMN IF NOT EXISTS `upgrades` LONGTEXT DEFAULT NULL AFTER `warehouse_id`,
+        ADD COLUMN IF NOT EXISTS `is_active` TINYINT(1) DEFAULT 1 AFTER `upgrades`,
+        ADD COLUMN IF NOT EXISTS `in_debt_since` TIMESTAMP NULL DEFAULT NULL AFTER `is_active`,
+        ADD COLUMN IF NOT EXISTS `foreclosed_at` TIMESTAMP NULL DEFAULT NULL AFTER `in_debt_since`,
+        ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`;
     ]])
 
     -- Fleet Table (Linking vehicles to companies)

@@ -79,6 +79,16 @@ CreateThread(function()
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ]])
 
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS `trucker_offline_notifications` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `user_id` VARCHAR(50) NOT NULL,
+            `message` TEXT NOT NULL,
+            `notification_type` VARCHAR(50) NOT NULL DEFAULT 'success',
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ]])
+
     -- Clean up legacy remote bootdey avatar URLs to point to local assets
     MySQL.query.await([[
         UPDATE trucker_drivers 
@@ -106,5 +116,15 @@ CreateThread(function()
         ADD COLUMN IF NOT EXISTS `finished_deliveries` INT DEFAULT 0,
         ADD COLUMN IF NOT EXISTS `traveled_distance` DOUBLE DEFAULT 0,
         ADD COLUMN IF NOT EXISTS `total_work_time` BIGINT DEFAULT 0
+    ]])
+
+    -- Migração para novo sistema de combustível e comboio cooperativo
+    MySQL.query.await([[
+        ALTER TABLE `trucker_users` 
+        ADD COLUMN IF NOT EXISTS `fuel_stock` INT UNSIGNED DEFAULT 0
+    ]])
+    MySQL.query.await([[
+        ALTER TABLE `trucker_available_contracts` 
+        ADD COLUMN IF NOT EXISTS `coop` TINYINT(1) DEFAULT 0
     ]])
 end)

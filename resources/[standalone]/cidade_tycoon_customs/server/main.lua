@@ -11,7 +11,7 @@ local function isNearAnyWorkshop(source)
     
     for _, warehouse in pairs(logisticsConfig.warehouses) do
         local base = warehouse.autopartsCoords or warehouse.productionCoords
-        if base and #(pCoords - vec3(base.x, base.y, base.z)) < sharedConfig.WorkshopDistance + 5.0 then
+        if base and #(pCoords - vector3(base.x, base.y, base.z)) < sharedConfig.WorkshopDistance + 5.0 then
             return true
         end
     end

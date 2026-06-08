@@ -2,7 +2,6 @@ local timeUntilAFK = 300 -- 5 minutos padrão
 local isAFK = false
 local lastInputTime = GetGameTimer()
 local prevCoords = nil
-local prevHeading = nil
 local animDict = "anim@amb@business@bcm@bcm_spa_p1@"
 local animName = "sit_floor_sleep_clip"
 local isFrozen = false
@@ -16,7 +15,6 @@ if configRaw then
         if config.timeUntilAFK then
             timeUntilAFK = config.timeUntilAFK
         elseif config.timeUntilAFKKick then
-            -- Define o tempo de AFK como 1/3 do tempo de kick (com mínimo de 60 segundos)
             timeUntilAFK = math.max(60, math.floor(config.timeUntilAFKKick / 3))
         end
     end
@@ -26,7 +24,7 @@ end
 local function togglePassiveMode(state)
     local ped = PlayerPedId()
     if state then
-        SetEntityAlpha(ped, 150, false) -- Fica transparente (fantasminha)
+        SetEntityAlpha(ped, 100, false) -- Fica transparente
         SetEntityInvincible(ped, true) -- Fica invencível
         SetBlockingOfNonTemporaryEvents(ped, true) -- Não reage a nada ao redor
         exports.qbx_core:Notify('Modo Pacífico Ativo (AFK)', 'inform', 5000)
@@ -47,22 +45,29 @@ local function clearSittingAnim(ped)
         FreezeEntityPosition(ped, false)
         isFrozen = false
     end
-    ClearPedTasks(ped)
+    ClearPedTasksImmediately(ped)
 end
 
 -- Função para reproduzir a animação
 local function playSittingAnim(ped)
+    ClearPedTasksImmediately(ped)
     RequestAnimDict(animDict)
-    while not HasAnimDictLoaded(animDict) do
+    local timer = 0
+    while not HasAnimDictLoaded(animDict) and timer < 100 do
         Wait(10)
+        timer = timer + 1
     end
     
-    TaskPlayAnim(ped, animDict, animName, 8.0, -8.0, -1, 1, 0, false, false, false)
+    if HasAnimDictLoaded(animDict) then
+        TaskPlayAnim(ped, animDict, animName, 8.0, -8.0, -1, 1, 0, false, false, false)
+    else
+        -- Fallback se a animação do casino falhar
+        TaskStartScenarioInPlace(ped, "WORLD_HUMAN_SIT_UPS", 0, true)
+    end
     
-    -- Congelar a posição do ped após ele sentar (esperar 1 segundo para o ped se posicionar no chão)
+    -- Congelar a posição do ped após ele sentar
     CreateThread(function()
-        Wait(1000)
-        -- Só congela se o jogador ainda estiver AFK e não estiver em veículo
+        Wait(2000)
         if isAFK and not IsPedInAnyVehicle(ped, false) then
             FreezeEntityPosition(ped, true)
             isFrozen = true
@@ -70,55 +75,47 @@ local function playSittingAnim(ped)
     end)
 end
 
--- Thread de detecção de AFK de Alta Performance e Frame Rate Correto
+-- Thread de detecção de AFK
 CreateThread(function()
     local lastCheck = GetGameTimer()
     local hasNotifiedRestore = true
     
     while true do
-        -- 1. Invalida idle camera nativa a cada frame (Wait 0) para evitar que a câmera mude de perspectiva
         InvalidateIdleCam()
         InvalidateVehicleIdleCam()
         
         local ped = PlayerPedId()
         
-        -- Só monitora se o jogador estiver logado
         if LocalPlayer.state.isLoggedIn then
-            -- Se o jogador morrer, limpa o estado de AFK imediatamente
             if IsEntityDead(ped) then
                 if isAFK then
                     isAFK = false
                     TriggerServerEvent('qbx_afk:server:setAFK', false)
                     clearSittingAnim(ped)
                     togglePassiveMode(false)
-                    combatCooldownUntil = 0 -- Reseta cooldown se morrer
+                    combatCooldownUntil = 0
                 end
             else
                 local coords = GetEntityCoords(ped)
-                local heading = GetEntityHeading(ped)
-                
                 local hasInput = false
                 
-                -- Checa se qualquer controle principal está sendo ativamente pressionado (movimentação, câmera, etc.)
-                for i = 0, 6 do
-                    if IsControlPressed(0, i) or IsDisabledControlPressed(0, i) then
-                        hasInput = true
-                        break
-                    end
+                -- Checagem de Input
+                if GetDisabledControlNormal(0, 1) ~= 0.0 or GetDisabledControlNormal(0, 2) ~= 0.0 then
+                    hasInput = true
                 end
-                
+
                 if not hasInput then
-                    for i = 30, 35 do
+                    for i = 30, 36 do 
                         if IsControlPressed(0, i) or IsDisabledControlPressed(0, i) then
                             hasInput = true
                             break
                         end
                     end
                 end
-                
+
                 if not hasInput then
-                    local extraControls = {18, 22, 23, 24, 25, 38, 44}
-                    for _, controlId in ipairs(extraControls) do
+                    local commonControls = {18, 22, 23, 24, 25, 37, 38, 44, 140, 141, 142}
+                    for _, controlId in ipairs(commonControls) do
                         if IsControlPressed(0, controlId) or IsDisabledControlPressed(0, controlId) then
                             hasInput = true
                             break
@@ -126,23 +123,12 @@ CreateThread(function()
                     end
                 end
                 
-                if GetDisabledControlNormal(0, 1) ~= 0.0 or GetDisabledControlNormal(0, 2) ~= 0.0 then
-                    hasInput = true
-                end
+                if IsNuiFocused() then hasInput = true end
+                if not isFrozen and prevCoords and #(prevCoords - coords) > 0.5 then hasInput = true end
                 
-                if IsNuiFocused() then
-                    hasInput = true
-                end
-                
-                if prevCoords and #(prevCoords - coords) > 0.2 then
-                    hasInput = true
-                end
-                
-                -- Se houve ação do jogador, reseta o temporizador e sai do AFK se estiver
                 if hasInput then
                     lastInputTime = GetGameTimer()
                     prevCoords = coords
-                    prevHeading = heading
                     
                     if isAFK then
                         isAFK = false
@@ -153,25 +139,20 @@ CreateThread(function()
                     end
                 end
                 
-                -- O processamento do timer de inatividade e reinício de animação roda a cada 1000ms para economizar CPU
                 local now = GetGameTimer()
                 if now - lastCheck >= 1000 then
                     lastCheck = now
-                    
                     if not hasInput then
                         local idleTime = (now - lastInputTime) / 1000
                         if idleTime >= timeUntilAFK and not isAFK then
                             isAFK = true
                             TriggerServerEvent('qbx_afk:server:setAFK', true)
                             togglePassiveMode(true)
-                            
                             if not IsPedInAnyVehicle(ped, false) and not IsPedFalling(ped) and not IsPedSwimming(ped) then
                                 playSittingAnim(ped)
                             end
                         end
-                        
-                        -- Se o jogador estiver AFK, mas saiu do veículo ou a animação parou, reinicia a animação
-                        if isAFK and not IsPedInAnyVehicle(ped, false) and not IsPedFalling(ped) and not IsPedSwimming(ped) and not IsEntityPlayingAnim(ped, animDict, animName, 3) then
+                        if isAFK and not IsPedInAnyVehicle(ped, false) and not IsPedFalling(ped) and not IsPedSwimming(ped) and not IsEntityPlayingAnim(ped, animDict, animName, 3) and not IsPedUsingAnyScenario(ped) then
                             playSittingAnim(ped)
                         end
                     end
@@ -181,26 +162,27 @@ CreateThread(function()
             Wait(1000)
         end
         
-        -- Bloqueia ações de combate se estiver AFK ou na trava de segurança
+        -- BLOQUEIO DE COMBATE
         local nowTimer = GetGameTimer()
         if isAFK or nowTimer < combatCooldownUntil then
             if not isAFK and nowTimer < combatCooldownUntil then
-                -- Desenha aviso de recarga de combate
                 DrawText3D(GetEntityCoords(ped) + vector3(0.0, 0.0, 1.1), "~r~RECARREGANDO COMBATE")
             end
 
-            DisablePlayerFiring(PlayerId(), true) -- Desativa tiro
-            DisableControlAction(0, 24, true) -- Ataque
-            DisableControlAction(0, 25, true) -- Mira
-            DisableControlAction(0, 37, true) -- Roda de armas
-            DisableControlAction(0, 47, true) -- Arma
-            DisableControlAction(0, 58, true) -- Arma
-            DisableControlAction(0, 140, true) -- Ataque corporal
-            DisableControlAction(0, 141, true) -- Ataque corporal
-            DisableControlAction(0, 142, true) -- Ataque corporal
-            DisableControlAction(0, 143, true) -- Ataque corporal
-            DisableControlAction(0, 263, true) -- Ataque corporal
-            DisableControlAction(0, 264, true) -- Ataque corporal
+            DisablePlayerFiring(PlayerId(), true) 
+            SetPlayerCanDoDriveBy(PlayerId(), false)
+            
+            -- Bloqueio Extensivo de Controles de Ataque
+            local controlsToBlock = {24, 25, 37, 44, 45, 47, 58, 69, 70, 92, 114, 140, 141, 142, 143, 257, 263, 264, 331}
+            for _, control in ipairs(controlsToBlock) do
+                DisableControlAction(0, control, true)
+                DisableControlAction(1, control, true)
+                DisableControlAction(2, control, true)
+            end
+            
+            if IsPedInMeleeCombat(ped) or IsPedPerformingMeleeAction(ped) then
+                ClearPedTasksImmediately(ped)
+            end
         elseif not hasNotifiedRestore then
             hasNotifiedRestore = true
             exports.qbx_core:Notify('Habilidades de combate restauradas.', 'success', 5000)
@@ -226,40 +208,45 @@ function DrawText3D(coords, text)
     ClearDrawOrigin()
 end
 
--- Thread para renderizar o texto AFK em cima da cabeça
+-- Texto AFK sobre a cabeça
 CreateThread(function()
     while true do
         local sleep = 1000
         local myPed = PlayerPedId()
         local myCoords = GetEntityCoords(myPed)
-        
         local activePlayers = GetActivePlayers()
         for i = 1, #activePlayers do
             local player = activePlayers[i]
             local playerPed = GetPlayerPed(player)
-            
             if DoesEntityExist(playerPed) then
                 local serverId = GetPlayerServerId(player)
                 local isPlayerAFK = false
-                
-                if playerPed == myPed then
-                    isPlayerAFK = isAFK
-                else
-                    isPlayerAFK = Player(serverId).state.isAFK
-                end
-                
+                if playerPed == myPed then isPlayerAFK = isAFK
+                else local s = Player(serverId).state isPlayerAFK = s and s.isAFK end
                 if isPlayerAFK then
                     local targetCoords = GetEntityCoords(playerPed)
-                    local dist = #(myCoords - targetCoords)
-                    
-                    if dist < 15.0 then
+                    if #(myCoords - targetCoords) < 15.0 then
                         sleep = 0
                         DrawText3D(targetCoords + vector3(0.0, 0.0, 1.1), "AFK")
                     end
                 end
             end
         end
-        
         Wait(sleep)
+    end
+end)
+
+-- Comando /afk corrigido
+RegisterCommand('afk', function()
+    if not isAFK then
+        isAFK = true
+        TriggerServerEvent('qbx_afk:server:setAFK', true)
+        togglePassiveMode(true)
+        playSittingAnim(PlayerPedId())
+    else
+        isAFK = false
+        TriggerServerEvent('qbx_afk:server:setAFK', false)
+        clearSittingAnim(PlayerPedId())
+        togglePassiveMode(false)
     end
 end)

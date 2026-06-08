@@ -124,16 +124,16 @@
                 <span class="app-label">Finanças</span>
               </div>
               
-              <!-- App Empresa (Logística Corporativa) -->
-              <div class="app-icon-wrapper" data-app="business">
-                <div class="app-icon icon-business" style="background: linear-gradient(135deg, #FF9800, #F44336);">
+              <!-- App Minha Empresa (Production Business) -->
+              <div class="app-icon-wrapper" data-app="production">
+                <div class="app-icon icon-production" style="background: linear-gradient(135deg, #FF9800, #F44336);">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                     <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
                     <line x1="12" y1="22.08" x2="12" y2="12"/>
                   </svg>
                 </div>
-                <span class="app-label">Empresa</span>
+                <span class="app-label">Minha Empresa</span>
               </div>
 
               <!-- App Empregos (Mural) -->
@@ -374,6 +374,11 @@
           
           <!-- APP: EMPRESA (BUSINESS) -->
           <section id="app-business" class="view-panel app-view hidden">
+...
+          </section>
+
+          <!-- APP: PRODUÇÃO (PRODUCTION BUSINESS) -->
+          <section id="app-production" class="view-panel app-view hidden">
             <header class="app-header">
               <button class="back-home-btn">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
@@ -381,52 +386,73 @@
                 </svg>
               </button>
               <div class="app-header-title">
-                <h1>Logística Corporativa</h1>
-                <p>Gestão de frota, funcionários e produção</p>
+                <h1>Gerenciamento Industrial</h1>
+                <p id="production-company-name">Empresa não identificada</p>
               </div>
             </header>
             
             <div class="app-body scrollable">
-              <div id="business-setup-view" class="hidden">
-                <div class="os-card">
-                  <div class="card-header"><h3>Fundar Nova Empresa</h3></div>
-                  <div class="card-body">
-                    <p>Você ainda não possui um registro de empresa logística. Adquira um galpão para começar.</p>
-                    <div class="warehouse-grid" id="business-warehouse-list">
-                      <!-- Gerado dinamicamente -->
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div id="business-main-view" class="hidden">
+              <div id="production-main-view">
+                <!-- Dashboard Industrial -->
                 <div class="business-stats-grid">
                   <div class="balance-card">
-                    <span>Cofre da Empresa</span>
-                    <h2 id="business-vault-value">$ --,--</h2>
+                    <span>Nível de Fábrica</span>
+                    <h2 id="production-level-value">LV --</h2>
                   </div>
                   <div class="balance-card">
-                    <span>Nível Corporativo</span>
-                    <h2 id="business-level-value">T --</h2>
+                    <span>Membros Ativos</span>
+                    <h2 id="production-members-count">-- / --</h2>
                   </div>
                 </div>
 
-                <div class="tab-container" style="margin-top: 20px;">
+                <!-- Abas Internas -->
+                <div class="tab-container mt-4">
                   <div class="tab-header">
-                    <button class="tab-btn active" data-tab="biz-fleet">Frota</button>
-                    <button class="tab-btn" data-tab="biz-staff">Equipe</button>
-                    <button class="tab-btn" data-tab="biz-prod">Produção</button>
+                    <button class="tab-btn active" data-tab="prod-staff">Equipe & RH</button>
+                    <button class="tab-btn" data-tab="prod-lines">Linhas</button>
+                    <button class="tab-btn" data-tab="prod-stock">Estoque</button>
+                    <button class="tab-btn" data-tab="prod-upgrades">Melhorias</button>
                   </div>
                   
                   <div class="tab-content">
-                    <div id="biz-fleet" class="tab-pane active">
-                      <div class="fleet-list" id="business-fleet-list"></div>
+                    <!-- Aba Equipe -->
+                    <div id="prod-staff" class="tab-pane active">
+                      <div class="os-card mb-3">
+                        <div class="card-header"><h3>Contratar Funcionário</h3></div>
+                        <div class="card-body d-flex gap-2">
+                          <input type="number" id="input-invite-id" placeholder="ID do Cidadão" class="flex-grow-1" style="background:#edf2f7; border:none; padding:10px; border-radius:8px;">
+                          <button id="btn-send-invite" class="btn btn-blue">Convidar</button>
+                        </div>
+                      </div>
+                      <div class="staff-list" id="production-staff-list">
+                        <!-- Lista de membros gerada via JS -->
+                      </div>
                     </div>
-                    <div id="biz-staff" class="tab-pane">
-                      <div class="staff-list" id="business-staff-list"></div>
+
+                    <!-- Aba Estoque -->
+                    <div id="prod-stock" class="tab-pane">
+                      <div class="os-card">
+                        <div class="card-header"><h3>Inventário do Galpão</h3></div>
+                        <div class="business-list" id="production-stock-list">
+                          <!-- Gerado dinamicamente -->
+                        </div>
+                      </div>
                     </div>
-                    <div id="biz-prod" class="tab-pane">
-                      <div class="production-view" id="business-production-view"></div>
+
+                    <!-- Aba Linhas de Produção -->
+                    <div id="prod-lines" class="tab-pane">
+                      <div class="production-view" id="production-lines-list">
+                        <!-- Itens produzíveis -->
+                      </div>
+                    </div>
+
+                    <!-- Aba Melhorias -->
+                    <div id="prod-upgrades" class="tab-pane">
+                      <div class="upgrades-list" id="production-upgrades-list">
+                         <div class="os-card p-4 text-center">
+                            <p class="text-muted">Módulo de expansão industrial em desenvolvimento.</p>
+                         </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -535,6 +561,10 @@
                 <h1>Truck Logistics</h1>
                 <p>Painel de controle da sua transportadora</p>
               </div>
+              <div class="trucker-header-meta">
+                <span class="trucker-status-dot"></span>
+                <span>Integrado ao TycoonOS</span>
+              </div>
             </header>
 
             <div class="app-body trucker-frame-body">
@@ -578,7 +608,7 @@
               <line x1="2" y1="12" x2="22" y2="12"/>
             </svg>
           </div>
-          <div class="dock-item" data-target="business">
+          <div class="dock-item" data-target="production">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
               <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>

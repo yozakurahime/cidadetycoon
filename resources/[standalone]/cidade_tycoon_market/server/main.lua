@@ -158,7 +158,7 @@ CreateThread(function()
         -- 1. Lock vehicles with > 3 days delay
         MySQL.update.await([[
             UPDATE player_vehicles pv
-            JOIN tycoon_financings f ON pv.plate = f.plate
+            JOIN tycoon_financings f ON pv.plate COLLATE utf8mb4_unicode_ci = f.plate COLLATE utf8mb4_unicode_ci
             SET pv.state = 3, pv.in_debt_since = NOW()
             WHERE f.is_active = 1 
             AND f.last_payment < DATE_SUB(NOW(), INTERVAL 3 DAY)

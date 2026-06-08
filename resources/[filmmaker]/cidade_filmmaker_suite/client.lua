@@ -247,8 +247,13 @@ local function openChromaMenu()
                 PlaceObjectOnGroundProperly(prop)
                 FreezeEntityPosition(prop, true)
                 
-                -- Aplicar cor customizada
-                SetEntityColour(prop, opt.value.r, opt.value.g, opt.value.b)
+                -- Aplicar cor customizada (nativo inexistente no GTA V — fallback seguro)
+                pcall(function()
+                    SetEntityColour(prop, opt.value.r, opt.value.g, opt.value.b)
+                end)
+                if opt.value.r == 0 and opt.value.g == 255 and opt.value.b == 0 then
+                    SetObjectTextureVariation(prop, 0)
+                end
                 
                 table.insert(chromaProps, prop)
                 spawnedChromaCount = spawnedChromaCount + 1

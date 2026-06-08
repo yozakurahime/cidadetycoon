@@ -2,6 +2,7 @@ local RESOURCE = GetCurrentResourceName()
 local isOpen = {}
 local eventLocks = {}
 local activeJobs = {}
+local CoopBonusTime = 0
 
 local function corePlayer(source)
     return exports.cidade_tycoon_core:GetFrameworkPlayer(source)
@@ -43,7 +44,12 @@ local function clone(t)
 end
 
 local function notify(source, message, notifyType)
-    TriggerClientEvent('qbx_core:client:notify', source, message, notifyType == 'primary' and 'inform' or (notifyType or 'inform'))
+    local kind = notifyType == 'primary' and 'inform' or (notifyType or 'inform')
+    exports.cidade_tycoon_core:NotifyPlayer(source, message, kind)
+end
+
+local function queueOfflineNotification(userId, message, notifyType)
+    MySQL.insert.await('INSERT INTO trucker_offline_notifications (user_id, message, notification_type) VALUES (?, ?, ?)', { userId, message, notifyType or 'success' })
 end
 
 local function withLock(source, fn)
@@ -127,11 +133,17 @@ function generateContract()
     local isUrgente = math.random(100) <= Config.contratos.probabilidade_ser_carga_urgente and 1 or 0
     local type = math.random(100) <= 30 and 1 or 0 
     local truck = Config.contratos.caminhoes[math.random(#Config.contratos.caminhoes)]
+    local isCoop = math.random(100) <= 15 and 1 or 0
+    
+    if isCoop == 1 then
+        name = "👥 [COOP] " .. name
+        pricePerKm = math.floor(pricePerKm * 1.5)
+    end
 
     MySQL.insert.await([[INSERT INTO trucker_available_contracts 
-        (contract_type, contract_name, coords_index, price_per_km, cargo_type, fragile, valuable, fast, truck, trailer) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]], {
-        type, cargo.nome, coordsIndex, pricePerKm, cargo.def[1], cargo.def[2], cargo.def[3], isUrgente, truck, cargo.carga
+        (contract_type, contract_name, coords_index, price_per_km, cargo_type, fragile, valuable, fast, truck, trailer, coop) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]], {
+        type, name, coordsIndex, pricePerKm, cargo.def[1], cargo.def[2], cargo.def[3], isUrgente, truck, cargo.carga, isCoop
     })
 end
 
@@ -160,7 +172,11 @@ CreateThread(function()
         for _, driver in ipairs(drivers) do
             local source = playerSourceByCitizenId(driver.user_id)
             if Config.trabalhos.gera_dinheiro_offline or source then
-                if driver.status ~= 'WAITING_DECISION' then
+                if driver.status == 'WAITING_DECISION' then
+                    if driver.timer > 0 and now >= driver.timer then
+                        resolveDriverCrisis(driver.user_id, driver.driver_id, nil)
+                    end
+                else
                     if driver.timer == 0 or now >= driver.timer then
                         local currentStatus = driver.status or 'IDLE'
                         local nextStatus = 'PREPARING'
@@ -218,48 +234,66 @@ CreateThread(function()
                                     pendingEventData = json.encode({ type = 'PRF' })
                                     table.insert(routeEvents, { name = "Retido PRF", time = 12 })
                                     if source then 
-                                        notify(source, ("🚔 PRF: %s parado! Instruções pendentes no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 EMERGÊNCIA LOGÍSTICA', ('O motorista %s foi parado pela PRF e aguarda ordens.'):format(driver.name), 10000)
+                                        notify(source, ("🚔 PRF: %s parado! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 EMERGÊNCIA LOGÍSTICA', ('O motorista %s foi parado pela PRF e aguarda ordens no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
+                                    else
+                                        queueOfflineNotification(driver.user_id, ("🚔 PRF: O motorista %s foi parado pela PRF! Decida a instrução no Tablet (Limite: 5 min)."):format(driver.name), 'error')
                                     end
                                 elseif eventRoll > 70 then -- Breakdown (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Falha Mecânica"
                                     pendingEventData = json.encode({ type = 'BREAKDOWN' })
                                     table.insert(routeEvents, { name = "Pane Mecânica", time = 15 })
                                     if source then 
-                                        notify(source, ("⚠️ ALERTA: Quebra com %s! Instruções pendentes no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🛠️ FALHA MECÂNICA', ('O veículo de %s quebrou. Decida o tipo de reparo no Tablet.'):format(driver.name), 10000)
+                                        notify(source, ("⚠️ ALERTA: Quebra com %s! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🛠️ FALHA MECÂNICA', ('O veículo de %s quebrou. Decida o tipo de reparo no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
+                                    else
+                                        queueOfflineNotification(driver.user_id, ("⚠️ ALERTA: Quebra mecânica com o motorista %s! Decida a ação no Tablet (Limite: 5 min)."):format(driver.name), 'error')
                                     end
                                 elseif eventRoll > 60 then -- Robbery (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Tentativa de Assalto"
                                     pendingEventData = json.encode({ type = 'ROBBERY' })
                                     table.insert(routeEvents, { name = "Abordagem Armada", time = 20 })
                                     if source then 
-                                        notify(source, ("🚨 ALERTA: Assalto em andamento com %s! Instruções no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 ROUBO EM ANDAMENTO', ('O motorista %s foi abordado por assaltantes armados!'):format(driver.name), 10000)
+                                        notify(source, ("🚨 ALERTA: Assalto em andamento com %s! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 ROUBO EM ANDAMENTO', ('O motorista %s foi abordado por assaltantes armados! Decida a reação no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
+                                    else
+                                        queueOfflineNotification(driver.user_id, ("🚨 ALERTA: Assalto em andamento com o motorista %s! Decida no Tablet (Limite: 5 min)."):format(driver.name), 'error')
                                     end
                                 elseif eventRoll > 50 then -- Protest (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Bloqueio de Pista"
                                     pendingEventData = json.encode({ type = 'PROTEST' })
                                     table.insert(routeEvents, { name = "Manifestação na Pista", time = 25 })
                                     if source then 
-                                        notify(source, ("⚠️ PROTESTO: %s parou em um bloqueio! Instruções no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '⚠️ ROTA BLOQUEADA', ('O motorista %s parou devido a um protesto na pista.'):format(driver.name), 10000)
+                                        notify(source, ("⚠️ PROTESTO: %s parou em um bloqueio! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '⚠️ ROTA BLOQUEADA', ('O motorista %s parou devido a um protesto na pista. Decida a rota no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
+                                    else
+                                        queueOfflineNotification(driver.user_id, ("⚠️ PROTESTO: O motorista %s parou em um bloqueio na pista! Decida no Tablet (Limite: 5 min)."):format(driver.name), 'error')
                                     end
                                 elseif eventRoll > 40 then -- Contraband (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Carga Clandestina"
                                     pendingEventData = json.encode({ type = 'CONTRABAND' })
                                     table.insert(routeEvents, { name = "Oferta Suspeita", time = 5 })
                                     if source then 
-                                        notify(source, ("🤫 ALERTA: %s recebeu uma oferta suspeita! Decida no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🤫 OFERTA Suspeita', ('Ofereceram um frete clandestino valioso para o motorista %s.'):format(driver.name), 10000)
+                                        notify(source, ("🤫 ALERTA: %s recebeu uma oferta suspeita! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🤫 OFERTA Suspeita', ('Ofereceram um frete clandestino valioso para o motorista %s. Decida no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
+                                    else
+                                        queueOfflineNotification(driver.user_id, ("🤫 ALERTA: O motorista %s recebeu proposta clandestina! Decida no Tablet (Limite: 5 min)."):format(driver.name), 'error')
                                     end
                                 elseif eventRoll > 30 then -- Blizzard (Interactive)
                                     nextStatus, activeEvent = 'WAITING_DECISION', "Clima Extremo"
                                     pendingEventData = json.encode({ type = 'BLIZZARD' })
                                     table.insert(routeEvents, { name = "Clima Severo", time = 15 })
                                     if source then 
-                                        notify(source, ("❄️ CLIMA: %s preso em tempestade severa! Instruções no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '❄️ CLIMA EXTREMO', ('O motorista %s enfrenta tempestade severa na pista.'):format(driver.name), 10000)
+                                        notify(source, ("❄️ CLIMA: %s preso em tempestade severa! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '❄️ CLIMA EXTREMO', ('O motorista %s enfrenta tempestade severa na pista. Decida no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
+                                    else
+                                        queueOfflineNotification(driver.user_id, ("❄️ CLIMA: O motorista %s preso em tempestade severa! Decida no Tablet (Limite: 5 min)."):format(driver.name), 'error')
                                     end
                                 elseif eventRoll > 20 then -- Accident
                                     activeEvent = "Colisão Leve"
@@ -289,7 +323,11 @@ CreateThread(function()
                                 companyDebit(driver.user_id, penaltyCost)
                                 MySQL.update.await([[UPDATE trucker_drivers SET total_spent = total_spent + ? WHERE driver_id = ?]], { penaltyCost, driver.driver_id })
                             end
-                            nextWait = (baseTime + cargoModifier) * 60
+                            if nextStatus == 'WAITING_DECISION' then
+                                nextWait = 300
+                            else
+                                nextWait = (baseTime + cargoModifier) * 60
+                            end
                         elseif currentStatus == 'TRANSIT' then
                             nextStatus = 'RETURNING'
                             nextWait = math.random(5, 10) * 60
@@ -297,24 +335,85 @@ CreateThread(function()
                             nextStatus = 'IDLE'
                             nextWait = 10 * 60
                             local routeKm = math.random(15, 45)
-                            if companyDebit(driver.user_id, number(driver.price_per_km)) then
-                                companyCredit(driver.user_id, currentJobReward)
-                                local netProfit = currentJobReward - number(driver.price_per_km)
-                                if source then
-                                    notify(source, ("📦 %s concluiu a entrega! Lucro: %s"):format(driver.name, formatCurrency(netProfit, Config)), 'success')
-                                    TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📦 ENTREGA CONCLUÍDA', ('O motorista %s finalizou a rota. Lucro Líquido: %s'):format(driver.name, formatCurrency(netProfit, Config)), 7000)
+                            local driverWage = number(driver.price_per_km)
+                            local fuelNeeded = math.ceil(routeKm * 1.5)
+                            local usedDepotFuel = false
+                            
+                            local userRow = MySQL.single.await('SELECT fuel_stock FROM trucker_users WHERE user_id = ?', { driver.user_id })
+                            local fuelStock = userRow and number(userRow.fuel_stock) or 0
+                            
+                            if fuelStock >= fuelNeeded then
+                                MySQL.update.await('UPDATE trucker_users SET fuel_stock = fuel_stock - ? WHERE user_id = ?', { fuelNeeded, driver.user_id })
+                                driverWage = math.floor(driverWage * 0.5)
+                                usedDepotFuel = true
+                            end
+
+                            if companyDebit(driver.user_id, driverWage) then
+                                local coopBonusApplied = false
+                                if os.time() < CoopBonusTime then
+                                    currentJobReward = math.floor(currentJobReward * 1.20)
+                                    coopBonusApplied = true
                                 end
+
+                                local netProfit = currentJobReward - driverWage
+                                local tax = 0
+                                if not source and netProfit > 0 then
+                                    tax = math.floor(netProfit * 0.70)
+                                    netProfit = netProfit - tax
+                                end
+                                companyCredit(driver.user_id, currentJobReward - tax)
+                                
+                                local brutoStr = formatCurrency(currentJobReward, Config)
+                                local custoStr = formatCurrency(driverWage, Config)
+                                local lucroStr = formatCurrency(netProfit, Config)
+                                local cargoStr = currentCargoName or "Mercadoria"
+                                
+                                local message
+                                if tax > 0 then
+                                    message = ("📦 %s concluiu a entrega de %s!\nBruto: %s | Custo: %s | Lucro (Offline -70%%): %s"):format(driver.name, cargoStr, brutoStr, custoStr, lucroStr)
+                                else
+                                    message = ("📦 %s concluiu a entrega de %s!\nBruto: %s | Custo: %s | Lucro: %s"):format(driver.name, cargoStr, brutoStr, custoStr, lucroStr)
+                                end
+                                
+                                if usedDepotFuel then
+                                    message = message .. ("\n⛽ Depósito utilizado: -%d L (Custo reduzido em 50%%!)"):format(fuelNeeded)
+                                end
+                                if coopBonusApplied then
+                                    message = message .. "\n🎉 Bônus de Comboio Ativo (+20% de lucro!)"
+                                end
+                                
+                                local toastText = ("O motorista %s finalizou a rota de %s.\nBruto: %s | Custo Motorista: %s | Lucro Líquido: %s"):format(driver.name, cargoStr, brutoStr, custoStr, lucroStr)
+                                if usedDepotFuel then
+                                    toastText = toastText .. ("\nCombustível do Depósito: -%d L."):format(fuelNeeded)
+                                end
+                                if coopBonusApplied then
+                                    toastText = toastText .. "\nComboio Ativo: +20% de lucro."
+                                end
+                                
+                                if source then
+                                    notify(source, message, 'success')
+                                    TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📦 ENTREGA CONCLUÍDA', toastText, 10000)
+                                    TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+                                else
+                                    queueOfflineNotification(driver.user_id, message, 'success')
+                                end
+                                
                                 MySQL.update.await([[UPDATE trucker_drivers SET 
                                     total_profit = total_profit + ?, 
                                     total_spent = total_spent + ?,
                                     finished_deliveries = finished_deliveries + 1,
                                     traveled_distance = traveled_distance + ?
-                                    WHERE driver_id = ?]], { currentJobReward, number(driver.price_per_km), routeKm, driver.driver_id })
+                                    WHERE driver_id = ?]], { currentJobReward - tax, driverWage, routeKm, driver.driver_id })
                                 local wear = math.random(20, 50)
                                 MySQL.update.await([[UPDATE trucker_trucks SET engine = IF(engine > ?, engine - ?, 0), transmission = IF(transmission > ?, transmission - ?, 0), body = IF(body > ?, body - ?, 0), wheels = IF(wheels > ?, wheels - ?, 0) WHERE truck_id = ?]], { wear, wear, wear, wear, math.floor(wear/2), math.floor(wear/2), wear * 2, wear * 2, driver.truck_id })
                             else
                                 nextStatus, nextWait = 'IDLE', 60 * 60
-                                if source then notify(source, Lang[Config.lang].driver_failed:format(driver.name), 'error') end
+                                local failMsg = Lang[Config.lang].driver_failed:format(driver.name)
+                                if source then 
+                                    notify(source, failMsg, 'error') 
+                                else
+                                    queueOfflineNotification(driver.user_id, failMsg, 'error')
+                                end
                             end
                             currentJobReward, currentCargoName, activeEvent = 0, nil, nil
                             routeEvents = {}
@@ -442,15 +541,32 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:trainDriver', function(driverId)
     else notify(source, "Saldo insuficiente!", "error") end
 end)
 
-RegisterNetEvent('cidade_tycoon_trucklogistics:resolveCrisis', function(data)
-    local source = source
-    local userId = citizenId(source)
-    local driverId = type(data) == 'table' and integer(data.driver_id, 1) or nil
-    local option = type(data) == 'table' and tostring(data.option) or nil
-    if not userId or not driverId or not option then return end
+local crisisOptions = {
+    ['PRF'] = { 'cooperate', 'bribe', 'flee' },
+    ['BREAKDOWN'] = { 'official', 'cheap' },
+    ['ROBBERY'] = { 'surrender', 'reag', 'police' },
+    ['PROTEST'] = { 'detour', 'wait_out', 'ram' },
+    ['CONTRABAND'] = { 'decline', 'accept_smuggle' },
+    ['BLIZZARD'] = { 'shelter', 'slow_drive', 'speed_up' }
+}
+
+local function resolveDriverCrisis(userId, driverId, option)
     local driver = MySQL.single.await('SELECT * FROM trucker_drivers WHERE driver_id = ? AND user_id = ?', { driverId, userId })
     if not driver or driver.status ~= 'WAITING_DECISION' then return end
     local eventData = json.decode(driver.pending_event_data)
+    if not eventData then return end
+
+    local isAuto = false
+    if not option then
+        isAuto = true
+        local options = crisisOptions[eventData.type]
+        if options and #options > 0 then
+            option = options[math.random(#options)]
+        else
+            return
+        end
+    end
+
     local penaltyCost, damageData, nextWait, resultMessage = 0, {engine=0,transmission=0,body=0,wheels=0}, 5*60, ""
     
     if eventData.type == 'PRF' then
@@ -583,6 +699,10 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:resolveCrisis', function(data)
         end
     end
     
+    if isAuto then
+        resultMessage = "⏰ [AUTO-DECISÃO] " .. resultMessage
+    end
+    
     if penaltyCost > 0 then 
         companyDebit(userId, penaltyCost) 
         MySQL.update.await('UPDATE trucker_drivers SET total_spent = total_spent + ? WHERE driver_id = ?', { penaltyCost, driverId }) 
@@ -590,13 +710,24 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:resolveCrisis', function(data)
     
     MySQL.update.await([[UPDATE trucker_trucks SET engine = IF(engine > ?, engine - ?, 0), transmission = IF(transmission > ?, transmission - ?, 0), body = IF(body > ?, body - ?, 0), wheels = IF(wheels > ?, wheels - ?, 0) WHERE truck_id = ?]], { damageData.engine, damageData.engine, damageData.transmission, damageData.transmission, damageData.body, damageData.body, damageData.wheels, damageData.wheels, driver.truck_id })
     MySQL.update.await([[UPDATE trucker_drivers SET status = 'TRANSIT', timer = ?, pending_event_data = NULL, active_event = ? WHERE driver_id = ?]], { os.time() + nextWait, "Crise Resolvida", driverId })
-    notify(source, resultMessage, "inform")
     
+    local source = playerSourceByCitizenId(userId)
     if source then
+        notify(source, resultMessage, "inform")
         TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📉 EVENTO RESOLVIDO', resultMessage, 10000)
+        openUI(source, true)
+    else
+        queueOfflineNotification(userId, resultMessage, "inform")
     end
-    
-    openUI(source, true)
+end
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:resolveCrisis', function(data)
+    local source = source
+    local userId = citizenId(source)
+    local driverId = type(data) == 'table' and integer(data.driver_id, 1) or nil
+    local option = type(data) == 'table' and tostring(data.option) or nil
+    if not userId or not driverId or not option then return end
+    resolveDriverCrisis(userId, driverId, option)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:spawnTruck', function(truckId)
@@ -623,17 +754,44 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:upgradeSkill', function(data)
     openUI(source, true)
 end)
 
-RegisterNetEvent('cidade_tycoon_trucklogistics:repairTruck', function(item)
+local repairItems = {
+    ['engine'] = { item = 'engine_block', label = 'Bloco do Motor' },
+    ['transmission'] = { item = 'transmission_gear', label = 'Engrenagem de Transmissão' },
+    ['wheels'] = { item = 'truck_tire', label = 'Pneu Reforçado' },
+    ['body'] = { item = 'raw_metal', label = 'Metal Bruto' }
+}
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:repairTruck', function(item, useItem)
     local source = source
     local userId = citizenId(source)
     if not userId then return end
     local truck = MySQL.single.await('SELECT * FROM trucker_trucks WHERE user_id = ? AND driver = 0 LIMIT 1', { userId })
     if not truck then return end
-    local amount = math.floor((100 - number(truck[item]) / 10) * number(Config.valor_reparo[item]))
-    if amount <= 0 then return end
-    if not companyDebit(userId, amount) then return end
-    MySQL.update.await(('UPDATE trucker_trucks SET `%s` = 1000 WHERE truck_id = ? AND user_id = ?'):format(item), { truck.truck_id, userId })
-    openUI(source, true)
+    
+    if useItem then
+        local itemInfo = repairItems[item]
+        if not itemInfo then return end
+        local count = exports.ox_inventory:Search(source, 'count', itemInfo.item)
+        if count >= 1 then
+            exports.ox_inventory:RemoveItem(source, itemInfo.item, 1)
+            MySQL.update.await(('UPDATE trucker_trucks SET `%s` = 1000 WHERE truck_id = ? AND user_id = ?'):format(item), { truck.truck_id, userId })
+            notify(source, ("Componente %s reparado com sucesso usando 1x %s!"):format(item == 'body' and 'Lataria' or item == 'engine' and 'Motor' or item == 'transmission' and 'Transmissão' or 'Rodas', itemInfo.label), 'success')
+            TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🔧 REPARO CONCLUÍDO', ("Caminhão reparado usando %s."):format(itemInfo.label), 5000)
+            TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+            openUI(source, true)
+        else
+            notify(source, ("Você não possui 1x %s!"):format(itemInfo.label), 'error')
+        end
+    else
+        local amount = math.floor((100 - number(truck[item]) / 10) * number(Config.valor_reparo[item]))
+        if amount <= 0 then return end
+        if not companyDebit(userId, amount) then return end
+        MySQL.update.await(('UPDATE trucker_trucks SET `%s` = 1000 WHERE truck_id = ? AND user_id = ?'):format(item), { truck.truck_id, userId })
+        notify(source, ("Componente %s reparado por %s!"):format(item == 'body' and 'Lataria' or item == 'engine' and 'Motor' or item == 'transmission' and 'Transmissão' or 'Rodas', formatCurrency(amount, Config)), 'success')
+        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🔧 REPARO CONCLUÍDO', ("Caminhão reparado por %s."):format(formatCurrency(amount, Config)), 5000)
+        TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+        openUI(source, true)
+    end
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:buyTruck', function(data)
@@ -753,8 +911,147 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:payLoan', function(data)
     end
 end)
 
+RegisterNetEvent('cidade_tycoon_trucklogistics:finishJob', function(data, distance, reward, truckData, engineHealth, bodyHealth, trailerHealth)
+    local source = source
+    local userId = citizenId(source)
+    if not userId then return end
+    
+    local activeJob = activeJobs[source]
+    if not activeJob then return end
+    
+    activeJobs[source] = nil
+    
+    local expGained = math.floor(activeJob.distance * 2)
+    companyCredit(userId, activeJob.reward)
+    
+    MySQL.update.await([[UPDATE trucker_users SET 
+        finished_deliveries = finished_deliveries + 1, 
+        traveled_distance = traveled_distance + ?,
+        exp = exp + ?
+        WHERE user_id = ?]], { activeJob.distance, expGained, userId })
+        
+    local isCoop = activeJob.contract and activeJob.contract.coop == 1
+    if isCoop then
+        CoopBonusTime = os.time() + 10 * 60
+        local playerName = GetPlayerName(source)
+        TriggerClientEvent('chat:addMessage', -1, {
+            color = { 99, 209, 158 },
+            multiline = true,
+            args = { "🚚 COMBOIO COOPERATIVO", ("A empresa de %s concluiu uma entrega cooperativa! Bônus de +20%% de lucro em todas as entregas do servidor pelos próximos 10 minutos!"):format(playerName) }
+        })
+    end
+    
+    notify(source, ("Você concluiu a entrega! Recompensa de %s creditada na empresa (+%d EXP)."):format(formatCurrency(activeJob.reward, Config), expGained), 'success')
+    TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+    openUI(source, true)
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:openFuelMenu', function()
+    local source = source
+    local userId = citizenId(source)
+    if not userId then return end
+    local user = ensureUser(userId)
+    TriggerClientEvent('cidade_tycoon_trucklogistics:showFuelMenu', source, user.fuel_stock or 0, user.money or 0)
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:depositJerrycan', function()
+    local source = source
+    local userId = citizenId(source)
+    if not userId then return end
+    
+    local count = exports.ox_inventory:Search(source, 'count', 'jerrycan')
+    if count >= 1 then
+        exports.ox_inventory:RemoveItem(source, 'jerrycan', 1)
+        MySQL.update.await('UPDATE trucker_users SET fuel_stock = fuel_stock + 20 WHERE user_id = ?', { userId })
+        notify(source, 'Você abasteceu o depósito com 20 litros de combustível!', 'success')
+        TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+    else
+        notify(source, 'Você não possui um Jerrycan em seu inventário!', 'error')
+    end
+    local user = ensureUser(userId)
+    TriggerClientEvent('cidade_tycoon_trucklogistics:showFuelMenu', source, user.fuel_stock or 0, user.money or 0)
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:buyFuelBatch', function(liters, cost, deliver, empresaId)
+    local source = source
+    local userId = citizenId(source)
+    if not userId then return end
+    
+    if activeJobs[source] then
+        notify(source, 'Você já possui uma missão ou contrato ativo!', 'error')
+        return
+    end
+    
+    if companyDebit(userId, cost) then
+        if deliver then
+            MySQL.update.await('UPDATE trucker_users SET fuel_stock = fuel_stock + ? WHERE user_id = ?', { liters, userId })
+            notify(source, ('Você comprou um lote de %d litros de combustível por %s!'):format(liters, formatCurrency(cost, Config)), 'success')
+            TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+            local user = ensureUser(userId)
+            TriggerClientEvent('cidade_tycoon_trucklogistics:showFuelMenu', source, user.fuel_stock or 0, user.money or 0)
+        else
+            activeJobs[source] = { userId = userId, isFuelMission = true, liters = liters, cost = cost }
+            
+            -- Pick refinery location based on company
+            local refineryCoords = vector4(979.79, -2120.35, 31.47, 263.3) -- Default Refinery 1 (LS docks)
+            if empresaId == 'trucker_3' then
+                refineryCoords = vector4(-2415.0, 3355.0, 32.8, 120.0) -- Refinery 3 (Paleto)
+            end
+            
+            TriggerClientEvent('cidade_tycoon_trucklogistics:startFuelMission', source, liters, refineryCoords, empresaId)
+        end
+    else
+        notify(source, 'Saldo da empresa insuficiente!', 'error')
+    end
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:finishFuelMission', function(liters)
+    local source = source
+    local userId = citizenId(source)
+    if not userId then return end
+    
+    local activeJob = activeJobs[source]
+    if not activeJob or not activeJob.isFuelMission then return end
+    
+    activeJobs[source] = nil
+    
+    -- Add the fuel stock to database
+    MySQL.update.await('UPDATE trucker_users SET fuel_stock = fuel_stock + ? WHERE user_id = ?', { liters, userId })
+    
+    -- Give some EXP
+    local expGained = math.floor(liters * 0.1)
+    MySQL.update.await('UPDATE trucker_users SET exp = exp + ? WHERE user_id = ?', { expGained, userId })
+    
+    notify(source, ("Você descarregou o tanque de combustível na empresa! +%d Litros estocados (+%d EXP)."):format(liters, expGained), 'success')
+    TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:cancelFuelMission', function()
+    local source = source
+    activeJobs[source] = nil
+end)
+
 AddEventHandler('playerDropped', function()
     isOpen[source] = nil
     eventLocks[source] = nil
     activeJobs[source] = nil
+end)
+
+AddEventHandler('qbx_core:server:onPlayerLoaded', function(source)
+    local userId = citizenId(source)
+    if not userId then return end
+    
+    -- Check for pending offline notifications
+    local notifications = MySQL.query.await('SELECT * FROM trucker_offline_notifications WHERE user_id = ? ORDER BY id ASC', { userId })
+    if notifications and #notifications > 0 then
+        CreateThread(function()
+            Wait(5000) -- Wait a few seconds for the client to fully load and spawn before spamming notifications
+            for _, notif in ipairs(notifications) do
+                notify(source, notif.message, notif.notification_type)
+                TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+                Wait(1500) -- Small delay between notifications
+            end
+            MySQL.update.await('DELETE FROM trucker_offline_notifications WHERE user_id = ?', { userId })
+        end)
+    end
 end)

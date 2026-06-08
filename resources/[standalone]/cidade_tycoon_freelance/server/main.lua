@@ -76,7 +76,7 @@ end
 local function isPlayerNear(source, coords, maxDistance)
     local ped = GetPlayerPed(source)
     if ped == 0 or not coords then return false end
-    return #(GetEntityCoords(ped) - vec3(coords.x, coords.y, coords.z)) <= maxDistance
+    return #(GetEntityCoords(ped) - vector3(coords.x, coords.y, coords.z)) <= maxDistance
 end
 
 local function validateMissionVehicle(source, mission, vehicleNetId, bindVehicle)

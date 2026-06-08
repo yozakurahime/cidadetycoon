@@ -72,6 +72,18 @@ CreateThread(function()
                                     TriggerEvent('cidade_tycoon_trucklogistics:openViaTablet', k)
                                 end
                             end
+                        },
+                        {
+                            name = 'open_trucker_fuel_' .. k,
+                            label = 'Gerenciar Depósito de Combustível',
+                            icon = 'fa-solid fa-gas-pump',
+                            distance = 2.5,
+                            onSelect = function()
+                                if not menuactive then
+                                    empresaAtual = k
+                                    TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu')
+                                end
+                            end
                         }
                     })
                 end

@@ -31,7 +31,7 @@ local function offsetSpawnPoint(origin, forwardOffset, rightOffset)
     local rightX = math.cos(heading - math.pi / 2)
     local rightY = math.sin(heading - math.pi / 2)
 
-    return vec4(
+    return vector4(
         origin.x + (forwardX * forwardOffset) + (rightX * rightOffset),
         origin.y + (forwardY * forwardOffset) + (rightY * rightOffset),
         origin.z,
@@ -200,7 +200,7 @@ local function getPlayerSpawnOrigin(source)
     local ped = GetPlayerPed(source)
     local coords = GetEntityCoords(ped)
     local heading = GetEntityHeading(ped)
-    return offsetSpawnPoint(vec4(coords.x, coords.y, coords.z, heading), 6.0, 0.0)
+    return offsetSpawnPoint(vector4(coords.x, coords.y, coords.z, heading), 6.0, 0.0)
 end
 
 local function spawnOwnedVehicle(source, vehicleId, garageName, accessPointIndex, mode)
