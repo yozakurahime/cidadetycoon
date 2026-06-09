@@ -383,16 +383,17 @@ var fuelCheckInterval = null;
 window.addEventListener('message', function (event) {
     var item = event.data;
     if (item.action === 'updateStations') {
-        fuelStations = item.stations || [];
+        var arr = item.stations || [];
+        fuelStations = {};
+        for (var i = 0; i < arr.length; i++) { var s = arr[i]; fuelStations[s.id] = s; }
         fuelPlayerX = item.playerX || 0;
         fuelPlayerY = item.playerY || 0;
-        renderStationList();
         drawFuelMap();
         if ($('.fuel-page').is(':visible') && !fuelCheckInterval) {
             fuelCheckInterval = setInterval(function() {
                 if (!$('.fuel-page').is(':visible')) { clearInterval(fuelCheckInterval); fuelCheckInterval = null; }
                 else { refreshFuel(); requestStations(); }
-            }, 15000);
+            }, 20000);
         }
     }
         if (item.action === 'updateFuel') {
@@ -412,20 +413,24 @@ window.addEventListener('message', function (event) {
     }
 });
 
+
+
 // =========================================================================
-// FUEL STATION MAP SYSTEM
+// FUEL STATION MAP SYSTEM (full-width canvas)
 // =========================================================================
-var fuelStations = [];
+var fuelStations = {};
 var fuelPlayerX = 0, fuelPlayerY = 0;
 var selectedStationId = null;
+var fuelMapReady = false;
 
 function requestStations() {
     post("requestStations", {});
+    document.getElementById("fuel-map-hint").innerHTML = "Carregando postos...";
 }
 
 function buyFromStation() {
     if (!selectedStationId) return;
-    var liters = parseInt($('#fuel-sel-liters').val()) || 200;
+    var liters = parseInt(document.getElementById("fuel-sel-liters").value) || 200;
     if (liters < 50) liters = 50;
     if (liters > 2000) liters = 2000;
     post("buyFromStation", { stationId: selectedStationId, liters: liters });
@@ -437,127 +442,92 @@ function setFuelWaypoint() {
     post("setFuelWaypoint", { x: s.coords.x, y: s.coords.y });
 }
 
-function selectStation(id) {
-    selectedStationId = id;
-    var s = fuelStations[id];
-    if (!s) return;
-    $('#fuel-sel-name').text(s.nome);
-    $('#fuel-sel-info').text('$' + s.preco + '/L | Estoque: ' + s.estoque + 'L | ' + s.distancia.toFixed(1) + ' km');
-    $('#fuel-select-station').show();
-    $('#fuel-sel-liters').val(Math.min(500, s.estoque));
-    drawFuelMap();
-}
-
 function drawFuelMap() {
-    var canvas = document.getElementById('fuel-canvas');
+    var canvas = document.getElementById("fuel-canvas");
     if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var w = canvas.width, h = canvas.height;
+    var ctx = canvas.getContext("2d");
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w; canvas.height = h;
     ctx.clearRect(0, 0, w, h);
-
-    // Background
-    ctx.fillStyle = '#0f1014';
-    ctx.fillRect(0, 0, w, h);
-
-    // Grid
-    ctx.strokeStyle = '#1a1c25';
-    ctx.lineWidth = 0.5;
-    for (var i = 0; i < w; i += 20) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
-    for (var j = 0; j < h; j += 20) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(w, j); ctx.stroke(); }
-
-    if (fuelStations.length === 0) {
-        ctx.fillStyle = '#919aa3';
-        ctx.font = '11px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Clique em Atualizar', w/2, h/2);
-        return;
-    }
-
+    ctx.fillStyle = "#0b0c10"; ctx.fillRect(0, 0, w, h);
+    var keys = Object.keys(fuelStations);
+    if (keys.length === 0) return;
+    var hint = document.getElementById("fuel-map-hint");
+    if (hint) hint.style.display = "none";
+    fuelMapReady = true;
     // Calculate bounds
     var minX = fuelPlayerX, maxX = fuelPlayerX, minY = fuelPlayerY, maxY = fuelPlayerY;
-    for (var i in fuelStations) {
-        var s = fuelStations[i];
+    for (var k in fuelStations) {
+        var s = fuelStations[k];
         if (s.coords.x < minX) minX = s.coords.x;
         if (s.coords.x > maxX) maxX = s.coords.x;
         if (s.coords.y < minY) minY = s.coords.y;
         if (s.coords.y > maxY) maxY = s.coords.y;
     }
-    var padX = (maxX - minX) * 0.15 || 200;
-    var padY = (maxY - minY) * 0.15 || 200;
+    var padX = (maxX - minX) * 0.2 || 400;
+    var padY = (maxY - minY) * 0.2 || 400;
     minX -= padX; maxX += padX; minY -= padY; maxY += padY;
-
-    function toScreen(cx, cy) {
-        return {
-            x: ((cx - minX) / (maxX - minX)) * w,
-            y: h - ((cy - minY) / (maxY - minY)) * h
-        };
-    }
-
+    function sx(cx) { return ((cx - minX) / (maxX - minX)) * w; }
+    function sy(cy) { return h - ((cy - minY) / (maxY - minY)) * h; }
+    // Grid
+    ctx.strokeStyle = "#14161d"; ctx.lineWidth = 0.5;
+    for (var i = 0; i < w; i += 30) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
+    for (var j = 0; j < h; j += 30) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(w, j); ctx.stroke(); }
     // Draw stations
-    for (var i in fuelStations) {
-        var s = fuelStations[i];
-        var p = toScreen(s.coords.x, s.coords.y);
-        var isSelected = (s.id === selectedStationId);
-
-        // Station dot
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, isSelected ? 7 : 5, 0, Math.PI * 2);
-
-        // Color by price
-        var priceRatio = s.preco / 50;
-        var r, g, b;
-        if (priceRatio < 0.8) { r = 99; g = 209; b = 158; }  // green (cheap)
-        else if (priceRatio < 1.0) { r = 255; g = 204; b = 0; } // yellow
-        else { r = 255; g = 100; b = 100; }  // red (expensive)
-
-        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',0.8)';
-        ctx.fill();
-        ctx.strokeStyle = isSelected ? '#fff' : '#1a1c23';
-        ctx.lineWidth = isSelected ? 2 : 1;
-        ctx.stroke();
-
+    fuelStations._screenPos = {};
+    for (var k in fuelStations) {
+        var s = fuelStations[k];
+        var x = sx(s.coords.x), y = sy(s.coords.y);
+        fuelStations._screenPos[s.id] = { x: x, y: y };
+        var isSel = (s.id === selectedStationId);
+        // Dot
+        ctx.beginPath(); ctx.arc(x, y, isSel ? 8 : 5, 0, Math.PI * 2);
+        var color;
+        if (s.preco < 38) color = "#63d19e";
+        else if (s.preco < 42) color = "#ffcc00";
+        else color = "#ff6464";
+        ctx.fillStyle = color; ctx.fill();
+        ctx.strokeStyle = isSel ? "#fff" : "#1a1c23";
+        ctx.lineWidth = isSel ? 2.5 : 1.5; ctx.stroke();
         // Label
-        if (isSelected || s.estoque > 500) {
-            ctx.fillStyle = '#fff';
-            ctx.font = (isSelected ? '9px' : '7px') + ' Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('$' + s.preco, p.x, p.y - 10);
-        }
+        ctx.fillStyle = "#fff"; ctx.font = "bold 9px Inter, sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("$" + s.preco, x, y - 12);
     }
-
     // Player marker
-    var pp = toScreen(fuelPlayerX, fuelPlayerY);
-    ctx.beginPath();
-    ctx.arc(pp.x, pp.y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#5c6bc0';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = '#fff';
-    ctx.font = '8px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('VC', pp.x, pp.y - 10);
+    var px = sx(fuelPlayerX), py = sy(fuelPlayerY);
+    ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#5c6bc0"; ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = "bold 7px Inter, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("VC", px, py - 11);
 }
 
-function renderStationList() {
-    var html = '';
-    var sorted = fuelStations.slice().sort(function(a, b) { return a.distancia - b.distancia; });
-    for (var i = 0; i < sorted.length; i++) {
-        var s = sorted[i];
-        var priceColor = s.preco < 38 ? '#63d19e' : (s.preco > 45 ? '#ff6464' : '#ffcc00');
-        var stockBar = Math.round((s.estoque / s.estoque_max) * 100);
-        var stockColor = stockBar > 50 ? '#63d19e' : (stockBar > 20 ? '#ffcc00' : '#ff6464');
-        html += '<div class="fuel-station-row' + (s.id === selectedStationId ? ' selected' : '') + '" onclick="selectStation(' + s.id + ')">';
-        html += '<div class="fuel-station-info">';
-        html += '<span class="fuel-station-name">' + s.nome + '</span>';
-        html += '<span style="font-size:10px;color:#919aa3;">' + s.distancia.toFixed(1) + ' km</span>';
-        html += '</div>';
-        html += '<div class="fuel-station-price">';
-        html += '<span style="color:' + priceColor + ';font-weight:700;">$' + s.preco + '/L</span>';
-        html += '<span style="font-size:9px;color:' + stockColor + ';">' + s.estoque + 'L (' + stockBar + '%)</span>';
-        html += '</div>';
-        html += '</div>';
-    }
-    document.getElementById('fuel-station-list').innerHTML = html;
+// Canvas click → select station
+document.addEventListener("DOMContentLoaded", function() {
+    var canvas = document.getElementById("fuel-canvas");
+    if (!canvas) return;
+    canvas.addEventListener("click", function(e) {
+        if (!fuelMapReady) return;
+        var rect = canvas.getBoundingClientRect();
+        var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+        var best = null, bestDist = 20; // 20px tolerance
+        var sp = fuelStations._screenPos || {};
+        for (var id in sp) {
+            var p = sp[id];
+            var d = Math.sqrt((cx-p.x)*(cx-p.x) + (cy-p.y)*(cy-p.y));
+            if (d < bestDist) { bestDist = d; best = id; }
+        }
+        if (best) selectStation(parseInt(best));
+    });
+});
+
+function selectStation(id) {
+    selectedStationId = parseInt(id);
+    var s = fuelStations[id];
+    if (!s) return;
+    document.getElementById("fuel-sel-name").textContent = s.nome;
+    document.getElementById("fuel-sel-info").textContent = "$" + s.preco + "/L | " + s.estoque + "L estoque | " + s.distancia.toFixed(1) + " km";
+    document.getElementById("fuel-select-station").style.display = "block";
+    document.getElementById("fuel-sel-liters").value = Math.min(500, s.estoque);
+    drawFuelMap();
 }
