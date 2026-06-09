@@ -476,6 +476,7 @@ function drawFuelMap() {
     // Draw stations
     fuelStations._screenPos = {};
     for (var k in fuelStations) {
+        if (k === '_screenPos') continue;
         var s = fuelStations[k];
         var x = sx(s.coords.x), y = sy(s.coords.y);
         fuelStations._screenPos[s.id] = { x: x, y: y };
