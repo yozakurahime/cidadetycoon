@@ -4,7 +4,7 @@ Config = {}
 -- GERAL
 -- ==========================================
 Config.Entrance = {
-    coords = vec4(950.5, -3100.2, 5.9, 180.0), -- Terminal de Cargas — Porto de LS
+    coords = vec4(155.7565, -3203.2197, 6.0219, 274.3145), -- Porto de LS — entrada original
     pedModel = "s_m_y_dockwork_01",
     scenario = "WORLD_HUMAN_CLIPBOARD"
 }
@@ -17,8 +17,9 @@ Config.Freelance = {
 }
 
 Config.Interior = {
-    coords = vec4(849.1, -3000.2, -45.97, 0.0),
-    exitCoords = vec4(849.1, -3000.2, -45.97, 0.0),
+    -- Galpão Industrial do Porto (dimensão isolada via Routing Bucket)
+    coords = vec4(990.0, -3088.0, 5.9, 90.0),
+    exitCoords = vec4(990.0, -3088.0, 5.9, 90.0),
 }
 
 -- ==========================================
@@ -257,67 +258,66 @@ Config.Products = {
 }
 
 -- ==========================================
--- MAQUINÁRIO / SLOTS FÍSICOS NO GALPÃO (CE Warehouse Interior)
--- Galpão: X=838~862, Y=-2990~-3025, Z=-45.97
--- Pilares: X≈846.5, X≈852.5  |  Y≈-3002, Y≈-3014
+-- MAQUINÁRIO / SLOTS FÍSICOS NO GALPÃO (Galpão do Porto — dimensão isolada)
+-- Centro: X=990, Y=-3088, Z=5.9 — espaço útil ~24m x 24m
 -- ==========================================
 Config.MachineSlots = {
     -- ╔══════════════════════════════════════════════════════════════╗
     -- ║ PAREDE ESQUERDA — SETOR LEGAL (Bancadas de Ferramentas)    ║
-    -- ║ X=841.5, heading=90° (voltadas para o centro do galpão)    ║
-    -- ║ 12 slots — nível 1 a 16 — passo Y=2.5m                     ║
+    -- ║ X=981.0, heading=90° (voltadas para o centro do galpão)    ║
+    -- ║ 12 slots — nível 1 a 16 — passo Y≈1.5m                     ║
     -- ╚══════════════════════════════════════════════════════════════╝
-    { model = "prop_tool_bench02",  type = "legal", minLevel = 1,  coords = vec4(841.5, -2994.0, -45.97, 90.0) },
-    { model = "prop_tool_bench02",  type = "legal", minLevel = 1,  coords = vec4(841.5, -2996.5, -45.97, 90.0) },
-    { model = "prop_tool_bench02",  type = "legal", minLevel = 1,  coords = vec4(841.5, -2999.0, -45.97, 90.0) },
-    { model = "prop_tool_bench02",  type = "legal", minLevel = 3,  coords = vec4(841.5, -3001.5, -45.97, 90.0) },
-    { model = "prop_tool_bench02",  type = "legal", minLevel = 3,  coords = vec4(841.5, -3004.0, -45.97, 90.0) },
-    { model = "prop_tool_bench02",  type = "legal", minLevel = 5,  coords = vec4(841.5, -3006.5, -45.97, 90.0) },
-    { model = "prop_tool_bench02",  type = "legal", minLevel = 5,  coords = vec4(841.5, -3009.0, -45.97, 90.0) },
-    { model = "prop_tool_bench02",  type = "legal", minLevel = 7,  coords = vec4(841.5, -3011.5, -45.97, 90.0) },
-    { model = "prop_tool_bench03",  type = "legal", minLevel = 7,  coords = vec4(841.5, -3014.0, -45.97, 90.0) },
-    { model = "prop_tool_bench03",  type = "legal", minLevel = 10, coords = vec4(841.5, -3016.5, -45.97, 90.0) },
-    { model = "prop_tool_bench03",  type = "legal", minLevel = 13, coords = vec4(841.5, -3019.0, -45.97, 90.0) },
-    { model = "prop_tool_bench03",  type = "legal", minLevel = 16, coords = vec4(841.5, -3021.5, -45.97, 90.0) },
+    { model = "prop_tool_bench02",  type = "legal", minLevel = 1,  coords = vec4(981.0, -3079.0, 5.9, 90.0) },
+    { model = "prop_tool_bench02",  type = "legal", minLevel = 1,  coords = vec4(981.0, -3080.5, 5.9, 90.0) },
+    { model = "prop_tool_bench02",  type = "legal", minLevel = 1,  coords = vec4(981.0, -3082.0, 5.9, 90.0) },
+    { model = "prop_tool_bench02",  type = "legal", minLevel = 3,  coords = vec4(981.0, -3083.5, 5.9, 90.0) },
+    { model = "prop_tool_bench02",  type = "legal", minLevel = 3,  coords = vec4(981.0, -3085.0, 5.9, 90.0) },
+    { model = "prop_tool_bench02",  type = "legal", minLevel = 5,  coords = vec4(981.0, -3086.5, 5.9, 90.0) },
+    { model = "prop_tool_bench02",  type = "legal", minLevel = 5,  coords = vec4(981.0, -3088.0, 5.9, 90.0) },
+    { model = "prop_tool_bench02",  type = "legal", minLevel = 7,  coords = vec4(981.0, -3089.5, 5.9, 90.0) },
+    { model = "prop_tool_bench03",  type = "legal", minLevel = 7,  coords = vec4(981.0, -3091.0, 5.9, 90.0) },
+    { model = "prop_tool_bench03",  type = "legal", minLevel = 10, coords = vec4(981.0, -3092.5, 5.9, 90.0) },
+    { model = "prop_tool_bench03",  type = "legal", minLevel = 13, coords = vec4(981.0, -3094.0, 5.9, 90.0) },
+    { model = "prop_tool_bench03",  type = "legal", minLevel = 16, coords = vec4(981.0, -3095.5, 5.9, 90.0) },
 
     -- ╔══════════════════════════════════════════════════════════════╗
     -- ║ PAREDE DIREITA — SETOR ILEGAL (Mesas de Laboratório)       ║
-    -- ║ X=857.5, heading=270° (voltadas para o centro do galpão)   ║
-    -- ║ 8 slots — nível 10 a 20 — passo Y=2.5m                     ║
+    -- ║ X=999.0, heading=270° (voltadas para o centro do galpão)   ║
+    -- ║ 8 slots — nível 10 a 20 — passo Y≈2.0m                     ║
     -- ╚══════════════════════════════════════════════════════════════╝
-    { model = "bkr_prop_meth_table01a",     type = "illegal", minLevel = 10, coords = vec4(857.5, -2995.0, -45.97, 270.0) },
-    { model = "bkr_prop_meth_table01a",     type = "illegal", minLevel = 10, coords = vec4(857.5, -2997.5, -45.97, 270.0) },
-    { model = "bkr_prop_meth_table01a",     type = "illegal", minLevel = 10, coords = vec4(857.5, -3000.0, -45.97, 270.0) },
-    { model = "bkr_prop_meth_table01a",     type = "illegal", minLevel = 12, coords = vec4(857.5, -3002.5, -45.97, 270.0) },
-    { model = "hei_prop_heist_cut_table_01", type = "illegal", minLevel = 13, coords = vec4(857.5, -3005.0, -45.97, 270.0) },
-    { model = "hei_prop_heist_cut_table_01", type = "illegal", minLevel = 15, coords = vec4(857.5, -3007.5, -45.97, 270.0) },
-    { model = "hei_prop_heist_cut_table_01", type = "illegal", minLevel = 17, coords = vec4(857.5, -3010.0, -45.97, 270.0) },
-    { model = "hei_prop_heist_cut_table_01", type = "illegal", minLevel = 20, coords = vec4(857.5, -3012.5, -45.97, 270.0) },
+    { model = "bkr_prop_meth_table01a",     type = "illegal", minLevel = 10, coords = vec4(999.0, -3080.0, 5.9, 270.0) },
+    { model = "bkr_prop_meth_table01a",     type = "illegal", minLevel = 10, coords = vec4(999.0, -3082.0, 5.9, 270.0) },
+    { model = "bkr_prop_meth_table01a",     type = "illegal", minLevel = 10, coords = vec4(999.0, -3084.0, 5.9, 270.0) },
+    { model = "bkr_prop_meth_table01a",     type = "illegal", minLevel = 12, coords = vec4(999.0, -3086.0, 5.9, 270.0) },
+    { model = "hei_prop_heist_cut_table_01", type = "illegal", minLevel = 13, coords = vec4(999.0, -3088.0, 5.9, 270.0) },
+    { model = "hei_prop_heist_cut_table_01", type = "illegal", minLevel = 15, coords = vec4(999.0, -3090.0, 5.9, 270.0) },
+    { model = "hei_prop_heist_cut_table_01", type = "illegal", minLevel = 17, coords = vec4(999.0, -3092.0, 5.9, 270.0) },
+    { model = "hei_prop_heist_cut_table_01", type = "illegal", minLevel = 20, coords = vec4(999.0, -3094.0, 5.9, 270.0) },
 
     -- ╔══════════════════════════════════════════════════════════════╗
     -- ║ PAREDE DO FUNDO — SETOR AVANÇADO (Montagem & Acabamento)   ║
-    -- ║ Y=-3024.0, heading=0° (voltadas para o corredor central)   ║
+    -- ║ Y=-3098.0, heading=0° (voltadas para o corredor central)   ║
     -- ║ 5 slots — nível 8 a 22 — passo X=3.0m                      ║
     -- ╚══════════════════════════════════════════════════════════════╝
-    { model = "prop_bench_01a",  type = "legal",   minLevel = 8,  coords = vec4(843.0, -3024.0, -45.97, 0.0) },
-    { model = "prop_bench_01a",  type = "legal",   minLevel = 10, coords = vec4(846.0, -3024.0, -45.97, 0.0) },
-    { model = "v_serv_tray01",   type = "illegal", minLevel = 15, coords = vec4(849.0, -3024.0, -45.97, 0.0) },
-    { model = "v_serv_tray01",   type = "special", minLevel = 18, coords = vec4(852.0, -3024.0, -45.97, 0.0) },
-    { model = "v_serv_tray01",   type = "special", minLevel = 22, coords = vec4(855.0, -3024.0, -45.97, 0.0) },
+    { model = "prop_bench_01a",  type = "legal",   minLevel = 8,  coords = vec4(984.0, -3098.0, 5.9, 0.0) },
+    { model = "prop_bench_01a",  type = "legal",   minLevel = 10, coords = vec4(987.0, -3098.0, 5.9, 0.0) },
+    { model = "v_serv_tray01",   type = "illegal", minLevel = 15, coords = vec4(990.0, -3098.0, 5.9, 0.0) },
+    { model = "v_serv_tray01",   type = "special", minLevel = 18, coords = vec4(993.0, -3098.0, 5.9, 0.0) },
+    { model = "v_serv_tray01",   type = "special", minLevel = 22, coords = vec4(996.0, -3098.0, 5.9, 0.0) },
 
     -- ╔══════════════════════════════════════════════════════════════╗
     -- ║ ILHA CENTRAL — SETOR EXPERIMENTAL (freestanding no galpão) ║
-    -- ║ Y=-3008.5 (meio do galpão), heading=180° (voltadas p/ sul) ║
-    -- ║ 2 slots — nível 20 e 25 — passo X=4.0m                     ║
+    -- ║ Y=-3088.5 (meio do galpão), heading=180° (voltadas p/ sul) ║
+    -- ║ 2 slots — nível 20 e 25 — passo X=5.0m                     ║
     -- ╚══════════════════════════════════════════════════════════════╝
-    { model = "prop_tool_bench03",  type = "special", minLevel = 20, coords = vec4(849.0, -3008.5, -45.97, 180.0) },
-    { model = "prop_tool_bench03",  type = "special", minLevel = 25, coords = vec4(853.0, -3008.5, -45.97, 180.0) },
+    { model = "prop_tool_bench03",  type = "special", minLevel = 20, coords = vec4(988.0, -3088.5, 5.9, 180.0) },
+    { model = "prop_tool_bench03",  type = "special", minLevel = 25, coords = vec4(993.0, -3088.5, 5.9, 180.0) },
 
     -- ╔══════════════════════════════════════════════════════════════╗
     -- ║ FUTURAS EXPANSÕES (comentadas — prontas para ativar)       ║
     -- ╚══════════════════════════════════════════════════════════════╝
-    -- { model = "v_serv_tray01",      type = "special", minLevel = 30, coords = vec4(849.5, -3012.0, -45.97, 0.0) },
-    -- { model = "v_serv_tray01",      type = "special", minLevel = 35, coords = vec4(853.5, -3012.0, -45.97, 0.0) },
-    -- { model = "prop_bench_01a",     type = "special", minLevel = 40, coords = vec4(849.5, -3005.0, -45.97, 0.0) },
-    -- { model = "prop_tool_bench03",  type = "special", minLevel = 45, coords = vec4(853.5, -3005.0, -45.97, 0.0) },
+    -- { model = "v_serv_tray01",      type = "special", minLevel = 30, coords = vec4(990.5, -3092.0, 5.9, 0.0) },
+    -- { model = "v_serv_tray01",      type = "special", minLevel = 35, coords = vec4(994.5, -3092.0, 5.9, 0.0) },
+    -- { model = "prop_bench_01a",     type = "special", minLevel = 40, coords = vec4(990.5, -3085.0, 5.9, 0.0) },
+    -- { model = "prop_tool_bench03",  type = "special", minLevel = 45, coords = vec4(994.5, -3085.0, 5.9, 0.0) },
 }
