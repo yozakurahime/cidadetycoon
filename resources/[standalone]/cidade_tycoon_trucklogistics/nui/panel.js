@@ -347,7 +347,7 @@ function trainDriver(id) {
     post("trainDriver", id); 
 }
 function resolveCrisis(id, opt) { post("resolveCrisis", {driver_id: id, option: opt}); }
-function openPage(pageN) { $(".pages").hide(); const p = [".main-page", ".job-page", ".freight-page", ".skills-page", ".diagnostic-page", ".dealership-page", ".trucks-page", ".recruitment-page", ".drivers-page", ".bank-page", ".fuel-page"]; $(p[pageN]).show(); if (pageN === 10) refreshFuel(); }
+function openPage(pageN) { $(".pages").hide(); const p = [".main-page", ".job-page", ".freight-page", ".skills-page", ".diagnostic-page", ".dealership-page", ".trucks-page", ".recruitment-page", ".drivers-page", ".bank-page", ".fuel-page"]; $(p[pageN]).show(); if (pageN === 10) { refreshFuel(); requestStations(); } }
 function closeUI() { post("close", "") }
 function startJob(id, r, d) { post("startJob", {id: id, reward: r, distance: d}) }
 function buyTruck(name, price) { post("buyTruck", {truck_name: name, price: price}) }
@@ -378,59 +378,27 @@ $(document).ready(function() {
 		$('.sidebar-navigation ul li').last().hide();
 	}
 });
-// Fuel page auto-refresh
-var fuelCheckInterval = null;
-window.addEventListener('message', function (event) {
-    var item = event.data;
-    if (item.action === 'updateStations') {
-        var arr = item.stations || [];
-        fuelStations = {};
-        for (var i = 0; i < arr.length; i++) { var s = arr[i]; fuelStations[s.id] = s; }
-        fuelPlayerX = item.playerX || 0;
-        fuelPlayerY = item.playerY || 0;
-        drawFuelMap();
-        if ($('.fuel-page').is(':visible') && !fuelCheckInterval) {
-            fuelCheckInterval = setInterval(function() {
-                if (!$('.fuel-page').is(':visible')) { clearInterval(fuelCheckInterval); fuelCheckInterval = null; }
-                else { refreshFuel(); requestStations(); }
-            }, 20000);
-        }
-    }
-        if (item.action === 'updateFuel') {
-        var fuelStock = item.fuelStock || 0;
-        $('#fuel-stock-display').text(fuelStock + ' L');
-        $('#fuel-company-money').text(item.money ? '$ ' + Number(item.money).toLocaleString('pt-BR') : '---');
-        if ($('.fuel-page').is(':visible') && !fuelCheckInterval) {
-            fuelCheckInterval = setInterval(function() {
-                if (!$('.fuel-page').is(':visible')) {
-                    clearInterval(fuelCheckInterval);
-                    fuelCheckInterval = null;
-                } else {
-                    refreshFuel();
-                }
-            }, 5000);
-        }
-    }
-});
-
-
 
 // =========================================================================
-// FUEL STATION MAP SYSTEM (full-width canvas)
+// FUEL PAGE — Station Map System
 // =========================================================================
 var fuelStations = {};
 var fuelPlayerX = 0, fuelPlayerY = 0;
 var selectedStationId = null;
 var fuelMapReady = false;
+var fuelScreenPos = {};
+var fuelCheckInterval = null;
 
 function requestStations() {
     post("requestStations", {});
-    document.getElementById("fuel-map-hint").innerHTML = "Carregando postos...";
+    var hint = document.getElementById("fuel-map-hint");
+    if (hint) hint.innerHTML = "Carregando postos...";
 }
 
 function buyFromStation() {
     if (!selectedStationId) return;
-    var liters = parseInt(document.getElementById("fuel-sel-liters").value) || 200;
+    var el = document.getElementById("fuel-sel-liters");
+    var liters = el ? (parseInt(el.value) || 200) : 200;
     if (liters < 50) liters = 50;
     if (liters > 2000) liters = 2000;
     post("buyFromStation", { stationId: selectedStationId, liters: liters });
@@ -442,58 +410,83 @@ function setFuelWaypoint() {
     post("setFuelWaypoint", { x: s.coords.x, y: s.coords.y });
 }
 
+function selectStation(id) {
+    selectedStationId = parseInt(id);
+    var s = fuelStations[id];
+    if (!s) return;
+    var nameEl = document.getElementById("fuel-sel-name");
+    var infoEl = document.getElementById("fuel-sel-info");
+    var barEl = document.getElementById("fuel-select-station");
+    var litEl = document.getElementById("fuel-sel-liters");
+    if (nameEl) nameEl.textContent = s.nome;
+    if (infoEl) infoEl.textContent = "$" + s.preco + "/L | " + s.estoque + "L estoque | " + s.distancia.toFixed(1) + " km";
+    if (barEl) barEl.style.display = "block";
+    if (litEl) litEl.value = Math.min(500, s.estoque);
+    drawFuelMap();
+}
+
 function drawFuelMap() {
     var canvas = document.getElementById("fuel-canvas");
     if (!canvas) return;
     var ctx = canvas.getContext("2d");
-    var w = canvas.clientWidth, h = canvas.clientHeight;
+    var w = canvas.clientWidth || 580, h = canvas.clientHeight || 340;
+    if (w < 10 || h < 10) return;
     canvas.width = w; canvas.height = h;
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = "#0b0c10"; ctx.fillRect(0, 0, w, h);
-    var keys = Object.keys(fuelStations);
-    if (keys.length === 0) return;
-    var screenPos = {};
+
     var hint = document.getElementById("fuel-map-hint");
-    if (hint) hint.style.display = "none";
+    if (hint && Object.keys(fuelStations).length > 0) hint.style.display = "none";
+
+    var keys = Object.keys(fuelStations);
+    if (keys.length === 0) {
+        ctx.fillStyle = "#919aa3";
+        ctx.font = "11px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Clique em Atualizar Postos", w/2, h/2);
+        return;
+    }
+
     fuelMapReady = true;
+    fuelScreenPos = {};
+
     // Calculate bounds
     var minX = fuelPlayerX, maxX = fuelPlayerX, minY = fuelPlayerY, maxY = fuelPlayerY;
-    for (var k in fuelStations) {
+    keys.forEach(function(k) {
         var s = fuelStations[k];
         if (s.coords.x < minX) minX = s.coords.x;
         if (s.coords.x > maxX) maxX = s.coords.x;
         if (s.coords.y < minY) minY = s.coords.y;
         if (s.coords.y > maxY) maxY = s.coords.y;
-    }
+    });
     var padX = (maxX - minX) * 0.2 || 400;
     var padY = (maxY - minY) * 0.2 || 400;
     minX -= padX; maxX += padX; minY -= padY; maxY += padY;
+
     function sx(cx) { return ((cx - minX) / (maxX - minX)) * w; }
     function sy(cy) { return h - ((cy - minY) / (maxY - minY)) * h; }
+
     // Grid
     ctx.strokeStyle = "#14161d"; ctx.lineWidth = 0.5;
-    for (var i = 0; i < w; i += 30) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
-    for (var j = 0; j < h; j += 30) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(w, j); ctx.stroke(); }
-    // Draw stations
-    screenPos = {};
-    for (var k in fuelStations) {
+    for (var i = 0; i < w; i += 30) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,h); ctx.stroke(); }
+    for (var j = 0; j < h; j += 30) { ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(w,j); ctx.stroke(); }
+
+    // Station dots
+    keys.forEach(function(k) {
         var s = fuelStations[k];
         var x = sx(s.coords.x), y = sy(s.coords.y);
-        screenPos[s.id] = { x: x, y: y };
+        fuelScreenPos[s.id] = { x: x, y: y };
+
         var isSel = (s.id === selectedStationId);
-        // Dot
         ctx.beginPath(); ctx.arc(x, y, isSel ? 8 : 5, 0, Math.PI * 2);
-        var color;
-        if (s.preco < 38) color = "#63d19e";
-        else if (s.preco < 42) color = "#ffcc00";
-        else color = "#ff6464";
+        var color = s.preco < 38 ? "#63d19e" : (s.preco < 42 ? "#ffcc00" : "#ff6464");
         ctx.fillStyle = color; ctx.fill();
         ctx.strokeStyle = isSel ? "#fff" : "#1a1c23";
         ctx.lineWidth = isSel ? 2.5 : 1.5; ctx.stroke();
-        // Label
         ctx.fillStyle = "#fff"; ctx.font = "bold 9px Inter, sans-serif";
         ctx.textAlign = "center"; ctx.fillText("$" + s.preco, x, y - 12);
-    }
+    });
+
     // Player marker
     var px = sx(fuelPlayerX), py = sy(fuelPlayerY);
     ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
@@ -503,32 +496,54 @@ function drawFuelMap() {
     ctx.fillText("VC", px, py - 11);
 }
 
-// Canvas click → select station
-document.addEventListener("DOMContentLoaded", function() {
+// Canvas click → station selection
+(function() {
     var canvas = document.getElementById("fuel-canvas");
     if (!canvas) return;
     canvas.addEventListener("click", function(e) {
         if (!fuelMapReady) return;
         var rect = canvas.getBoundingClientRect();
         var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
-        var best = null, bestDist = 20; // 20px tolerance
-        var sp = screenPos || {};
-        for (var id in sp) {
-            var p = sp[id];
+        var best = null, bestDist = 20;
+        for (var id in fuelScreenPos) {
+            var p = fuelScreenPos[id];
             var d = Math.sqrt((cx-p.x)*(cx-p.x) + (cy-p.y)*(cy-p.y));
             if (d < bestDist) { bestDist = d; best = id; }
         }
-        if (best) selectStation(parseInt(best));
+        if (best !== null) selectStation(parseInt(best));
     });
+})();
+
+// NUI message handler for fuel
+window.addEventListener('message', function(event) {
+    var item = event.data;
+
+    if (item.action === 'updateStations') {
+        var arr = item.stations || [];
+        fuelStations = {};
+        for (var i = 0; i < arr.length; i++) {
+            var s = arr[i];
+            fuelStations[s.id] = s;
+        }
+        fuelPlayerX = item.playerX || 0;
+        fuelPlayerY = item.playerY || 0;
+        drawFuelMap();
+    }
+
+    if (item.action === 'updateFuel') {
+        var fuelStock = item.fuelStock || 0;
+        var display = document.getElementById("fuel-stock-display");
+        var money = document.getElementById("fuel-company-money");
+        if (display) display.textContent = fuelStock + " L";
+        if (money) money.textContent = item.money ? "$ " + Number(item.money).toLocaleString("pt-BR") : "---";
+    }
 });
 
-function selectStation(id) {
-    selectedStationId = parseInt(id);
-    var s = fuelStations[id];
-    if (!s) return;
-    document.getElementById("fuel-sel-name").textContent = s.nome;
-    document.getElementById("fuel-sel-info").textContent = "$" + s.preco + "/L | " + s.estoque + "L estoque | " + s.distancia.toFixed(1) + " km";
-    document.getElementById("fuel-select-station").style.display = "block";
-    document.getElementById("fuel-sel-liters").value = Math.min(500, s.estoque);
-    drawFuelMap();
-}
+// Auto-refresh stations every 30s when fuel tab is visible
+setInterval(function() {
+    if (document.querySelector('.fuel-page') && 
+        document.querySelector('.fuel-page').style.display !== 'none') {
+        requestStations();
+        post("refreshFuel", {});
+    }
+}, 30000);
