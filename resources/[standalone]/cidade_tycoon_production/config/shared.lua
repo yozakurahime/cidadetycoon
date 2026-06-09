@@ -4,40 +4,32 @@ Config = {}
 -- GERAL
 -- ==========================================
 Config.Entrance = {
-    coords = vec4(155.7565, -3203.2197, 6.0219, 274.3145), -- Ao lado do porto
+    coords = vec4(155.7565, -3203.2197, 6.0219, 274.3145),
     pedModel = "s_m_y_dockwork_01",
     scenario = "WORLD_HUMAN_CLIPBOARD"
 }
 
 Config.Freelance = {
-    coords = vec4(1197.2, -3250.6, 7.1, 90.0), -- PostOP Docks entrance original
+    coords = vec4(1197.2, -3250.6, 7.1, 90.0),
     pedModel = "s_m_m_trucker_01",
     scenario = "WORLD_HUMAN_CLIPBOARD",
     name = "Porto de Los Santos - Freelance"
 }
 
 Config.Interior = {
-    -- Criminal Enterprise Warehouse (Instanciado via Routing Buckets)
     coords = vec4(849.1, -3000.2, -45.97, 0.0),
-    exitCoords = vec4(849.1, -3000.2, -45.97, 0.0), -- Ponto de saída interno
+    exitCoords = vec4(849.1, -3000.2, -45.97, 0.0),
 }
 
 -- ==========================================
 -- PREÇOS E PROGRESSÃO
 -- ==========================================
-Config.CreationPrice = 500000 -- R$ 500.000 para abrir a primeira empresa
+Config.CreationPrice = 500000
 Config.MaxMembersPerLevel = {
-    [1]  = 3,
-    [5]  = 5,
-    [10] = 8,
-    [15] = 10,
-    [20] = 12,
-    [25] = 15,
-    [30] = 18,
-    [40] = 22,
+    [1] = 3,  [5] = 5,  [10] = 8,  [15] = 10,
+    [20] = 12, [25] = 15, [30] = 18, [40] = 22,
 }
-
-Config.ExperiencePerAction = 25 -- EXP ganha por cada mini-game de produção concluído
+Config.ExperiencePerAction = 25
 
 Config.Levels = {
     [1]  = { exp = 0,      label = "Oficina de Fundo de Quintal" },
@@ -59,9 +51,18 @@ Config.Levels = {
 }
 
 -- ==========================================
--- PRODUTOS FABRICÁVEIS — Cadeia de Produção Realista
--- Matérias-primas do mundo: iron_ore, aluminum, copper_wire, plastic,
---   rubber, glass, steel, raw_chemicals
+-- PRODUTOS FABRICÁVEIS — Cadeia Automotiva
+--
+-- Matérias-primas (coletadas/compradas no mundo):
+--   iron_ore, steel, aluminum, copper_wire, plastic,
+--   rubber, glass, raw_chemicals
+--
+-- 🛠️  REPARO: pneus, pastilhas, amortecedores, transmissão, motor
+--       → consumidos ao consertar veículos nas oficinas
+-- 🏎️  PERFORMANCE: drift, corrida, arrancada, turbo, tração, freios esportivos
+--       → modificam o funcionamento dos veículos
+-- 🔫  ILEGAL: armas, munição, explosivos, chip falsificado
+-- 🔐  ESPECIAL: lockpick avançado, blindagem, kit de reparo
 -- ==========================================
 Config.Products = {
     -- ╔══════════════════════════════════════════════════════════════╗
@@ -69,74 +70,133 @@ Config.Products = {
     -- ╚══════════════════════════════════════════════════════════════╝
     ["steel_plate"] = {
         label = "Chapa de Aço",
-        type = "legal",
-        minLevel = 1,
+        type = "legal", minLevel = 1,
         requirements = { { item = "iron_ore", count = 8 }, { item = "steel", count = 2 } },
         processTime = 15000,
     },
     ["aluminum_plate"] = {
         label = "Chapa de Alumínio",
-        type = "legal",
-        minLevel = 1,
+        type = "legal", minLevel = 1,
         requirements = { { item = "aluminum", count = 8 } },
         processTime = 12000,
     },
     ["copper_coil"] = {
         label = "Bobina de Cobre",
-        type = "legal",
-        minLevel = 1,
+        type = "legal", minLevel = 1,
         requirements = { { item = "copper_wire", count = 6 } },
         processTime = 12000,
     },
     ["plastic_sheet"] = {
         label = "Chapa Plástica",
-        type = "legal",
-        minLevel = 1,
+        type = "legal", minLevel = 1,
         requirements = { { item = "plastic", count = 8 } },
         processTime = 12000,
     },
+    ["rubber_sheet"] = {
+        label = "Manta de Borracha",
+        type = "legal", minLevel = 1,
+        requirements = { { item = "rubber", count = 8 } },
+        processTime = 12000,
+    },
+    ["glass_pane"] = {
+        label = "Painel de Vidro",
+        type = "legal", minLevel = 1,
+        requirements = { { item = "glass", count = 6 } },
+        processTime = 10000,
+    },
 
     -- ╔══════════════════════════════════════════════════════════════╗
-    -- ║ TIER 2 — COMPONENTES (Legal, Nível 3-7)                    ║
+    -- ║ TIER 2 — PEÇAS DE REPARO (Legal, Nível 3-7)                ║
+    -- ║ Consumidas ao consertar veículos nas oficinas da cidade     ║
     -- ╚══════════════════════════════════════════════════════════════╝
     ["mechanical_parts"] = {
         label = "Peças Mecânicas",
-        type = "legal",
-        minLevel = 3,
-        requirements = { { item = "steel_plate", count = 4 }, { item = "aluminum_plate", count = 3 }, { item = "rubber", count = 2 } },
+        type = "legal", minLevel = 3,
+        requirements = { { item = "steel_plate", count = 4 }, { item = "aluminum_plate", count = 3 }, { item = "rubber_sheet", count = 2 } },
         processTime = 25000,
+    },
+    ["standard_tires"] = {
+        label = "Pneus Padrão",
+        type = "legal", minLevel = 3,
+        requirements = { { item = "rubber_sheet", count = 6 }, { item = "steel_plate", count = 2 } },
+        processTime = 20000,
+    },
+    ["brake_pads"] = {
+        label = "Pastilhas de Freio",
+        type = "legal", minLevel = 3,
+        requirements = { { item = "steel_plate", count = 4 }, { item = "copper_coil", count = 2 } },
+        processTime = 20000,
     },
     ["electronic_circuit"] = {
         label = "Circuito Eletrônico",
-        type = "legal",
-        minLevel = 5,
-        requirements = { { item = "copper_coil", count = 4 }, { item = "plastic_sheet", count = 3 }, { item = "glass", count = 2 } },
+        type = "legal", minLevel = 5,
+        requirements = { { item = "copper_coil", count = 4 }, { item = "plastic_sheet", count = 3 }, { item = "glass_pane", count = 2 } },
         processTime = 30000,
+    },
+    ["suspension_kit"] = {
+        label = "Kit de Amortecedores",
+        type = "legal", minLevel = 5,
+        requirements = { { item = "steel_plate", count = 5 }, { item = "rubber_sheet", count = 4 }, { item = "mechanical_parts", count = 2 } },
+        processTime = 28000,
+    },
+    ["transmission_parts"] = {
+        label = "Peças de Transmissão",
+        type = "legal", minLevel = 7,
+        requirements = { { item = "steel_plate", count = 6 }, { item = "mechanical_parts", count = 4 }, { item = "aluminum_plate", count = 3 } },
+        processTime = 32000,
     },
     ["reinforced_frame"] = {
         label = "Chassi Reforçado",
-        type = "legal",
-        minLevel = 7,
-        requirements = { { item = "steel_plate", count = 6 }, { item = "mechanical_parts", count = 4 } },
+        type = "legal", minLevel = 7,
+        requirements = { { item = "steel_plate", count = 8 }, { item = "mechanical_parts", count = 4 } },
         processTime = 35000,
     },
 
     -- ╔══════════════════════════════════════════════════════════════╗
-    -- ║ TIER 3 — COMPONENTES AVANÇADOS (Legal, Nível 10-13)        ║
+    -- ║ TIER 3 — PEÇAS DE PERFORMANCE (Legal, Nível 10-15)         ║
+    -- ║ Modificam o funcionamento do veículo (oficina)              ║
     -- ╚══════════════════════════════════════════════════════════════╝
     ["engine_block"] = {
         label = "Bloco de Motor",
-        type = "legal",
-        minLevel = 10,
+        type = "legal", minLevel = 10,
         requirements = { { item = "steel_plate", count = 10 }, { item = "mechanical_parts", count = 8 }, { item = "aluminum_plate", count = 5 } },
         processTime = 50000,
     },
+    ["performance_brakes"] = {
+        label = "Freios Esportivos",
+        type = "legal", minLevel = 10,
+        requirements = { { item = "brake_pads", count = 3 }, { item = "steel_plate", count = 4 }, { item = "copper_coil", count = 3 } },
+        processTime = 40000,
+    },
+    ["drift_tires"] = {
+        label = "Pneus de Drift",
+        type = "legal", minLevel = 12,
+        requirements = { { item = "standard_tires", count = 3 }, { item = "rubber_sheet", count = 5 }, { item = "aluminum_plate", count = 3 } },
+        processTime = 42000,
+    },
     ["turbo_kit"] = {
         label = "Kit Turbo",
-        type = "legal",
-        minLevel = 13,
-        requirements = { { item = "mechanical_parts", count = 8 }, { item = "steel_plate", count = 5 }, { item = "electronic_circuit", count = 3 }, { item = "rubber", count = 3 } },
+        type = "legal", minLevel = 13,
+        requirements = { { item = "mechanical_parts", count = 8 }, { item = "steel_plate", count = 5 }, { item = "electronic_circuit", count = 3 }, { item = "rubber_sheet", count = 3 } },
         processTime = 55000,
+    },
+    ["racing_tires"] = {
+        label = "Pneus de Corrida",
+        type = "legal", minLevel = 13,
+        requirements = { { item = "standard_tires", count = 4 }, { item = "rubber_sheet", count = 6 }, { item = "aluminum_plate", count = 4 }, { item = "copper_coil", count = 2 } },
+        processTime = 48000,
+    },
+    ["drag_tires"] = {
+        label = "Pneus de Arrancada",
+        type = "legal", minLevel = 15,
+        requirements = { { item = "standard_tires", count = 4 }, { item = "rubber_sheet", count = 8 }, { item = "steel_plate", count = 4 } },
+        processTime = 52000,
+    },
+    ["traction_control"] = {
+        label = "Controle de Tração",
+        type = "legal", minLevel = 15,
+        requirements = { { item = "electronic_circuit", count = 5 }, { item = "copper_coil", count = 4 }, { item = "transmission_parts", count = 3 } },
+        processTime = 58000,
     },
 
     -- ╔══════════════════════════════════════════════════════════════╗
@@ -144,38 +204,33 @@ Config.Products = {
     -- ╚══════════════════════════════════════════════════════════════╝
     ["refined_powder"] = {
         label = "Pó Refinado",
-        type = "illegal",
-        minLevel = 10,
+        type = "illegal", minLevel = 10,
         requirements = { { item = "raw_chemicals", count = 5 } },
         processTime = 40000,
     },
     ["weapon_parts"] = {
         label = "Peças de Arma",
-        type = "illegal",
-        minLevel = 10,
+        type = "illegal", minLevel = 10,
         requirements = { { item = "steel_plate", count = 8 }, { item = "mechanical_parts", count = 5 }, { item = "refined_powder", count = 2 } },
         processTime = 60000,
     },
+    ["counterfeit_chip"] = {
+        label = "Chip Falsificado",
+        type = "illegal", minLevel = 10,
+        requirements = { { item = "electronic_circuit", count = 5 }, { item = "plastic_sheet", count = 8 }, { item = "raw_chemicals", count = 3 } },
+        processTime = 45000,
+    },
     ["explosive_compound"] = {
         label = "Composto Explosivo",
-        type = "illegal",
-        minLevel = 13,
+        type = "illegal", minLevel = 13,
         requirements = { { item = "raw_chemicals", count = 10 }, { item = "refined_powder", count = 3 } },
         processTime = 55000,
     },
     ["ammo_pack"] = {
         label = "Pacote de Munição",
-        type = "illegal",
-        minLevel = 15,
+        type = "illegal", minLevel = 15,
         requirements = { { item = "weapon_parts", count = 4 }, { item = "explosive_compound", count = 3 }, { item = "copper_coil", count = 5 } },
         processTime = 70000,
-    },
-    ["counterfeit_chip"] = {
-        label = "Chip Falsificado",
-        type = "illegal",
-        minLevel = 10,
-        requirements = { { item = "electronic_circuit", count = 5 }, { item = "plastic_sheet", count = 8 }, { item = "raw_chemicals", count = 3 } },
-        processTime = 45000,
     },
 
     -- ╔══════════════════════════════════════════════════════════════╗
@@ -183,22 +238,19 @@ Config.Products = {
     -- ╚══════════════════════════════════════════════════════════════╝
     ["advanced_lockpick"] = {
         label = "Lockpick Avançado",
-        type = "special",
-        minLevel = 15,
+        type = "special", minLevel = 15,
         requirements = { { item = "steel_plate", count = 5 }, { item = "electronic_circuit", count = 5 }, { item = "counterfeit_chip", count = 2 } },
         processTime = 60000,
     },
     ["vehicle_armor"] = {
         label = "Blindagem Veicular",
-        type = "special",
-        minLevel = 18,
+        type = "special", minLevel = 18,
         requirements = { { item = "reinforced_frame", count = 8 }, { item = "steel_plate", count = 6 }, { item = "turbo_kit", count = 3 } },
         processTime = 90000,
     },
     ["advanced_repair_kit"] = {
         label = "Kit de Reparo Avançado",
-        type = "special",
-        minLevel = 20,
+        type = "special", minLevel = 20,
         requirements = { { item = "mechanical_parts", count = 6 }, { item = "electronic_circuit", count = 4 }, { item = "engine_block", count = 2 } },
         processTime = 75000,
     },
@@ -263,7 +315,6 @@ Config.MachineSlots = {
 
     -- ╔══════════════════════════════════════════════════════════════╗
     -- ║ FUTURAS EXPANSÕES (comentadas — prontas para ativar)       ║
-    -- ║ Mais 4 slots na ilha central para níveis 30-45             ║
     -- ╚══════════════════════════════════════════════════════════════╝
     -- { model = "v_serv_tray01",      type = "special", minLevel = 30, coords = vec4(849.5, -3012.0, -45.97, 0.0) },
     -- { model = "v_serv_tray01",      type = "special", minLevel = 35, coords = vec4(853.5, -3012.0, -45.97, 0.0) },
