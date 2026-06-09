@@ -356,7 +356,7 @@ function repairTruck(id) { post("repairTruck", {id: id}) }
 function setDriver(d_id, t_id) { post("setDriver", {driver_id: d_id, truck_id: t_id}) }
 function loan(id) { post("loan", {loan_id: id}) }
 function payLoan(id) { post("payLoan", {loan_id: id}) }
-function buyFuelBatch(liters, cost) { post("buyFuelBatch", {liters: liters, cost: cost, deliver: true, empresaId: 0}) }
+function buyFuelBatch(liters, cost, deliver) { post("buyFuelBatch", {liters: liters, cost: cost, deliver: deliver, empresaId: 0}) }
 function depositJerrycan() { post("depositJerrycan", {}) }
 function refreshFuel() { post("refreshFuel", {}) }
 function depositMoney() { var a = $('#input-deposit-money').val(); if (!a) return; $('#input-deposit-money').val(''); post("depositMoney", {amount: a}); }

@@ -342,6 +342,13 @@ RegisterNUICallback('refreshFuel', function(data, cb)
     cb('ok')
 end)
 
+RegisterNetEvent('cidade_tycoon_trucklogistics:startFuelMission', function(liters, coords, empresaId)
+    lib.notify({ title = '⛽ Missão de Combustível', description = ('Vá até a refinaria buscar %d litros de combustível! O ponto foi marcado no GPS.'):format(liters), type = 'inform', duration = 8000 })
+    SetNewWaypoint(coords.x, coords.y)
+    -- Store mission data for finish trigger (via ox_target at refinery)
+    fuelMissionData = { liters = liters, empresaId = empresaId }
+end)
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- PEGAR CAMINHÃO PRÓPRIO
 -----------------------------------------------------------------------------------------------------------------------------------------

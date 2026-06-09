@@ -225,32 +225,78 @@ Config.trabalhos = {
 
 Config.multiplicador_venda = 0.6	-- Value you receive when selling the used truck
 Config.concessionaria = {			-- Truck dealership vehicles
-	-- Here you can configure the vehicles of the dealership
-	['phantom'] = { 								-- This must be the vehicle's spawn name
-		['name'] = 'JoBuilt Phantom',		-- Truck name
-		['price'] = 350000,						-- Value
-		['engine'] = "24 Valve Supercharged",	-- Engine configuration
-		['transmission'] = "7-Speed",			-- Transmission configuration
-		['hp'] = '450',							-- Horsepower
-		['img'] = 'img/phantom.jpg'				-- Vehicle image
-	},
-	-- The other vehicles follow the same pattern as the vehicle above
-	['packer'] = {
-		['name'] = 'MTL Packer',
-		['price'] = 300000,
-		['engine'] = "24 Valve Supercharged",
-		['transmission'] = "7-Speed",
-		['hp'] = '401',
-		['img'] = 'img/packer.jpg'
-	},
-	['hauler'] = {
-		['name'] = 'JoBuilt Hauler',
-		['price'] = 330000,
-		['engine'] = "24 Valve Supercharged",
-		['transmission'] = "7-Speed",
-		['hp'] = '430',
-		['img'] = 'img/hauler.jpg'
-	}
+['phantom'] = {
+	['name'] = 'JoBuilt Phantom',
+	['price'] = 350000,
+	['engine'] = "24 Valve Supercharged",
+	['transmission'] = "7-Speed",
+	['hp'] = '450',
+	['img'] = 'img/phantom.jpg'
+},
+['hauler'] = {
+	['name'] = 'JoBuilt Hauler',
+	['price'] = 330000,
+	['engine'] = "24 Valve Supercharged",
+	['transmission'] = "7-Speed",
+	['hp'] = '430',
+	['img'] = 'img/hauler.jpg'
+},
+['packer'] = {
+	['name'] = 'MTL Packer',
+	['price'] = 300000,
+	['engine'] = "24 Valve Supercharged",
+	['transmission'] = "7-Speed",
+	['hp'] = '401',
+	['img'] = 'img/packer.jpg'
+},
+['phantom3'] = {
+	['name'] = 'JoBuilt Phantom Custom',
+	['price'] = 520000,
+	['engine'] = "32 Valve Twin-Turbo",
+	['transmission'] = "10-Speed Automated",
+	['hp'] = '625',
+	['img'] = 'img/phantom.jpg'
+},
+['mule5'] = {
+	['name'] = 'Maibatsu Mule Custom',
+	['price'] = 180000,
+	['engine'] = "16 Valve Diesel",
+	['transmission'] = "6-Speed",
+	['hp'] = '280',
+	['img'] = 'img/truck.png'
+},
+['pounder2'] = {
+	['name'] = 'MTL Pounder Custom',
+	['price'] = 240000,
+	['engine'] = "20 Valve Turbo Diesel",
+	['transmission'] = "7-Speed",
+	['hp'] = '350',
+	['img'] = 'img/truck.png'
+},
+['benson'] = {
+	['name'] = 'Vapid Benson',
+	['price'] = 150000,
+	['engine'] = "16 Valve EcoDiesel",
+	['transmission'] = "6-Speed",
+	['hp'] = '270',
+	['img'] = 'img/truck.png'
+},
+['stockade'] = {
+	['name'] = 'Brute Stockade Blindado',
+	['price'] = 450000,
+	['engine'] = "28 Valve V8",
+	['transmission'] = "8-Speed Heavy-Duty",
+	['hp'] = '380',
+	['img'] = 'img/truck.png'
+},
+['barracks3'] = {
+	['name'] = 'HVY Barracks Semi',
+	['price'] = 680000,
+	['engine'] = "36 Valve V12 Diesel",
+	['transmission'] = "12-Speed Off-Road",
+	['hp'] = '720',
+	['img'] = 'img/truck.png'
+},
 }
 Config.valor_reparo = { -- Value to repair 1% of each part (Example: if 40% of the part is damaged, the value to repair will be multiplied by 40)
 	['engine'] = 250,

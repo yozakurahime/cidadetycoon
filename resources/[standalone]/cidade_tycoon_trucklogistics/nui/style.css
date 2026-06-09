@@ -1322,3 +1322,6 @@ body.iframe-mode #myModal .modal-content p {
 .fuel-buy-card h5 { color: #fff; font-size: 15px; font-weight: 700; margin: 0 0 8px 0; }
 .fuel-price { display: block; font-size: 18px; font-weight: 900; color: #63d19e; }
 .fuel-unit { font-size: 10px; color: #919aa3; font-weight: 600; }
+.fuel-buy-card.fuel-mission { border-color: #63d19e; }
+.fuel-buy-card.fuel-mission:hover { border-color: #63d19e; box-shadow: 0 4px 15px rgba(99, 209, 158, 0.25); }
+.fuel-buy-card.fuel-mission .fuel-price { color: #63d19e; }
