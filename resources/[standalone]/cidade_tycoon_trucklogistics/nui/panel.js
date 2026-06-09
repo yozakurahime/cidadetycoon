@@ -381,6 +381,9 @@ window.addEventListener('message', function (event) {
     if (item.action === 'updateFuel') {
         var fuelStock = item.fuelStock || 0;
         $('#fuel-stock-display').text(fuelStock + ' L');
+        $('#fuel-company-money').text(item.money ? '$ ' + Number(item.money).toLocaleString('pt-BR') : '---');
+        if (fuelStock <= 0) $('#fuel-mission-status').text('💡 Deposite dinheiro no Banco antes de comprar combustível').css('color', '#919aa3');
+        else $('#fuel-mission-status').text('Consumo: ~1.5 L/km por motorista').css('color', '#ff9800');
         // If fuel page is open, re-request fuel data periodically
         if ($('.fuel-page').is(':visible') && !fuelCheckInterval) {
             fuelCheckInterval = setInterval(function() {
