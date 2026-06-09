@@ -1994,3 +1994,56 @@ input:checked + .slider:before {
 .info-row {
   min-height: 34px;
 }
+
+
+/* ==========================================================================
+   Crisis Alert Banner — Persistente para emergências logísticas
+   ========================================================================== */
+#crisis-banner {
+  position: absolute;
+  top: 42px;
+  left: 8px;
+  right: 8px;
+  z-index: 100;
+  background: linear-gradient(135deg, rgba(180, 20, 20, 0.92), rgba(140, 10, 10, 0.95));
+  border: 1.5px solid rgba(255, 80, 80, 0.7);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  animation: crisisPulse 1.8s ease-in-out infinite;
+  backdrop-filter: blur(8px);
+}
+#crisis-banner:hover {
+  background: linear-gradient(135deg, rgba(200, 30, 30, 0.95), rgba(160, 15, 15, 0.97));
+  border-color: rgba(255, 120, 120, 0.9);
+}
+#crisis-banner.hidden {
+  display: none;
+}
+.crisis-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.crisis-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.crisis-driver {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.crisis-timer {
+  font-family: 'Inter', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffcc00;
+  text-shadow: 0 0 6px rgba(255, 200, 0, 0.4);
+}
+@keyframes crisisPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 50, 50, 0.4); }
+  50% { box-shadow: 0 0 18px rgba(255, 50, 50, 0.7); }
+}

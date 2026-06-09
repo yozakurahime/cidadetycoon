@@ -276,6 +276,13 @@ RegisterNetEvent('cidade_tycoon_tablet:client:showToast', function(title, messag
     })
 end)
 
+RegisterNetEvent('cidade_tycoon_tablet:client:driverCrisisAlert', function(crisisData)
+    SendNUIMessage({
+        action = 'driverCrisisAlert',
+        payload = crisisData,
+    })
+end)
+
 -- Sincronização de Relógio delegada nativamente ao JavaScript da interface CEF (app.js)
 
 AddEventHandler('onResourceStop', function(res)

@@ -238,7 +238,7 @@ CreateThread(function()
                                     table.insert(routeEvents, { name = "Retido PRF", time = 12 })
                                     if source then 
                                         notify(source, ("🚔 PRF: %s parado! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 EMERGÊNCIA LOGÍSTICA', ('O motorista %s foi parado pela PRF e aguarda ordens no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 EMERGÊNCIA LOGÍSTICA', ('O motorista %s foi parado pela PRF e aguarda ordens no Tablet (Limite: 5 min).'):format(driver.name), 300000)
                                         TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
                                     else
                                         queueOfflineNotification(driver.user_id, ("🚔 PRF: O motorista %s foi parado pela PRF! Decida a instrução no Tablet (Limite: 5 min)."):format(driver.name), 'error')
@@ -249,7 +249,7 @@ CreateThread(function()
                                     table.insert(routeEvents, { name = "Pane Mecânica", time = 15 })
                                     if source then 
                                         notify(source, ("⚠️ ALERTA: Quebra com %s! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🛠️ FALHA MECÂNICA', ('O veículo de %s quebrou. Decida o tipo de reparo no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🛠️ FALHA MECÂNICA', ('O veículo de %s quebrou. Decida o tipo de reparo no Tablet (Limite: 5 min).'):format(driver.name), 300000)
                                         TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
                                     else
                                         queueOfflineNotification(driver.user_id, ("⚠️ ALERTA: Quebra mecânica com o motorista %s! Decida a ação no Tablet (Limite: 5 min)."):format(driver.name), 'error')
@@ -260,7 +260,7 @@ CreateThread(function()
                                     table.insert(routeEvents, { name = "Abordagem Armada", time = 20 })
                                     if source then 
                                         notify(source, ("🚨 ALERTA: Assalto em andamento com %s! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 ROUBO EM ANDAMENTO', ('O motorista %s foi abordado por assaltantes armados! Decida a reação no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🚨 ROUBO EM ANDAMENTO', ('O motorista %s foi abordado por assaltantes armados! Decida a reação no Tablet (Limite: 5 min).'):format(driver.name), 300000)
                                         TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
                                     else
                                         queueOfflineNotification(driver.user_id, ("🚨 ALERTA: Assalto em andamento com o motorista %s! Decida no Tablet (Limite: 5 min)."):format(driver.name), 'error')
@@ -271,7 +271,7 @@ CreateThread(function()
                                     table.insert(routeEvents, { name = "Manifestação na Pista", time = 25 })
                                     if source then 
                                         notify(source, ("⚠️ PROTESTO: %s parou em um bloqueio! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '⚠️ ROTA BLOQUEADA', ('O motorista %s parou devido a um protesto na pista. Decida a rota no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '⚠️ ROTA BLOQUEADA', ('O motorista %s parou devido a um protesto na pista. Decida a rota no Tablet (Limite: 5 min).'):format(driver.name), 300000)
                                         TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
                                     else
                                         queueOfflineNotification(driver.user_id, ("⚠️ PROTESTO: O motorista %s parou em um bloqueio na pista! Decida no Tablet (Limite: 5 min)."):format(driver.name), 'error')
@@ -282,7 +282,7 @@ CreateThread(function()
                                     table.insert(routeEvents, { name = "Oferta Suspeita", time = 5 })
                                     if source then 
                                         notify(source, ("🤫 ALERTA: %s recebeu uma oferta suspeita! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🤫 OFERTA Suspeita', ('Ofereceram um frete clandestino valioso para o motorista %s. Decida no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🤫 OFERTA Suspeita', ('Ofereceram um frete clandestino valioso para o motorista %s. Decida no Tablet (Limite: 5 min).'):format(driver.name), 300000)
                                         TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
                                     else
                                         queueOfflineNotification(driver.user_id, ("🤫 ALERTA: O motorista %s recebeu proposta clandestina! Decida no Tablet (Limite: 5 min)."):format(driver.name), 'error')
@@ -293,7 +293,7 @@ CreateThread(function()
                                     table.insert(routeEvents, { name = "Clima Severo", time = 15 })
                                     if source then 
                                         notify(source, ("❄️ CLIMA: %s preso em tempestade severa! Decida em até 5 min no Tablet."):format(driver.name), 'error') 
-                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '❄️ CLIMA EXTREMO', ('O motorista %s enfrenta tempestade severa na pista. Decida no Tablet (Limite: 5 min).'):format(driver.name), 10000)
+                                        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '❄️ CLIMA EXTREMO', ('O motorista %s enfrenta tempestade severa na pista. Decida no Tablet (Limite: 5 min).'):format(driver.name), 300000)
                                         TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
                                     else
                                         queueOfflineNotification(driver.user_id, ("❄️ CLIMA: O motorista %s preso em tempestade severa! Decida no Tablet (Limite: 5 min)."):format(driver.name), 'error')
@@ -395,7 +395,7 @@ CreateThread(function()
                                 
                                 if source then
                                     notify(source, message, 'success')
-                                    TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📦 ENTREGA CONCLUÍDA', toastText, 10000)
+                                    TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📦 ENTREGA CONCLUÍDA', toastText, 300000)
                                     TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
                                 else
                                     queueOfflineNotification(driver.user_id, message, 'success')
@@ -717,7 +717,7 @@ local function resolveDriverCrisis(userId, driverId, option)
     local source = playerSourceByCitizenId(userId)
     if source then
         notify(source, resultMessage, "inform")
-        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📉 EVENTO RESOLVIDO', resultMessage, 10000)
+        TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '📉 EVENTO RESOLVIDO', resultMessage, 300000)
         openUI(source, true)
     else
         queueOfflineNotification(userId, resultMessage, "inform")
@@ -1048,13 +1048,44 @@ AddEventHandler('qbx_core:server:onPlayerLoaded', function(source)
     local notifications = MySQL.query.await('SELECT * FROM trucker_offline_notifications WHERE user_id = ? ORDER BY id ASC', { userId })
     if notifications and #notifications > 0 then
         CreateThread(function()
-            Wait(5000) -- Wait a few seconds for the client to fully load and spawn before spamming notifications
+            Wait(5000)
             for _, notif in ipairs(notifications) do
                 notify(source, notif.message, notif.notification_type)
                 TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
-                Wait(1500) -- Small delay between notifications
+                Wait(1500)
             end
             MySQL.update.await('DELETE FROM trucker_offline_notifications WHERE user_id = ?', { userId })
         end)
     end
+
+    -- Check for active driver crises (driver in WAITING_DECISION)
+    CreateThread(function()
+        Wait(8000)
+        local drivers = MySQL.query.await([[
+            SELECT d.* FROM trucker_drivers d
+            INNER JOIN trucker_trucks t ON t.driver = d.driver_id
+            WHERE d.user_id = ? AND d.status = 'WAITING_DECISION'
+        ]], { userId })
+        
+        if drivers and #drivers > 0 then
+            local now = os.time()
+            for _, driver in ipairs(drivers) do
+                if driver.timer > 0 and now < driver.timer then
+                    local remaining = driver.timer - now
+                    local eventName = driver.active_event or 'Evento Crítico'
+                    local msg = ('🚨 %s: O motorista %s tem um(a) %s pendente! Restam %d segundos para decidir no Tablet.'):format(
+                        eventName, driver.name, eventName, remaining)
+                    notify(source, msg, 'error')
+                    TriggerClientEvent('cidade_tycoon_tablet:client:driverCrisisAlert', source, {
+                        driverId = driver.driver_id,
+                        driverName = driver.name,
+                        eventType = driver.active_event,
+                        remainingSeconds = remaining,
+                        pendingData = driver.pending_event_data,
+                    })
+                    TriggerClientEvent('cidade_tycoon_trucklogistics:warningSound', source)
+                end
+            end
+        end
+    end)
 end)

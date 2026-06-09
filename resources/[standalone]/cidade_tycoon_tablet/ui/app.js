@@ -75,6 +75,50 @@ window.showToast = function(title, message, duration = 3500) {
 };
 
 // ==========================================================================
+// Driver Crisis Alert — Persistent banner for truck logistics emergencies
+// ==========================================================================
+let crisisDismissed = {};
+window.showDriverCrisisAlert = function(crisisData) {
+  if (!crisisData || !crisisData.driverId) return;
+  if (crisisDismissed[crisisData.driverId]) return;
+
+  const banner = document.getElementById('crisis-banner');
+  if (!banner) return;
+
+  const remaining = crisisData.remainingSeconds || 300;
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const timeStr = mins > 0 ? `${mins}min ${secs}s` : `${secs}s`;
+
+  banner.querySelector('.crisis-title').textContent = '🚨 ' + (crisisData.eventType || 'Emergência Logística');
+  banner.querySelector('.crisis-driver').textContent = 'Motorista: ' + (crisisData.driverName || 'Desconhecido');
+  banner.querySelector('.crisis-timer').textContent = '⏱️ ' + timeStr + ' restantes';
+  banner.classList.remove('hidden');
+
+  // Countdown timer
+  let remainingSecs = remaining;
+  if (crisisData._crisisInterval) clearInterval(crisisData._crisisInterval);
+  crisisData._crisisInterval = setInterval(() => {
+    remainingSecs--;
+    if (remainingSecs <= 0) {
+      clearInterval(crisisData._crisisInterval);
+      banner.classList.add('hidden');
+    } else {
+      const m = Math.floor(remainingSecs / 60);
+      const s = remainingSecs % 60;
+      banner.querySelector('.crisis-timer').textContent = '⏱️ ' + (m > 0 ? `${m}min ${s}s` : `${s}s`) + ' restantes';
+    }
+  }, 1000);
+
+  // Click to open truck logistics
+  banner.onclick = function() {
+    window.openApp('trucker');
+  };
+
+  window.playClickSound();
+};
+
+// ==========================================================================
 // OS Confirmation Modal
 // ==========================================================================
 window.showConfirmationModal = function(title, message, onConfirm, onCancel = null) {
@@ -509,6 +553,8 @@ window.addEventListener('message', (event) => {
     document.getElementById('app').classList.add('hidden');
   } else if (data.action === 'showToast') {
     window.showToast(data.title || 'Notificação', data.message || '', data.duration || 3500);
+  } else if (data.action === 'driverCrisisAlert') {
+    window.showDriverCrisisAlert(data.payload || {});
   } else if (data.action === 'truckLogisticsMessage') {
     postTruckLogisticsToIframe(data.payload || {});
   } else if (data.action === 'updateTime') {
