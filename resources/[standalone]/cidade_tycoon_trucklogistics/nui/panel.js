@@ -347,7 +347,7 @@ function trainDriver(id) {
     post("trainDriver", id); 
 }
 function resolveCrisis(id, opt) { post("resolveCrisis", {driver_id: id, option: opt}); }
-function openPage(pageN) { $(".pages").hide(); const p = [".main-page", ".job-page", ".freight-page", ".skills-page", ".diagnostic-page", ".dealership-page", ".trucks-page", ".recruitment-page", ".drivers-page", ".bank-page", ".fuel-page"]; $(p[pageN]).show(); if (pageN === 10) { refreshFuel(); requestStations(); } }
+function openPage(pageN) { $(".pages").hide(); const p = [".main-page", ".job-page", ".freight-page", ".skills-page", ".diagnostic-page", ".dealership-page", ".trucks-page", ".recruitment-page", ".drivers-page", ".bank-page", ".fuel-page"]; if (pageN === 10) { $(".fuel-page").css("display", "flex"); refreshFuel(); requestStations(); setTimeout(function() { drawFuelMap(); }, 200); } else { $(p[pageN]).show(); } }
 function closeUI() { post("close", "") }
 function startJob(id, r, d) { post("startJob", {id: id, reward: r, distance: d}) }
 function buyTruck(name, price) { post("buyTruck", {truck_name: name, price: price}) }
