@@ -319,6 +319,29 @@ function closeUI()
 	TriggerServerEvent('cidade_tycoon_trucklogistics:closeUI')
 end
 
+RegisterNetEvent('cidade_tycoon_trucklogistics:showFuelMenu', function(fuelStock, money)
+    SendNUIMessage({
+        action = 'updateFuel',
+        fuelStock = fuelStock or 0,
+        money = money or 0
+    })
+end)
+
+RegisterNUICallback('buyFuelBatch', function(data, cb)
+    TriggerServerEvent('cidade_tycoon_trucklogistics:buyFuelBatch', tonumber(data.liters), tonumber(data.cost), data.deliver, data.empresaId)
+    cb('ok')
+end)
+
+RegisterNUICallback('depositJerrycan', function(data, cb)
+    TriggerServerEvent('cidade_tycoon_trucklogistics:depositJerrycan')
+    cb('ok')
+end)
+
+RegisterNUICallback('refreshFuel', function(data, cb)
+    TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu')
+    cb('ok')
+end)
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- PEGAR CAMINHÃO PRÓPRIO
 -----------------------------------------------------------------------------------------------------------------------------------------

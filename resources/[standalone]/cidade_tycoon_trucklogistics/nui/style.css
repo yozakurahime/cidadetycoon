@@ -1298,3 +1298,27 @@ body.iframe-mode #myModal .modal-content p {
         padding: 14px 16px;
     }
 }
+
+
+/* ==========================================================================
+   Fuel Page
+   ========================================================================== */
+.fuel-page .fuel-sections { display: flex; flex-direction: column; gap: 15px; }
+.fuel-buy-card {
+  background: linear-gradient(135deg, #1a1c23, #232636);
+  border: 1.5px solid #373a40;
+  border-radius: 12px;
+  padding: 18px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.fuel-buy-card:hover {
+  border-color: #ff9800;
+  background: linear-gradient(135deg, #232636, #2d3044);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
+}
+.fuel-buy-card h5 { color: #fff; font-size: 15px; font-weight: 700; margin: 0 0 8px 0; }
+.fuel-price { display: block; font-size: 18px; font-weight: 900; color: #63d19e; }
+.fuel-unit { font-size: 10px; color: #919aa3; font-weight: 600; }

@@ -343,7 +343,7 @@ function trainDriver(id) {
     post("trainDriver", id); 
 }
 function resolveCrisis(id, opt) { post("resolveCrisis", {driver_id: id, option: opt}); }
-function openPage(pageN) { $(".pages").hide(); const p = [".main-page", ".job-page", ".freight-page", ".skills-page", ".diagnostic-page", ".dealership-page", ".trucks-page", ".recruitment-page", ".drivers-page", ".bank-page"]; $(p[pageN]).show(); }
+function openPage(pageN) { $(".pages").hide(); const p = [".main-page", ".job-page", ".freight-page", ".skills-page", ".diagnostic-page", ".dealership-page", ".trucks-page", ".recruitment-page", ".drivers-page", ".bank-page", ".fuel-page"]; $(p[pageN]).show(); if (pageN === 10) refreshFuel(); }
 function closeUI() { post("close", "") }
 function startJob(id, r, d) { post("startJob", {id: id, reward: r, distance: d}) }
 function buyTruck(name, price) { post("buyTruck", {truck_name: name, price: price}) }
@@ -356,6 +356,9 @@ function repairTruck(id) { post("repairTruck", {id: id}) }
 function setDriver(d_id, t_id) { post("setDriver", {driver_id: d_id, truck_id: t_id}) }
 function loan(id) { post("loan", {loan_id: id}) }
 function payLoan(id) { post("payLoan", {loan_id: id}) }
+function buyFuelBatch(liters, cost) { post("buyFuelBatch", {liters: liters, cost: cost, deliver: true, empresaId: 0}) }
+function depositJerrycan() { post("depositJerrycan", {}) }
+function refreshFuel() { post("refreshFuel", {}) }
 function depositMoney() { var a = $('#input-deposit-money').val(); if (!a) return; $('#input-deposit-money').val(''); post("depositMoney", {amount: a}); }
 function withdrawMoney() { post("withdrawMoney", {}) }
 function post(name, data) { $.post("https://cidade_tycoon_trucklogistics/" + name, JSON.stringify(data)); }
@@ -370,4 +373,24 @@ $(document).ready(function() {
 		$('body').css('background-color', 'transparent');
 		$('.sidebar-navigation ul li').last().hide();
 	}
+});
+// Fuel page auto-refresh
+var fuelCheckInterval = null;
+window.addEventListener('message', function (event) {
+    var item = event.data;
+    if (item.action === 'updateFuel') {
+        var fuelStock = item.fuelStock || 0;
+        $('#fuel-stock-display').text(fuelStock + ' L');
+        // If fuel page is open, re-request fuel data periodically
+        if ($('.fuel-page').is(':visible') && !fuelCheckInterval) {
+            fuelCheckInterval = setInterval(function() {
+                if (!$('.fuel-page').is(':visible')) {
+                    clearInterval(fuelCheckInterval);
+                    fuelCheckInterval = null;
+                } else {
+                    refreshFuel();
+                }
+            }, 5000);
+        }
+    }
 });
