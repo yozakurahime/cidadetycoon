@@ -366,6 +366,7 @@ end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:receiveStations', function(stations)
     local pc = GetEntityCoords(PlayerPedId())
+    print(('^3[FUEL] Client received %d stations^7'):format(stations and #stations or 0))
     -- Calculate distances on client side (GetEntityCoords is client-only)
     for _, s in pairs(stations) do
         local sc = vector3(s.coords.x, s.coords.y, pc.z)

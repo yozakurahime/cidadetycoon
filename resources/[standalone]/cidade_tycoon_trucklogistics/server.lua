@@ -1125,7 +1125,8 @@ end)
 RegisterNetEvent('cidade_tycoon_trucklogistics:requestStations', function()
     local source = source
     local userId = citizenId(source)
-    if not userId then return end
+    if not userId then print('^1[FUEL] requestStations: userId nil^7') return end
+    print(('^2[FUEL] requestStations called by %s^7'):format(userId))
     local stations = {}
     for i, posto in ipairs(Config.postos) do
         local state = stationState[i]
@@ -1149,7 +1150,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:requestStations', function()
             estoque_max = posto.estoque_max
         }
     end
-    TriggerClientEvent('cidade_tycoon_trucklogistics:receiveStations', source, stations)
+    print(('^2[FUEL] Sending %d stations^7'):format(#stations)); TriggerClientEvent('cidade_tycoon_trucklogistics:receiveStations', source, stations)
 end)
 
 -- Player buys fuel from a specific station

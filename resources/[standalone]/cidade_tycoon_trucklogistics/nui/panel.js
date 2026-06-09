@@ -382,7 +382,7 @@ $(document).ready(function() {
 // =========================================================================
 // FUEL PAGE — Station Map System
 // =========================================================================
-var fuelStations = {};
+console.log('[FUEL NUI] Received updateStations:', arr.length, 'stations'); fuelStations = {};
 var fuelPlayerX = 0, fuelPlayerY = 0;
 var selectedStationId = null;
 var fuelMapReady = false;
@@ -520,7 +520,7 @@ window.addEventListener('message', function(event) {
 
     if (item.action === 'updateStations') {
         var arr = item.stations || [];
-        fuelStations = {};
+        console.log('[FUEL NUI] Received updateStations:', arr.length, 'stations'); fuelStations = {};
         for (var i = 0; i < arr.length; i++) {
             var s = arr[i];
             fuelStations[s.id] = s;
