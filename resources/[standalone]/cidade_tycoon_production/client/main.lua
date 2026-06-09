@@ -145,14 +145,17 @@ function openEntranceMenu()
 end
 
 local spawnedMachines = {}
+local machineMarkers = {}
 
 local function despawnCompanyMachines()
     for _, prop in pairs(spawnedMachines) do
-        if DoesEntityExist(prop) then
-            DeleteEntity(prop)
-        end
+        if DoesEntityExist(prop) then DeleteEntity(prop) end
     end
     spawnedMachines = {}
+    for _, marker in ipairs(machineMarkers) do
+        if marker.remove then marker:remove() end
+    end
+    machineMarkers = {}
 end
 
 local function spawnCompanyMachines(level)
@@ -166,7 +169,31 @@ local function spawnCompanyMachines(level)
             if HasModelLoaded(hash) then
                 local prop = CreateObject(hash, slot.coords.x, slot.coords.y, slot.coords.z, false, false, false)
                 SetEntityHeading(prop, slot.coords.w)
+                PlaceObjectOnGroundProperly(prop)
                 FreezeEntityPosition(prop, true)
+                
+                -- Marcador colorido no chão para identificar a bancada
+                local markerColor = { legal = { r = 46, g = 204, b = 113 }, illegal = { r = 231, g = 76, b = 60 }, special = { r = 241, g = 196, b = 15 } }
+                local col = markerColor[slot.type] or markerColor.legal
+                local marker = lib.points.new({
+                    coords = vec3(slot.coords.x, slot.coords.y, slot.coords.z - 0.95),
+                    distance = 15.0,
+                    marker = {
+                        type = 1,
+                        scale = vec3(0.7, 0.7, 0.02),
+                        color = col,
+                        bobUpAndDown = false,
+                        rotate = false,
+                    },
+                })
+                function marker:nearby()
+                    DrawMarker(self.marker.type, self.coords.x, self.coords.y, self.coords.z,
+                        0, 0, 0, 0, 0, 0,
+                        self.marker.scale.x, self.marker.scale.y, self.marker.scale.z,
+                        self.marker.color.r, self.marker.color.g, self.marker.color.b,
+                        180, self.marker.bobUpAndDown, self.marker.rotate, 2, false, nil, nil, false)
+                end
+                table.insert(machineMarkers, marker)
                 
                 -- Add ox_target
                 local options = {}
@@ -236,7 +263,7 @@ function enterWarehouse(companyId)
     -- Thread de Barreira (Garante que só rode uma vez por entrada)
     CreateThread(function()
         local centerCoords = config.Interior.coords.xyz
-        local maxDistance = 45.0 -- Raio maior para o galpão real
+        local maxDistance = 22.0 -- Raio seguro para o galpão real (34m x 40m)
         while inWarehouse do
             Wait(1000)
             local pPed = PlayerPedId()
