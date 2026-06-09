@@ -382,7 +382,7 @@ $(document).ready(function() {
 // =========================================================================
 // FUEL PAGE — Station Map System
 // =========================================================================
-console.log('[FUEL NUI] Received updateStations:', arr.length, 'stations'); fuelStations = {};
+var fuelStations = {};
 var fuelPlayerX = 0, fuelPlayerY = 0;
 var selectedStationId = null;
 var fuelMapReady = false;

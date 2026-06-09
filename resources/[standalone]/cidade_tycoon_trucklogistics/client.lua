@@ -378,6 +378,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:receiveStations', function(statio
         playerX = pc.x,
         playerY = pc.y
     })
+    print('^3[FUEL] SendNUIMessage updateStations sent to NUI^7')
 end)
 
 RegisterNUICallback('depositJerrycan', function(data, cb)
