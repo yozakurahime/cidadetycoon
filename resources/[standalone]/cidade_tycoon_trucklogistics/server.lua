@@ -4,6 +4,9 @@ local eventLocks = {}
 local activeJobs = {}
 local CoopBonusTime = 0
 
+-- Forward declarations for functions called before their definition
+local resolveDriverCrisis
+
 local function corePlayer(source)
     return exports.cidade_tycoon_core:GetFrameworkPlayer(source)
 end
@@ -105,7 +108,7 @@ function openUI(source, update)
     
     local payload = {
         trucker_users = user,
-        trucker_available_contracts = MySQL.query.await('SELECT * FROM trucker_available_contracts', {}),
+        trucker_available_contracts = MySQL.query.await('SELECT * FROM trucker_available_contracts ORDER BY contract_id DESC LIMIT 50', {}),
         trucker_trucks = MySQL.query.await('SELECT * FROM trucker_trucks WHERE user_id = ?', { userId }),
         trucker_drivers = MySQL.query.await('SELECT * FROM trucker_drivers WHERE user_id = ? OR user_id IS NULL', { userId }),
         trucker_loans = MySQL.query.await('SELECT * FROM trucker_loans WHERE user_id = ?', { userId }),
