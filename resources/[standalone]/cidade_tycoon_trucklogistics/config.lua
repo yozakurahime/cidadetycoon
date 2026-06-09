@@ -295,6 +295,22 @@ Config.emprestimos = {
 	}
 }
 
+Config.postos = { -- Postos de combustível com preços e estoque dinâmicos
+	-- { nome, coords (x,y,z), preco_base_por_litro, estoque_maximo }
+	{ nome = "Ron Oil - Elysian Island", coords = vector3(817.49, -2989.32, 6.0), preco_base = 35, estoque_max = 5000 },
+	{ nome = "Globe Oil - La Puerta", coords = vector3(300.0, -2040.0, 23.0), preco_base = 40, estoque_max = 3000 },
+	{ nome = "Globe Oil - Strawberry", coords = vector3(263.69, -1270.65, 29.29), preco_base = 38, estoque_max = 4000 },
+	{ nome = "Globe Oil - Davis Ave", coords = vector3(176.74, -1691.76, 29.29), preco_base = 37, estoque_max = 3500 },
+	{ nome = "Globe Oil - Vinewood", coords = vector3(637.74, 269.63, 103.27), preco_base = 42, estoque_max = 2500 },
+	{ nome = "Ron Oil - Route 68", coords = vector3(1198.81, 2645.49, 38.04), preco_base = 36, estoque_max = 4500 },
+	{ nome = "Ron Oil - Harmony", coords = vector3(547.71, 2650.09, 42.16), preco_base = 35, estoque_max = 4800 },
+	{ nome = "LTD Gasoline - Sandy Shores", coords = vector3(1956.8, 3742.35, 32.34), preco_base = 38, estoque_max = 3500 },
+	{ nome = "LTD Gasoline - Grapeseed", coords = vector3(1670.98, 4939.08, 42.07), preco_base = 40, estoque_max = 2000 },
+	{ nome = "Pit Stop - Paleto Bay", coords = vector3(176.28, 6599.97, 31.4), preco_base = 45, estoque_max = 1500 },
+	{ nome = "Globe Oil - Chumash", coords = vector3(-3227.72, 802.27, 11.06), preco_base = 41, estoque_max = 2800 },
+	{ nome = "Globe Oil - Banham Canyon", coords = vector3(-2041.74, -350.53, 13.03), preco_base = 43, estoque_max = 2000 },
+}
+
 Config.habilidade_distancia = {
 	[0] = 7, [1] = 7.5, [2] = 8, [3] = 8.5, [4] = 9, [5] = 9.5, [6] = 99
 }

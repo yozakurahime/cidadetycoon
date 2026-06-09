@@ -348,6 +348,33 @@ RegisterNUICallback('buyFuelBatch', function(data, cb)
 	cb('ok')
 end)
 
+RegisterNUICallback('buyFromStation', function(data, cb)
+    TriggerServerEvent('cidade_tycoon_trucklogistics:buyFromStation', tonumber(data.stationId), tonumber(data.liters))
+    CreateThread(function() Wait(1200) TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu') end)
+    cb('ok')
+end)
+
+RegisterNUICallback('requestStations', function(data, cb)
+    TriggerServerEvent('cidade_tycoon_trucklogistics:requestStations')
+    cb('ok')
+end)
+
+RegisterNUICallback('setFuelWaypoint', function(data, cb)
+    SetNewWaypoint(data.x + 0.0, data.y + 0.0)
+    cb('ok')
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:receiveStations', function(stations)
+    -- Send player coords along with stations for map rendering
+    local pc = GetEntityCoords(PlayerPedId())
+    SendNUIMessage({
+        action = 'updateStations',
+        stations = stations,
+        playerX = pc.x,
+        playerY = pc.y
+    })
+end)
+
 RegisterNUICallback('depositJerrycan', function(data, cb)
     TriggerServerEvent('cidade_tycoon_trucklogistics:depositJerrycan')
     CreateThread(function() Wait(1200) TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu') end)

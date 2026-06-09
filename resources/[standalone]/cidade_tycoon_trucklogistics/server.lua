@@ -1089,3 +1089,88 @@ AddEventHandler('qbx_core:server:onPlayerLoaded', function(source)
         end
     end)
 end)
+
+-- =========================================================================
+-- FUEL STATION SYSTEM — Dynamic prices & stock
+-- =========================================================================
+local stationState = {}
+
+-- Initialize station prices (with random variation ±15%)
+CreateThread(function()
+    Wait(2000)
+    for i, posto in ipairs(Config.postos) do
+        local variation = math.random(-15, 15) / 100
+        stationState[i] = {
+            preco_atual = math.floor(posto.preco_base * (1 + variation) + 0.5),
+            estoque = math.random(math.floor(posto.estoque_max * 0.4), posto.estoque_max),
+            ultimo_update = os.time()
+        }
+    end
+    -- Refresh station prices every 15 minutes
+    while true do
+        Wait(15 * 60 * 1000)
+        for i, posto in ipairs(Config.postos) do
+            local variation = math.random(-20, 20) / 100
+            local newPrice = math.floor(posto.preco_base * (1 + variation) + 0.5)
+            if newPrice < 20 then newPrice = 20 end
+            if newPrice > 80 then newPrice = 80 end
+            stationState[i].preco_atual = newPrice
+            stationState[i].estoque = math.min(stationState[i].estoque + math.random(200, 800), posto.estoque_max)
+            stationState[i].ultimo_update = os.time()
+        end
+    end
+end)
+
+-- Client requests station list
+RegisterNetEvent('cidade_tycoon_trucklogistics:requestStations', function()
+    local source = source
+    local userId = citizenId(source)
+    if not userId then return end
+    local ped = GetPlayerPed(source)
+    local playerCoords = GetEntityCoords(ped)
+    local stations = {}
+    for i, posto in ipairs(Config.postos) do
+        local state = stationState[i]
+        local dist = #(playerCoords - posto.coords.xyz) / 1000
+        stations[i] = {
+            id = i,
+            nome = posto.nome,
+            coords = {x = posto.coords.x, y = posto.coords.y},
+            preco = state.preco_atual,
+            estoque = state.estoque,
+            distancia = dist,
+            preco_base = posto.preco_base,
+            estoque_max = posto.estoque_max
+        }
+    end
+    TriggerClientEvent('cidade_tycoon_trucklogistics:receiveStations', source, stations)
+end)
+
+-- Player buys fuel from a specific station
+RegisterNetEvent('cidade_tycoon_trucklogistics:buyFromStation', function(stationId, liters)
+    local source = source
+    local userId = citizenId(source)
+    if not userId then return end
+    stationId = tonumber(stationId)
+    liters = tonumber(liters)
+    if not stationId or not liters or liters <= 0 then return end
+    if liters > 2000 then liters = 2000 end
+    local posto = Config.postos[stationId]
+    if not posto then return end
+    local state = stationState[stationId]
+    if not state or state.estoque < liters then
+        notify(source, 'Posto sem estoque suficiente!', 'error')
+        return
+    end
+    local totalCost = state.preco_atual * liters
+    if companyDebit(userId, totalCost) then
+        state.estoque = state.estoque - liters
+        MySQL.update.await('UPDATE trucker_users SET fuel_stock = COALESCE(fuel_stock, 0) + ? WHERE user_id = ?', { liters, userId })
+        notify(source, ('Comprou %d litros no %s por %s!'):format(liters, posto.nome, formatCurrency(totalCost, Config)), 'success')
+        TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
+        local user = ensureUser(userId)
+        TriggerClientEvent('cidade_tycoon_trucklogistics:showFuelMenu', source, user.fuel_stock or 0, user.money or 0)
+    else
+        notify(source, 'Saldo da empresa insuficiente!', 'error')
+    end
+end)

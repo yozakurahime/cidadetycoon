@@ -382,13 +382,23 @@ $(document).ready(function() {
 var fuelCheckInterval = null;
 window.addEventListener('message', function (event) {
     var item = event.data;
-    if (item.action === 'updateFuel') {
+    if (item.action === 'updateStations') {
+        fuelStations = item.stations || [];
+        fuelPlayerX = item.playerX || 0;
+        fuelPlayerY = item.playerY || 0;
+        renderStationList();
+        drawFuelMap();
+        if ($('.fuel-page').is(':visible') && !fuelCheckInterval) {
+            fuelCheckInterval = setInterval(function() {
+                if (!$('.fuel-page').is(':visible')) { clearInterval(fuelCheckInterval); fuelCheckInterval = null; }
+                else { refreshFuel(); requestStations(); }
+            }, 15000);
+        }
+    }
+        if (item.action === 'updateFuel') {
         var fuelStock = item.fuelStock || 0;
         $('#fuel-stock-display').text(fuelStock + ' L');
         $('#fuel-company-money').text(item.money ? '$ ' + Number(item.money).toLocaleString('pt-BR') : '---');
-        if (fuelStock <= 0) $('#fuel-mission-status').text('💡 Deposite dinheiro no Banco antes de comprar combustível').css('color', '#919aa3');
-        else $('#fuel-mission-status').text('Consumo: ~1.5 L/km por motorista').css('color', '#ff9800');
-        // If fuel page is open, re-request fuel data periodically
         if ($('.fuel-page').is(':visible') && !fuelCheckInterval) {
             fuelCheckInterval = setInterval(function() {
                 if (!$('.fuel-page').is(':visible')) {
@@ -401,3 +411,153 @@ window.addEventListener('message', function (event) {
         }
     }
 });
+
+// =========================================================================
+// FUEL STATION MAP SYSTEM
+// =========================================================================
+var fuelStations = [];
+var fuelPlayerX = 0, fuelPlayerY = 0;
+var selectedStationId = null;
+
+function requestStations() {
+    post("requestStations", {});
+}
+
+function buyFromStation() {
+    if (!selectedStationId) return;
+    var liters = parseInt($('#fuel-sel-liters').val()) || 200;
+    if (liters < 50) liters = 50;
+    if (liters > 2000) liters = 2000;
+    post("buyFromStation", { stationId: selectedStationId, liters: liters });
+}
+
+function setFuelWaypoint() {
+    var s = fuelStations[selectedStationId];
+    if (!s) return;
+    post("setFuelWaypoint", { x: s.coords.x, y: s.coords.y });
+}
+
+function selectStation(id) {
+    selectedStationId = id;
+    var s = fuelStations[id];
+    if (!s) return;
+    $('#fuel-sel-name').text(s.nome);
+    $('#fuel-sel-info').text('$' + s.preco + '/L | Estoque: ' + s.estoque + 'L | ' + s.distancia.toFixed(1) + ' km');
+    $('#fuel-select-station').show();
+    $('#fuel-sel-liters').val(Math.min(500, s.estoque));
+    drawFuelMap();
+}
+
+function drawFuelMap() {
+    var canvas = document.getElementById('fuel-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Background
+    ctx.fillStyle = '#0f1014';
+    ctx.fillRect(0, 0, w, h);
+
+    // Grid
+    ctx.strokeStyle = '#1a1c25';
+    ctx.lineWidth = 0.5;
+    for (var i = 0; i < w; i += 20) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
+    for (var j = 0; j < h; j += 20) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(w, j); ctx.stroke(); }
+
+    if (fuelStations.length === 0) {
+        ctx.fillStyle = '#919aa3';
+        ctx.font = '11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Clique em Atualizar', w/2, h/2);
+        return;
+    }
+
+    // Calculate bounds
+    var minX = fuelPlayerX, maxX = fuelPlayerX, minY = fuelPlayerY, maxY = fuelPlayerY;
+    for (var i in fuelStations) {
+        var s = fuelStations[i];
+        if (s.coords.x < minX) minX = s.coords.x;
+        if (s.coords.x > maxX) maxX = s.coords.x;
+        if (s.coords.y < minY) minY = s.coords.y;
+        if (s.coords.y > maxY) maxY = s.coords.y;
+    }
+    var padX = (maxX - minX) * 0.15 || 200;
+    var padY = (maxY - minY) * 0.15 || 200;
+    minX -= padX; maxX += padX; minY -= padY; maxY += padY;
+
+    function toScreen(cx, cy) {
+        return {
+            x: ((cx - minX) / (maxX - minX)) * w,
+            y: h - ((cy - minY) / (maxY - minY)) * h
+        };
+    }
+
+    // Draw stations
+    for (var i in fuelStations) {
+        var s = fuelStations[i];
+        var p = toScreen(s.coords.x, s.coords.y);
+        var isSelected = (s.id === selectedStationId);
+
+        // Station dot
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, isSelected ? 7 : 5, 0, Math.PI * 2);
+
+        // Color by price
+        var priceRatio = s.preco / 50;
+        var r, g, b;
+        if (priceRatio < 0.8) { r = 99; g = 209; b = 158; }  // green (cheap)
+        else if (priceRatio < 1.0) { r = 255; g = 204; b = 0; } // yellow
+        else { r = 255; g = 100; b = 100; }  // red (expensive)
+
+        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',0.8)';
+        ctx.fill();
+        ctx.strokeStyle = isSelected ? '#fff' : '#1a1c23';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.stroke();
+
+        // Label
+        if (isSelected || s.estoque > 500) {
+            ctx.fillStyle = '#fff';
+            ctx.font = (isSelected ? '9px' : '7px') + ' Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('$' + s.preco, p.x, p.y - 10);
+        }
+    }
+
+    // Player marker
+    var pp = toScreen(fuelPlayerX, fuelPlayerY);
+    ctx.beginPath();
+    ctx.arc(pp.x, pp.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#5c6bc0';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('VC', pp.x, pp.y - 10);
+}
+
+function renderStationList() {
+    var html = '';
+    var sorted = fuelStations.slice().sort(function(a, b) { return a.distancia - b.distancia; });
+    for (var i = 0; i < sorted.length; i++) {
+        var s = sorted[i];
+        var priceColor = s.preco < 38 ? '#63d19e' : (s.preco > 45 ? '#ff6464' : '#ffcc00');
+        var stockBar = Math.round((s.estoque / s.estoque_max) * 100);
+        var stockColor = stockBar > 50 ? '#63d19e' : (stockBar > 20 ? '#ffcc00' : '#ff6464');
+        html += '<div class="fuel-station-row' + (s.id === selectedStationId ? ' selected' : '') + '" onclick="selectStation(' + s.id + ')">';
+        html += '<div class="fuel-station-info">';
+        html += '<span class="fuel-station-name">' + s.nome + '</span>';
+        html += '<span style="font-size:10px;color:#919aa3;">' + s.distancia.toFixed(1) + ' km</span>';
+        html += '</div>';
+        html += '<div class="fuel-station-price">';
+        html += '<span style="color:' + priceColor + ';font-weight:700;">$' + s.preco + '/L</span>';
+        html += '<span style="font-size:9px;color:' + stockColor + ';">' + s.estoque + 'L (' + stockBar + '%)</span>';
+        html += '</div>';
+        html += '</div>';
+    }
+    document.getElementById('fuel-station-list').innerHTML = html;
+}

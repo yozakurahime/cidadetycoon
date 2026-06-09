@@ -386,38 +386,48 @@
 			<!-- PAGE: FUEL -->
 			<div class="pages fuel-page">
 				<h4 class="text-uppercase">⛽ Depósito de Combustível</h4>
-				<p class="page-desc">Abasteça sua frota com combustível para maximizar a eficiência dos motoristas.</p>
-				<div class="fuel-sections">
-					<div class="stat-card" style="box-shadow:none; border:none; padding:0; text-align:center;">
-						<span class="stat-label">Estoque Atual</span>
-						<span class="stat-value" id="fuel-stock-display" style="font-size:2.5rem;color:#ff9800;">0 L</span>
-						<span class="stat-label">Saldo da Empresa: <strong id="fuel-company-money" style="color:#63d19e;">---</strong></span>
-						<span class="stat-label" id="fuel-mission-status" style="font-size:11px;color:#919aa3;">💡 Deposite dinheiro no Banco antes de comprar combustível</span>
+				<div class="fuel-header">
+					<div class="stat-card" style="box-shadow:none;border:none;padding:0;text-align:center;">
+						<span class="stat-value" id="fuel-stock-display" style="font-size:2rem;color:#ff9800;">0 L</span>
+						<span class="stat-label">Saldo Empresa: <strong id="fuel-company-money" style="color:#63d19e;">---</strong></span>
 					</div>
-					
-					<h6 class="text-uppercase mb-2" style="font-size:11px;color:#919aa3;">Entrega Imediata (mais cara)</h6>
-					<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-						<div class="fuel-buy-card" onclick="buyFuelBatch(50,3800,true)"><h5>50 Litros</h5><span class="fuel-price">$3.800</span><span class="fuel-unit">Entrega Rápida</span></div>
-						<div class="fuel-buy-card" onclick="buyFuelBatch(200,14000,true)"><h5>200 Litros</h5><span class="fuel-price">$14.000</span><span class="fuel-unit">Entrega Rápida</span></div>
-						<div class="fuel-buy-card" onclick="buyFuelBatch(1000,65000,true)"><h5>1.000 Litros</h5><span class="fuel-price">$65.000</span><span class="fuel-unit">Entrega Rápida</span></div>
+				</div>
+				<div class="fuel-layout">
+					<!-- LEFT: Mini Map -->
+					<div class="fuel-map-panel">
+						<div class="fuel-map-header">
+							<span>🗺️ Postos de Combustível</span>
+							<button onclick="requestStations()" class="btn btn-sm" style="background:#373a40;color:#fff;padding:3px 8px;font-size:10px;">Atualizar</button>
+						</div>
+						<canvas id="fuel-canvas" width="280" height="260" style="width:100%;height:100%;border-radius:8px;"></canvas>
 					</div>
-					
-					<h6 class="text-uppercase mb-2 mt-3" style="font-size:11px;color:#63d19e;">🏗️ Buscar na Refinaria (mais barato)</h6>
-					<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-						<div class="fuel-buy-card fuel-mission" onclick="buyFuelBatch(100,2500,false)"><h5>100 Litros</h5><span class="fuel-price">$2.500</span><span class="fuel-unit">Dirija até a Refinaria</span></div>
-						<div class="fuel-buy-card fuel-mission" onclick="buyFuelBatch(400,9000,false)"><h5>400 Litros</h5><span class="fuel-price">$9.000</span><span class="fuel-unit">Dirija até a Refinaria ⭐</span></div>
-						<div class="fuel-buy-card fuel-mission" onclick="buyFuelBatch(2000,40000,false)"><h5>2.000 Litros</h5><span class="fuel-price">$40.000</span><span class="fuel-unit">Dirija até a Refinaria ⭐⭐</span></div>
-					</div>
-					
-					<div class="deposit-input-group mt-4">
-						<span class="stat-label">Converter Jerrycan em Combustível</span>
-						<div style="display:flex;gap:10px;align-items:center;">
-							<span style="font-size:12px;color:#919aa3;">1x Jerrycan = 20 Litros</span>
-							<button onclick="depositJerrycan()" class="btn btn-premium" style="background:#ff9800;">Depositar Jerrycan</button>
+					<!-- RIGHT: Station List -->
+					<div class="fuel-station-list" id="fuel-station-list">
+						<div style="text-align:center;padding:40px 20px;color:#919aa3;">
+							<p>Clique em <b>Atualizar</b> para carregar os postos</p>
 						</div>
 					</div>
 				</div>
-		</div>
+				<!-- Selected station purchase -->
+				<div id="fuel-select-station" style="display:none;margin-top:10px;background:#1a1c23;border-radius:10px;padding:12px 15px;border:1.5px solid #63d19e;">
+					<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+						<div>
+							<span style="color:#fff;font-weight:700;" id="fuel-sel-name">---</span>
+							<span style="display:block;font-size:10px;color:#919aa3;" id="fuel-sel-info">---</span>
+						</div>
+						<div style="display:flex;gap:6px;align-items:center;">
+							<input type="number" id="fuel-sel-liters" value="200" min="50" max="2000" step="50" style="width:70px;background:#232636;border:1px solid #373a40;color:#fff;padding:6px;border-radius:6px;text-align:center;font-size:12px;">
+							<button onclick="buyFromStation()" class="btn btn-premium" style="background:#63d19e;font-size:12px;padding:6px 14px;">Comprar</button>
+							<button onclick="setFuelWaypoint()" class="btn btn-sm" style="background:#373a40;color:#fff;font-size:10px;padding:4px 8px;">📍 GPS</button>
+						</div>
+					</div>
+				</div>
+				<!-- Jerrycan -->
+				<div class="deposit-input-group" style="margin-top:10px;">
+					<span class="stat-label">Converter Jerrycan (1 = 20 Litros)</span>
+					<button onclick="depositJerrycan()" class="btn btn-premium" style="background:#ff9800;font-size:11px;">Depositar Jerrycan</button>
+				</div>
+			</div>
 
 		<!-- Confirm Modal -->
 		<div id="myModal" class="modal fade" style="display: none; background: rgba(0,0,0,0.8); position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; align-items: center; justify-content: center;">
