@@ -1299,39 +1299,25 @@ body.iframe-mode #myModal .modal-content p {
     }
 }
 
-
 /* ==========================================================================
-   Fuel Page
+   Fuel Page — Station Cards
    ========================================================================== */
-.fuel-page .fuel-sections { display: flex; flex-direction: column; gap: 15px; }
-.fuel-buy-card {
-  background: linear-gradient(135deg, #1a1c23, #232636);
-  border: 1.5px solid #373a40;
-  border-radius: 12px;
-  padding: 18px 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.fuel-buy-card:hover {
-  border-color: #ff9800;
-  background: linear-gradient(135deg, #232636, #2d3044);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.2);
-}
-.fuel-buy-card h5 { color: #fff; font-size: 15px; font-weight: 700; margin: 0 0 8px 0; }
-.fuel-price { display: block; font-size: 18px; font-weight: 900; color: #63d19e; }
-.fuel-unit { font-size: 10px; color: #919aa3; font-weight: 600; }
-.fuel-buy-card.fuel-mission { border-color: #63d19e; }
-.fuel-buy-card.fuel-mission:hover { border-color: #63d19e; box-shadow: 0 4px 15px rgba(99, 209, 158, 0.25); }
-.fuel-buy-card.fuel-mission .fuel-price { color: #63d19e; }
-
-
-/* ==========================================================================
-   Fuel Page — Full-width Map
-   ========================================================================== */
-.fuel-page { display: flex; flex-direction: column; gap: 0; }
-.fuel-topbar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #1a1c23; border-radius: 8px; margin-bottom: 6px; }
-.fuel-map-wrap { position: relative; background: #0b0c10; border-radius: 8px; border: 1.5px solid #373a40; overflow: hidden; flex: 1; min-height: 250px; }
-.fuel-map-wrap canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
-.fuel-buy-card, .fuel-station-row { display: none; }
+.fuel-page { display: flex; flex-direction: column; }
+.fuel-topbar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #1a1c23; border-radius: 8px; margin-bottom: 8px; }
+.fuel-station-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; overflow-y: auto; flex: 1; align-content: start; padding-right: 2px; }
+.fuel-station-grid::-webkit-scrollbar { width: 3px; }
+.fuel-station-grid::-webkit-scrollbar-thumb { background: #373a40; border-radius: 3px; }
+.fuel-station-card { background: #1a1c23; border: 1.5px solid #2a2d38; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s; }
+.fuel-station-card:hover { border-color: #4a4d58; background: #20222c; }
+.fuel-station-card.selected { border-color: #63d19e; background: #1a2820; }
+.fuel-station-card .fsc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.fuel-station-card .fsc-name { font-size: 11px; font-weight: 700; color: #e0e0e0; }
+.fuel-station-card .fsc-dist { font-size: 9px; color: #919aa3; }
+.fuel-station-card .fsc-price { font-size: 16px; font-weight: 900; }
+.fuel-station-card .fsc-stock-label { font-size: 9px; color: #919aa3; }
+.fuel-station-card .fsc-stock-bar { height: 4px; background: #2a2d38; border-radius: 2px; margin-top: 4px; overflow: hidden; }
+.fuel-station-card .fsc-stock-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.fuel-station-card .fsc-buy-row { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+.fuel-station-card .fsc-buy-row input { width: 55px; background: #232636; border: 1px solid #373a40; color: #fff; padding: 4px; border-radius: 4px; text-align: center; font-size: 11px; }
+.fuel-station-card .fsc-buy-row button { font-size: 10px; padding: 4px 10px; }
+.fuel-buy-card, .fuel-station-row, .fuel-map-wrap, .fuel-sections, .fuel-layout, .fuel-header, .fuel-map-panel, .fuel-map-header, .fuel-station-list { display: none; }
