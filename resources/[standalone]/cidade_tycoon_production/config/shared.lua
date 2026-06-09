@@ -4,7 +4,7 @@ Config = {}
 -- GERAL
 -- ==========================================
 Config.Entrance = {
-    coords = vec4(155.7565, -3203.2197, 6.0219, 274.3145),
+    coords = vec4(950.5, -3100.2, 5.9, 180.0), -- Terminal de Cargas — Porto de LS
     pedModel = "s_m_y_dockwork_01",
     scenario = "WORLD_HUMAN_CLIPBOARD"
 }

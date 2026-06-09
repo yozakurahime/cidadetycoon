@@ -158,10 +158,37 @@ function startScavenging(location, locType)
 end
 
 -- ==========================================
+-- BLIPS NO MAPA
+-- ==========================================
+local function createScrapyardBlips()
+    for _, yard in ipairs(config.Scrapyards) do
+        local blip = AddBlipForCoord(yard.coords.x, yard.coords.y, yard.coords.z)
+        SetBlipSprite(blip, 365) -- reciclagem
+        SetBlipScale(blip, 0.6)
+        SetBlipColour(blip, 5) -- verde
+        SetBlipAsShortRange(blip, true)
+        BeginTextCommandSetBlipName("STRING")
+        AddTextComponentString(yard.label)
+        EndTextCommandSetBlipName(blip)
+    end
+    for _, lab in ipairs(config.Labs) do
+        local blip = AddBlipForCoord(lab.coords.x, lab.coords.y, lab.coords.z)
+        SetBlipSprite(blip, 499) -- frasco/lab
+        SetBlipScale(blip, 0.55)
+        SetBlipColour(blip, 76) -- roxo/vermelho
+        SetBlipAsShortRange(blip, true)
+        BeginTextCommandSetBlipName("STRING")
+        AddTextComponentString(lab.label)
+        EndTextCommandSetBlipName(blip)
+    end
+end
+
+-- ==========================================
 -- INICIALIZAÇÃO
 -- ==========================================
 CreateThread(function()
     Wait(2000)
+    createScrapyardBlips()
     spawnScrapyardNPCs()
     spawnLabNPCs()
     DebugLog("NPCs de coleta spawnados: %d ferros-velho + %d laboratórios.", #config.Scrapyards, #config.Labs)

@@ -145,10 +145,27 @@ function selectWeightedDrop(drops)
 end
 
 -- ==========================================
+-- BLIPS NO MAPA
+-- ==========================================
+local function createMineBlips()
+    for _, mine in ipairs(config.Mines) do
+        local blip = AddBlipForCoord(mine.coords.x, mine.coords.y, mine.coords.z)
+        SetBlipSprite(blip, 527)
+        SetBlipScale(blip, 0.65)
+        SetBlipColour(blip, 81)
+        SetBlipAsShortRange(blip, true)
+        BeginTextCommandSetBlipName("STRING")
+        AddTextComponentString(mine.label)
+        EndTextCommandSetBlipName(blip)
+    end
+end
+
+-- ==========================================
 -- INICIALIZAÇÃO
 -- ==========================================
 CreateThread(function()
     Wait(2000)
+    createMineBlips()
     spawnMineNPCs()
 end)
 
