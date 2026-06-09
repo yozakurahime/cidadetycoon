@@ -80,7 +80,7 @@ Config.contratos = {
 	['probabilidade_ser_carga_urgente'] = 10,	-- The urgent load is generated randomly, here you can configure the probability (%)
 	['max_contratos_ativos'] = 60,				-- Maximum of contracts that can be active, this means that when generating a contact that exceeds this number, the oldest contract will be deleted
 	['caminhoes'] = {							-- List of trucks that are generated in contracts
-		"phantom","packer","hauler"
+		"phantom","packer","hauler","phantom3","barracks3"
 	},
 	['cargas'] = {
 		--[[ 
@@ -224,7 +224,7 @@ Config.trabalhos = {
 }
 
 Config.multiplicador_venda = 0.6	-- Value you receive when selling the used truck
-Config.concessionaria = {			-- Truck dealership vehicles (all can pull trailers)
+Config.concessionaria = {			-- Truck dealership vehicles (verified semi-trucks that pull trailers)
 	['phantom'] = {
 		['name'] = 'JoBuilt Phantom',
 		['price'] = 350000,
@@ -242,7 +242,7 @@ Config.concessionaria = {			-- Truck dealership vehicles (all can pull trailers)
 		['img'] = 'img/hauler.jpg'
 	},
 	['packer'] = {
-		['name'] = 'MTL Packer',
+		['name'] = 'MTL Packer Transportador',
 		['price'] = 300000,
 		['engine'] = "24 Valve Supercharged",
 		['transmission'] = "7-Speed",
@@ -252,47 +252,15 @@ Config.concessionaria = {			-- Truck dealership vehicles (all can pull trailers)
 	['phantom3'] = {
 		['name'] = 'JoBuilt Phantom Custom',
 		['price'] = 520000,
-		['engine'] = "32 Valve Twin-Turbo",
+		['engine'] = "32 Valve Twin-Turbo Diesel",
 		['transmission'] = "10-Speed Automated",
 		['hp'] = '625',
 		['img'] = 'img/phantom.jpg'
 	},
-	['mule5'] = {
-		['name'] = 'Maibatsu Mule Custom',
-		['price'] = 180000,
-		['engine'] = "16 Valve Diesel",
-		['transmission'] = "6-Speed",
-		['hp'] = '280',
-		['img'] = 'img/truck.png'
-	},
-	['pounder2'] = {
-		['name'] = 'MTL Pounder Custom',
-		['price'] = 240000,
-		['engine'] = "20 Valve Turbo Diesel",
-		['transmission'] = "7-Speed",
-		['hp'] = '350',
-		['img'] = 'img/truck.png'
-	},
-	['benson'] = {
-		['name'] = 'Vapid Benson',
-		['price'] = 150000,
-		['engine'] = "16 Valve EcoDiesel",
-		['transmission'] = "6-Speed",
-		['hp'] = '270',
-		['img'] = 'img/truck.png'
-	},
-	['flatbed'] = {
-		['name'] = 'MTL Flatbed Reboque',
-		['price'] = 280000,
-		['engine'] = "20 Valve Turbo Diesel",
-		['transmission'] = "8-Speed",
-		['hp'] = '350',
-		['img'] = 'img/truck.png'
-	},
 	['barracks3'] = {
-		['name'] = 'HVY Barracks Semi',
+		['name'] = 'HVY Barracks Semi Militar',
 		['price'] = 680000,
-		['engine'] = "36 Valve V12 Diesel",
+		['engine'] = "36 Valve V12 Turbo Diesel",
 		['transmission'] = "12-Speed Off-Road",
 		['hp'] = '720',
 		['img'] = 'img/truck.png'
