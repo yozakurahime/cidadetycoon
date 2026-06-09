@@ -789,4 +789,142 @@ return {
         label = 'Borracha Bruta',
         weight = 1500,
     },
+
+    -- ==========================================
+    -- CIDADE TYCOON — Matérias-Primas & Produção
+    -- ==========================================
+
+    -- Mineração
+    ['iron_ore'] = {
+        label = 'Minério de Ferro',
+        weight = 1200,
+    },
+    ['copper_wire'] = {
+        label = 'Fio de Cobre',
+        weight = 800,
+    },
+    ['stone'] = {
+        label = 'Pedra Bruta',
+        weight = 2000,
+    },
+
+    -- Ferro-Velho / Coleta
+    ['raw_chemicals'] = {
+        label = 'Produtos Químicos',
+        weight = 1000,
+    },
+
+    -- TIER 1 — Materiais Processados
+    ['steel_plate'] = {
+        label = 'Chapa de Aço',
+        weight = 2000,
+    },
+    ['aluminum_plate'] = {
+        label = 'Chapa de Alumínio',
+        weight = 1500,
+    },
+    ['copper_coil'] = {
+        label = 'Bobina de Cobre',
+        weight = 1200,
+    },
+    ['plastic_sheet'] = {
+        label = 'Chapa Plástica',
+        weight = 1000,
+    },
+    ['rubber_sheet'] = {
+        label = 'Manta de Borracha',
+        weight = 1500,
+    },
+    ['glass_pane'] = {
+        label = 'Painel de Vidro',
+        weight = 1200,
+    },
+
+    -- TIER 2 — Peças de Reparo
+    ['mechanical_parts'] = {
+        label = 'Peças Mecânicas',
+        weight = 2500,
+    },
+    ['standard_tires'] = {
+        label = 'Pneus Padrão',
+        weight = 5000,
+    },
+    ['electronic_circuit'] = {
+        label = 'Circuito Eletrônico',
+        weight = 800,
+    },
+    ['suspension_kit'] = {
+        label = 'Kit de Amortecedores',
+        weight = 3000,
+    },
+    ['transmission_parts'] = {
+        label = 'Peças de Transmissão',
+        weight = 3500,
+    },
+    ['reinforced_frame'] = {
+        label = 'Chassi Reforçado',
+        weight = 5000,
+    },
+
+    -- TIER 3 — Performance
+    ['performance_brakes'] = {
+        label = 'Freios Esportivos',
+        weight = 2500,
+    },
+    ['drift_tires'] = {
+        label = 'Pneus de Drift',
+        weight = 4000,
+    },
+    ['turbo_kit'] = {
+        label = 'Kit Turbo',
+        weight = 3500,
+    },
+    ['racing_tires'] = {
+        label = 'Pneus de Corrida',
+        weight = 4000,
+    },
+    ['drag_tires'] = {
+        label = 'Pneus de Arrancada',
+        weight = 4500,
+    },
+    ['traction_control'] = {
+        label = 'Controle de Tração',
+        weight = 1500,
+    },
+
+    -- ILEGAL
+    ['refined_powder'] = {
+        label = 'Pó Refinado',
+        weight = 500,
+    },
+    ['weapon_parts'] = {
+        label = 'Peças de Arma',
+        weight = 2000,
+    },
+    ['counterfeit_chip'] = {
+        label = 'Chip Falsificado',
+        weight = 300,
+    },
+    ['explosive_compound'] = {
+        label = 'Composto Explosivo',
+        weight = 1500,
+    },
+    ['ammo_pack'] = {
+        label = 'Pacote de Munição',
+        weight = 3000,
+    },
+
+    -- ESPECIAL
+    ['advanced_lockpick'] = {
+        label = 'Lockpick Avançado',
+        weight = 500,
+    },
+    ['vehicle_armor'] = {
+        label = 'Blindagem Veicular',
+        weight = 8000,
+    },
+    ['advanced_repair_kit'] = {
+        label = 'Kit de Reparo Avançado',
+        weight = 4000,
+    },
 }
