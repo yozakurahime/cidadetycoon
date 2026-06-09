@@ -553,7 +553,7 @@ local crisisOptions = {
     ['BLIZZARD'] = { 'shelter', 'slow_drive', 'speed_up' }
 }
 
-local function resolveDriverCrisis(userId, driverId, option)
+resolveDriverCrisis = function(userId, driverId, option)
     local driver = MySQL.single.await('SELECT * FROM trucker_drivers WHERE driver_id = ? AND user_id = ?', { driverId, userId })
     if not driver or driver.status ~= 'WAITING_DECISION' then return end
     local eventData = json.decode(driver.pending_event_data)
