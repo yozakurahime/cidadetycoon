@@ -365,8 +365,12 @@ RegisterNUICallback('setFuelWaypoint', function(data, cb)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:receiveStations', function(stations)
-    -- Send player coords along with stations for map rendering
     local pc = GetEntityCoords(PlayerPedId())
+    -- Calculate distances on client side (GetEntityCoords is client-only)
+    for _, s in pairs(stations) do
+        local sc = vector3(s.coords.x, s.coords.y, pc.z)
+        s.distancia = #(pc - sc) / 1000
+    end
     SendNUIMessage({
         action = 'updateStations',
         stations = stations,

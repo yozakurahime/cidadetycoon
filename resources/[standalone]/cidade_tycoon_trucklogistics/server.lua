@@ -1126,19 +1126,15 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:requestStations', function()
     local source = source
     local userId = citizenId(source)
     if not userId then return end
-    local ped = GetPlayerPed(source)
-    local playerCoords = GetEntityCoords(ped)
     local stations = {}
     for i, posto in ipairs(Config.postos) do
         local state = stationState[i]
-        local dist = #(playerCoords - posto.coords.xyz) / 1000
         stations[i] = {
             id = i,
             nome = posto.nome,
             coords = {x = posto.coords.x, y = posto.coords.y},
             preco = state.preco_atual,
             estoque = state.estoque,
-            distancia = dist,
             preco_base = posto.preco_base,
             estoque_max = posto.estoque_max
         }
