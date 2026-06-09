@@ -294,9 +294,21 @@ RegisterNUICallback('payLoan', function(data, cb)
 end)
 
 
+RegisterNUICallback('resolveCrisis', function(data, cb)
+    if not data or not data.driver_id or not data.option then cb('ok') return end
+    TriggerServerEvent('cidade_tycoon_trucklogistics:resolveCrisis', { driver_id = tonumber(data.driver_id), option = tostring(data.option) })
+    cb('ok')
+end)
+
+RegisterNUICallback('trainDriver', function(data, cb)
+    if not data then cb('ok') return end
+    TriggerServerEvent('cidade_tycoon_trucklogistics:trainDriver', tonumber(data))
+    cb('ok')
+end)
+
 RegisterNUICallback('close', function(data, cb)
-	closeUI()
-	cb('ok')
+    closeUI()
+    cb('ok')
 end)
 
 function closeUI()
