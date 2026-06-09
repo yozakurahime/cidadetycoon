@@ -1,5 +1,6 @@
 -- Qbox client APIs are accessed through exports when needed.
 local truck,truck_blip,trailer,trailer_blip,rentTruck,route_blip
+local openFuelPageOnLoad = false
 menuactive = false
 empresaAtual = nil
 loading = false
@@ -81,7 +82,9 @@ CreateThread(function()
                             onSelect = function()
                                 if not menuactive then
                                     empresaAtual = k
-                                    TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu')
+                                    openFuelPageOnLoad = true
+                                    TriggerEvent('cidade_tycoon_tablet:client:openTablet', 'trucker')
+                                    TriggerEvent('cidade_tycoon_trucklogistics:openViaTablet', k)
                                 end
                             end
                         }
@@ -142,19 +145,22 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:open', function(dados,update)
 		TriggerEvent('cidade_tycoon_tablet:client:truckLogisticsMessage', {
 			showmenu = true,
 			update = update,
-			dados = dados
+			dados = dados,
+			openFuelPage = openFuelPageOnLoad
 		})
 	else
 		SendNUIMessage({ 
 			showmenu = true,
 			update = update,
-			dados = dados
+			dados = dados,
+			openFuelPage = openFuelPageOnLoad
 		})
 		if update == false then
 			menuactive = true
 			SetNuiFocus(true,true)
 		end
 	end
+	openFuelPageOnLoad = false
 end)
 
 -----------------------------------------------------------------------------------------------------------------------------------------
@@ -320,17 +326,26 @@ function closeUI()
 end
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:showFuelMenu', function(fuelStock, money)
-    SendNUIMessage({
-        action = 'updateFuel',
-        fuelStock = fuelStock or 0,
-        money = money or 0
-    })
+	local payload = {
+		action = 'updateFuel',
+		fuelStock = fuelStock or 0,
+		money = money or 0
+	}
+	if abertoViaTablet then
+		TriggerEvent('cidade_tycoon_tablet:client:truckLogisticsMessage', payload)
+	else
+		SendNUIMessage(payload)
+	end
 end)
 
 RegisterNUICallback('buyFuelBatch', function(data, cb)
-    TriggerServerEvent('cidade_tycoon_trucklogistics:buyFuelBatch', tonumber(data.liters), tonumber(data.cost), data.deliver, data.empresaId)
-    CreateThread(function() Wait(1200) TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu') end)
-    cb('ok')
+	if not data.deliver then
+		closeUI()
+	else
+		CreateThread(function() Wait(1200) TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu') end)
+	end
+	TriggerServerEvent('cidade_tycoon_trucklogistics:buyFuelBatch', tonumber(data.liters), tonumber(data.cost), data.deliver, empresaAtual)
+	cb('ok')
 end)
 
 RegisterNUICallback('depositJerrycan', function(data, cb)
@@ -345,10 +360,183 @@ RegisterNUICallback('refreshFuel', function(data, cb)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:startFuelMission', function(liters, coords, empresaId)
-    lib.notify({ title = '⛽ Missão de Combustível', description = ('Vá até a refinaria buscar %d litros de combustível! O ponto foi marcado no GPS.'):format(liters), type = 'inform', duration = 8000 })
-    SetNewWaypoint(coords.x, coords.y)
-    -- Store mission data for finish trigger (via ox_target at refinery)
-    fuelMissionData = { liters = liters, empresaId = empresaId }
+	if not IsEntityAVehicle(truck) then
+		notify("Você precisa retirar o seu caminhão da garagem primeiro para iniciar esta missão!", "error")
+		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission')
+		return
+	end
+
+	if trailer or rentTruck then
+		notify(Lang[Config.lang]['already_has_cargo'], "error")
+		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission')
+		return
+	end
+
+	-- Extract coordinates
+	local rx, ry, rz, rh = coords.x, coords.y, coords.z, coords.w
+	
+	-- Spawn fuel trailer at the refinery
+	local model = "tanker"
+	trailer, trailer_blip = spawnVehicle(model, rx, ry, rz, rh, 1000, 1000, 1000, 1000, 479, 5, "Tanque de Combustível")
+	if not trailer then
+		notify("Erro ao criar o tanque de combustível na refinaria!", "error")
+		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission')
+		return
+	end
+
+	notify("Tanque pronto na refinaria! Vá buscar o combustível.", "success")
+	PlaySoundFrontend(-1, "CHECKPOINT_BEAT", "HUD_MINI_GAME_SOUNDSET", 0)
+
+	-- Set route to refinery first
+	route_blip = AddBlipForCoord(rx, ry, rz)
+	SetBlipSprite(route_blip, 1)
+	SetBlipColour(route_blip, 5)
+	SetBlipAsShortRange(route_blip, false)
+	BeginTextCommandSetBlipName("STRING")
+	AddTextComponentString("Buscar Combustível")
+	EndTextCommandSetBlipName(route_blip)
+	SetBlipRoute(route_blip, true)
+
+	local step = 1 -- 1: Ir até a refinaria engatar o reboque, 2: Levar de volta para a empresa
+	local cargas = Config.empresas[empresaId]['coordenada_cargas']
+	local cx, cy, cz, ch = table.unpack(cargas[1])
+	
+	-- Encontra uma vaga livre na empresa
+	for i = 1, #cargas do
+		local x, y, z, h = table.unpack(cargas[i])
+		if IsSpawnPointClear({['x']=x,['y']=y,['z']=z}, 5.0) then
+			cx, cy, cz, ch = x, y, z, h
+			break
+		end
+	end
+
+	Citizen.CreateThread(function()
+		local timer = 5
+		while IsEntityAVehicle(trailer) and IsEntityAVehicle(truck) do
+			timer = 2000
+			local ped = PlayerPedId()
+			local veh = GetVehiclePedIsIn(ped, false)
+			local playerCoords = GetEntityCoords(ped)
+
+			local isAttached = IsEntityAttachedToEntity(truck, trailer)
+
+			if step == 1 then
+				if isAttached then
+					step = 2
+					RemoveBlip(route_blip)
+					route_blip = AddBlipForCoord(cx, cy, cz)
+					SetBlipSprite(route_blip, 1)
+					SetBlipColour(route_blip, 5)
+					SetBlipAsShortRange(route_blip, false)
+					BeginTextCommandSetBlipName("STRING")
+					AddTextComponentString("Entregar Combustível")
+					EndTextCommandSetBlipName(route_blip)
+					SetBlipRoute(route_blip, true)
+					notify("Tanque engatado! Leve o combustível de volta para a empresa.", "success")
+					PlaySoundFrontend(-1, "CHECKPOINT_BEAT", "HUD_MINI_GAME_SOUNDSET", 0)
+				else
+					local distToRefinery = #(playerCoords - vector3(rx, ry, rz))
+					if distToRefinery <= 50.0 then
+						timer = 5
+						local tCoords = GetEntityCoords(trailer)
+						DrawMarker(30, tCoords.x, tCoords.y, tCoords.z + 1.5, 0, 0, 0, 0, 0, 0, 1.5, 1.5, 1.5, 255, 165, 0, 100, 1, 0, 0, 0)
+					end
+				end
+			elseif step == 2 then
+				if not isAttached then
+					step = 1
+					RemoveBlip(route_blip)
+					local tCoords = GetEntityCoords(trailer)
+					route_blip = AddBlipForCoord(tCoords.x, tCoords.y, tCoords.z)
+					SetBlipSprite(route_blip, 1)
+					SetBlipColour(route_blip, 5)
+					SetBlipAsShortRange(route_blip, false)
+					BeginTextCommandSetBlipName("STRING")
+					AddTextComponentString("Buscar Tanque Desengatado")
+					EndTextCommandSetBlipName(route_blip)
+					SetBlipRoute(route_blip, true)
+					notify("O tanque de combustível foi desengatado! Volte e engate-o novamente.", "error")
+				else
+					local distToCompany = #(playerCoords - vector3(cx, cy, cz))
+					if distToCompany <= 50.0 then
+						timer = 5
+						if distToCompany <= 4.0 and veh == truck and angleDifference(GetEntityHeading(truck), ch) <= 15.0 and angleDifference(GetEntityHeading(trailer), ch) <= 15.0 then
+							DrawMarker(30, cx, cy, cz - 0.6, 0, 0, 0, 90.0, ch, 0.0, 3.0, 1.0, 10.0, 0, 255, 0, 50, 0, 0, 0, 0)
+							drawTxt("Pressione [E] para descarregar o combustível", 8, 0.5, 0.90, 0.50, 255, 255, 255, 180)
+							
+							if IsControlJustPressed(0, 38) then
+								BringVehicleToHalt(truck, 2.5, 1, false)
+								Wait(10)
+								DoScreenFadeOut(500)
+								Wait(500)
+								DeleteVehicle(trailer)
+								RemoveBlip(trailer_blip)
+								RemoveBlip(route_blip)
+								PlaySoundFrontend(-1, "PROPERTY_PURCHASE", "HUD_AWARDS", 0)
+								Wait(1000)
+								DoScreenFadeIn(1000)
+								CreateThreadNow(function()
+									showScaleform("SUCESSO", "Combustível Entregue com Sucesso!", 3)
+								end)
+								trailer = nil
+								trailer_blip = nil
+								route_blip = nil
+								TriggerServerEvent("cidade_tycoon_trucklogistics:finishFuelMission", liters)
+								break
+							end
+						else
+							drawTxt("Estacione de ré na vaga indicada", 8, 0.5, 0.90, 0.50, 255, 255, 255, 180)
+							DrawMarker(30, cx, cy, cz - 0.6, 0, 0, 0, 90.0, ch, 0.0, 3.0, 1.0, 10.0, 255, 0, 0, 50, 0, 0, 0, 0)
+						end
+					end
+				end
+			end
+
+			-- Verifica integridade do reboque
+			local bodyhealth = GetVehicleBodyHealth(trailer)
+			if bodyhealth <= 150 then
+				PlaySoundFrontend(-1, "PROPERTY_PURCHASE", "HUD_AWARDS", 0)
+				notify("A carga de combustível foi destruída!", "error")
+				RemoveBlip(trailer_blip)
+				RemoveBlip(route_blip)
+				DeleteVehicle(trailer)
+				trailer = nil
+				trailer_blip = nil
+				route_blip = nil
+				TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission')
+				break
+			end
+
+			-- Cancelar missão (Tecla F6 / Config)
+			if IsControlPressed(0, Config.contratos['cancel_contrato']) then
+				DeleteVehicle(trailer)
+				RemoveBlip(trailer_blip)
+				RemoveBlip(route_blip)
+				trailer = nil
+				trailer_blip = nil
+				route_blip = nil
+				TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission')
+				notify("Missão de combustível cancelada.", "error")
+				break
+			end
+
+			Wait(timer)
+		end
+
+		-- Limpeza final caso saia do loop (ex: caminhão destruído)
+		if IsEntityAVehicle(trailer) then
+			DeleteVehicle(trailer)
+		end
+		if trailer_blip then
+			RemoveBlip(trailer_blip)
+		end
+		if route_blip then
+			RemoveBlip(route_blip)
+		end
+		trailer = nil
+		trailer_blip = nil
+		route_blip = nil
+	end)
 end)
 
 -----------------------------------------------------------------------------------------------------------------------------------------

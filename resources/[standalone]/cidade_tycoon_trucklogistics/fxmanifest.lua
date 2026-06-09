@@ -47,6 +47,12 @@ files {
 	'nui/img/packer.jpg',
 	'nui/img/phantom.jpg',
 	'nui/img/truck.png',
+	'nui/img/phantom3.png',
+	'nui/img/mule5.png',
+	'nui/img/pounder2.png',
+	'nui/img/benson.png',
+	'nui/img/stockade.png',
+	'nui/img/barracks3.png',
 }
 
 dependencies {

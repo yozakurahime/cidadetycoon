@@ -18,10 +18,14 @@ window.addEventListener('message', function (event) {
 		if(item.update != true){
 			$(".pages").hide();
 			$("body").css("display", "flex");
-			$(".main-page").show();
 			$('.sidebar-navigation ul li').removeClass('active');
-			$('#sidebar-1').addClass('active');
-			openPage(0);
+			if (item.openFuelPage) {
+				$('#sidebar-fuel').addClass('active');
+				openPage(10);
+			} else {
+				$('#sidebar-1').addClass('active');
+				openPage(0);
+			}
 		}
 
 		// --- PROFILE STATS ---
