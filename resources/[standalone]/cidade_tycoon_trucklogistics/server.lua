@@ -346,7 +346,7 @@ CreateThread(function()
                             local fuelStock = userRow and number(userRow.fuel_stock) or 0
                             
                             if fuelStock >= fuelNeeded then
-                                MySQL.update.await('UPDATE trucker_users SET fuel_stock = fuel_stock - ? WHERE user_id = ?', { fuelNeeded, driver.user_id })
+                                MySQL.update.await('UPDATE trucker_users SET fuel_stock = COALESCE(fuel_stock, 0) - ? WHERE user_id = ?', { fuelNeeded, driver.user_id })
                                 driverWage = math.floor(driverWage * 0.5)
                                 usedDepotFuel = true
                             end
@@ -987,7 +987,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:buyFuelBatch', function(liters, c
     
     if companyDebit(userId, cost) then
         if deliver then
-            MySQL.update.await('UPDATE trucker_users SET fuel_stock = fuel_stock + ? WHERE user_id = ?', { liters, userId })
+            MySQL.update.await('UPDATE trucker_users SET fuel_stock = COALESCE(fuel_stock, 0) + ? WHERE user_id = ?', { liters, userId })
             notify(source, ('Você comprou um lote de %d litros de combustível por %s!'):format(liters, formatCurrency(cost, Config)), 'success')
             TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
             local user = ensureUser(userId)

@@ -123,6 +123,10 @@ CreateThread(function()
         ALTER TABLE `trucker_users` 
         ADD COLUMN IF NOT EXISTS `fuel_stock` INT UNSIGNED DEFAULT 0
     ]])
+    -- Fix existing users with NULL fuel_stock
+    MySQL.update.await([[
+        UPDATE `trucker_users` SET `fuel_stock` = 0 WHERE `fuel_stock` IS NULL
+    ]])
     MySQL.query.await([[
         ALTER TABLE `trucker_available_contracts` 
         ADD COLUMN IF NOT EXISTS `coop` TINYINT(1) DEFAULT 0
