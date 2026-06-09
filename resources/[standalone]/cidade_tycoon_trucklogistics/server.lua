@@ -1129,6 +1129,16 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:requestStations', function()
     local stations = {}
     for i, posto in ipairs(Config.postos) do
         local state = stationState[i]
+        if not state then
+            -- Initialize on-the-fly if thread hasn't run yet
+            local variation = math.random(-15, 15) / 100
+            state = {
+                preco_atual = math.floor(posto.preco_base * (1 + variation) + 0.5),
+                estoque = math.random(math.floor(posto.estoque_max * 0.4), posto.estoque_max),
+                ultimo_update = os.time()
+            }
+            stationState[i] = state
+        end
         stations[i] = {
             id = i,
             nome = posto.nome,

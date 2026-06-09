@@ -452,6 +452,7 @@ function drawFuelMap() {
     ctx.fillStyle = "#0b0c10"; ctx.fillRect(0, 0, w, h);
     var keys = Object.keys(fuelStations);
     if (keys.length === 0) return;
+    var screenPos = {};
     var hint = document.getElementById("fuel-map-hint");
     if (hint) hint.style.display = "none";
     fuelMapReady = true;
@@ -474,12 +475,11 @@ function drawFuelMap() {
     for (var i = 0; i < w; i += 30) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
     for (var j = 0; j < h; j += 30) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(w, j); ctx.stroke(); }
     // Draw stations
-    fuelStations._screenPos = {};
+    screenPos = {};
     for (var k in fuelStations) {
-        if (k === '_screenPos') continue;
         var s = fuelStations[k];
         var x = sx(s.coords.x), y = sy(s.coords.y);
-        fuelStations._screenPos[s.id] = { x: x, y: y };
+        screenPos[s.id] = { x: x, y: y };
         var isSel = (s.id === selectedStationId);
         // Dot
         ctx.beginPath(); ctx.arc(x, y, isSel ? 8 : 5, 0, Math.PI * 2);
@@ -512,7 +512,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var rect = canvas.getBoundingClientRect();
         var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
         var best = null, bestDist = 20; // 20px tolerance
-        var sp = fuelStations._screenPos || {};
+        var sp = screenPos || {};
         for (var id in sp) {
             var p = sp[id];
             var d = Math.sqrt((cx-p.x)*(cx-p.x) + (cy-p.y)*(cy-p.y));
