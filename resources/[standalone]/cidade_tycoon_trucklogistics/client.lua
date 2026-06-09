@@ -329,11 +329,13 @@ end)
 
 RegisterNUICallback('buyFuelBatch', function(data, cb)
     TriggerServerEvent('cidade_tycoon_trucklogistics:buyFuelBatch', tonumber(data.liters), tonumber(data.cost), data.deliver, data.empresaId)
+    CreateThread(function() Wait(1200) TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu') end)
     cb('ok')
 end)
 
 RegisterNUICallback('depositJerrycan', function(data, cb)
     TriggerServerEvent('cidade_tycoon_trucklogistics:depositJerrycan')
+    CreateThread(function() Wait(1200) TriggerServerEvent('cidade_tycoon_trucklogistics:openFuelMenu') end)
     cb('ok')
 end)
 
