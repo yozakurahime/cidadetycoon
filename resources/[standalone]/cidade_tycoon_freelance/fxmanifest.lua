@@ -15,6 +15,7 @@ shared_scripts {
 }
 
 server_scripts {
+    '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
 }
 
@@ -31,11 +32,13 @@ server_exports {
     'AdvanceTutorialStepForSource',
     'SetActiveVehiclePlate',
     'HandleTutorialVehicleRetrieved',
-    'GetCompanyAndFreelanceContextForSource'
+    'GetCompanyAndFreelanceContextForSource',
+    'StartJobBoardMission'
 }
 
 dependencies {
     'ox_lib',
+    'oxmysql',
     'cidade_tycoon_core',
+    'cidade_tycoon_logistics',
 }
-

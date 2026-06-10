@@ -121,7 +121,8 @@ CreateThread(function()
     -- Migração para novo sistema de combustível e comboio cooperativo
     MySQL.query.await([[
         ALTER TABLE `trucker_users` 
-        ADD COLUMN IF NOT EXISTS `fuel_stock` INT UNSIGNED DEFAULT 0
+        ADD COLUMN IF NOT EXISTS `fuel_stock` INT UNSIGNED DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS `last_loan_at` INT UNSIGNED NOT NULL DEFAULT 0
     ]])
     -- Fix existing users with NULL fuel_stock
     MySQL.update.await([[

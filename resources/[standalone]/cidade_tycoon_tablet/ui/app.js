@@ -209,6 +209,11 @@ function postTruckLogisticsToIframe(message) {
   iframe.contentWindow.postMessage(message, '*');
 }
 
+window.addEventListener('message', (event) => {
+  if (!event.data || event.data.action !== 'closeTruckLogisticsApp') return;
+  if (window.OSState.currentApp === 'trucker') window.openApp('home');
+});
+
 window.openApp = function(appId) {
   if (window.OSState.currentApp === appId) {
     if (appId === 'trucker') {
@@ -553,7 +558,17 @@ window.addEventListener('message', (event) => {
     document.getElementById('app').classList.add('hidden');
   } else if (data.action === 'showToast') {
     window.showToast(data.title || 'Notificação', data.message || '', data.duration || 3500);
-  } else if (data.action === 'driverCrisisAlert') {
+  } else if (data.action === 'pushUpdate') {
+    if (data.payload && data.payload.refresh) {
+      if (data.payload.type === 'production' && window.OSState.currentApp === 'production') {
+         window.postNUI('refreshProductionData').then(res => {
+            if (res) window.renderProduction(res);
+         });
+      } else if ((data.payload.type === 'logistics' || data.payload.type === 'production') && (window.OSState.currentApp === 'business' || window.OSState.currentApp === 'home')) {
+         window.refreshOS();
+      }
+    }
+  } else if (data.action === 'truckLogisticsMessage') {
     window.showDriverCrisisAlert(data.payload || {});
   } else if (data.action === 'truckLogisticsMessage') {
     postTruckLogisticsToIframe(data.payload || {});
@@ -1022,7 +1037,7 @@ window.renderBusiness = function(payload) {
     document.getElementById('business-level-value').textContent = `T ${company.level || 1}`;
     renderBizFleet(payload.fleet || []);
     renderBizStaff(payload.staff || []);
-    renderBizProduction(payload.production || []);
+    renderBizRoutes(payload.routes || []);
     renderWarehouseStock(payload.warehouseStock || [], company.id);
   }
 };
@@ -1115,15 +1130,15 @@ function renderBizStaff(staff) {
   `).join('');
 }
 
-function renderBizProduction(production) {
-  const container = document.getElementById('business-production-view');
+function renderBizRoutes(routes) {
+  const container = document.getElementById('business-routes-list');
   if (!container) return;
-  if (!production || production.length === 0) {
+  if (!routes || routes.length === 0) {
     container.innerHTML = `<p class="empty-state">Nenhuma rota corporativa ativa.</p>`;
     return;
   }
 
-  container.innerHTML = production.slice(0, 5).map(route => `
+  container.innerHTML = routes.slice(0, 5).map(route => `
     <div class="business-row">
       <span>${escapeHTML(route.vehicle_plate || 'Rota ativa')}</span>
       <strong>${Math.floor(route.progress || 0)}%</strong>
@@ -1136,7 +1151,34 @@ function renderBizProduction(production) {
 // --------------------------------------------------------------------------
 window.renderJobs = function(payload) {
   const container = document.getElementById('jobs-board-list');
+  const activeContainer = document.getElementById('jobs-active-mission');
   if (!container) return;
+  if (activeContainer) {
+    const mission = payload.activeMission;
+    if (payload.hasActiveMission && mission) {
+      activeContainer.classList.remove('hidden');
+      activeContainer.innerHTML = `
+        <div class="os-card active-job-card">
+          <div>
+            <span class="job-status-pill">EM ANDAMENTO</span>
+            <h4>${escapeHTML(mission.title || 'Entrega ativa')}</h4>
+            <p>${mission.totalDelivered || 0}/${mission.totalRequired || 0} volumes entregues</p>
+          </div>
+          <button class="os-btn os-btn-danger" id="btn-cancel-active-job">Cancelar</button>
+        </div>`;
+      activeContainer.querySelector('#btn-cancel-active-job').addEventListener('click', () => {
+        window.showConfirmationModal('Cancelar entrega', 'O contrato voltara ao mural e o progresso atual sera perdido.', () => {
+          window.postNUI('cancelActiveJob').then(resp => {
+            if (resp && resp.message) window.showToast('Emprego', resp.message);
+            if (resp && resp.ok) window.refreshOS();
+          });
+        });
+      });
+    } else {
+      activeContainer.classList.add('hidden');
+      activeContainer.innerHTML = '';
+    }
+  }
   const jobs = payload.availableJobs || [];
   if (jobs.length === 0) {
     container.innerHTML = `<p class="empty-state">Nenhum contrato publicado no momento.</p>`;
@@ -1148,7 +1190,7 @@ window.renderJobs = function(payload) {
       <h4>${escapeHTML(j.title)}</h4>
       <p>${escapeHTML(j.company_name || 'Empresa Tycoon')} | ${escapeHTML(j.cargo_type || 'Carga geral')}</p>
       <strong>${formatMoney(j.reward)}</strong>
-      <button class="os-btn os-btn-primary btn-take-job" data-id="${j.id}">Aceitar</button>
+      <button class="os-btn os-btn-primary btn-take-job" data-id="${j.id}" ${payload.hasActiveMission ? 'disabled' : ''}>${payload.hasActiveMission ? 'Em missao' : 'Aceitar'}</button>
     </div>
   `).join('');
 

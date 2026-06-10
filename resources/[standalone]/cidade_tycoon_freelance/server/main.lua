@@ -12,8 +12,15 @@ end
 -- SANITIZATION (Guardian Requirement)
 -- ==========================================
 local function sanitizePlayerMission(source)
-    if MissionState.activeMissions[source] then
+    local mission = MissionState.activeMissions[source]
+    if mission then
         DebugLog("Limpando missão órfã para o ID %d", source)
+        if mission.jobBoardId then
+            MySQL.update.await([[UPDATE tycoon_job_board
+                SET status = 'posted', assigned_citizenid = NULL
+                WHERE id = ? AND status = 'taken' AND assigned_citizenid = ?]],
+                { mission.jobBoardId, mission.assignedCitizenId })
+        end
         MissionState.activeMissions[source] = nil
     end
 end
@@ -24,6 +31,19 @@ end)
 
 AddEventHandler('playerDropped', function()
     sanitizePlayerMission(source)
+end)
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    CreateThread(function()
+        Wait(1000)
+        local ok, err = pcall(function()
+            MySQL.update.await("UPDATE tycoon_job_board SET status = 'posted', assigned_citizenid = NULL WHERE status = 'taken'")
+        end)
+        if not ok then
+            print(('^1[Tycoon:Freelance] Falha ao recuperar contratos pendentes: %s^7'):format(tostring(err)))
+        end
+    end)
 end)
 
 -- ==========================================
@@ -77,6 +97,32 @@ local function isPlayerNear(source, coords, maxDistance)
     local ped = GetPlayerPed(source)
     if ped == 0 or not coords then return false end
     return #(GetEntityCoords(ped) - vector3(coords.x, coords.y, coords.z)) <= maxDistance
+end
+
+local function decodeCoords(raw)
+    if type(raw) == 'string' then
+        local ok, decoded = pcall(json.decode, raw)
+        if not ok then return nil end
+        raw = decoded
+    end
+    if type(raw) ~= 'table' then return nil end
+    local x, y, z = tonumber(raw.x or raw[1]), tonumber(raw.y or raw[2]), tonumber(raw.z or raw[3])
+    if not x or not y or not z then return nil end
+    return { x = x, y = y, z = z }
+end
+
+local function missionOrigin(mission)
+    if mission.originCoords then return mission.originCoords end
+    local hub = mission.hubId and sharedConfig.hubs[mission.hubId] or nil
+    return hub and hub.coords or nil
+end
+
+local function jobBoxCount(cargoType)
+    cargoType = string.lower(tostring(cargoType or ''))
+    if cargoType:find('heavy', 1, true) or cargoType:find('pesad', 1, true) then return 5 end
+    if cargoType:find('frag', 1, true) then return 3 end
+    if cargoType:find('hazard', 1, true) or cargoType:find('perigos', 1, true) then return 2 end
+    return 3
 end
 
 local function validateMissionVehicle(source, mission, vehicleNetId, bindVehicle)
@@ -182,9 +228,9 @@ lib.callback.register('cidade_tycoon_freelance:server:freightAction', function(s
     if not mission or mission.missionId ~= missionId then return { ok = false } end
     
     if action == 'pickup_origin' then
-        local hub = sharedConfig.hubs[mission.hubId]
+        local origin = missionOrigin(mission)
         if mission.phase == 'pickup' and not mission.carryingBox
-            and isPlayerNear(source, hub and hub.coords, sharedConfig.freelance.pickupOriginDistance)
+            and isPlayerNear(source, origin, sharedConfig.freelance.pickupOriginDistance)
             and mission.collectedFromOrigin < mission.totalRequired then
             mission.collectedFromOrigin = mission.collectedFromOrigin + 1
             mission.carryingBox = true
@@ -251,12 +297,37 @@ RegisterNetEvent('cidade_tycoon_freelance:server:completeFreelanceMission', func
         return 
     end
 
+    if mission.completing then return end
+    mission.completing = true
+
     local baseReward = 2250
     local mult = (mission.contractType == 'fragile') and 1.4 or (mission.contractType == 'heavy') and 1.8 or (mission.contractType == 'hazardous') and 2.5 or 1.0
     local integrityBonus = mission.cargoHealth / 100
-    local finalReward = math.floor(baseReward * mult * integrityBonus)
+    local finalReward = mission.fixedReward
+        and math.floor(math.max(0, mission.fixedReward) * integrityBonus)
+        or math.floor(baseReward * mult * integrityBonus)
 
-    exports.cidade_tycoon_core:AddMoney(src, 'bank', finalReward, 'tycoon-freelance-reward')
+    if mission.jobBoardId then
+        local completed = MySQL.update.await([[UPDATE tycoon_job_board
+            SET status = 'completed'
+            WHERE id = ? AND status = 'taken' AND assigned_citizenid = ?]],
+            { mission.jobBoardId, mission.assignedCitizenId })
+        if not completed or completed < 1 then
+            mission.completing = false
+            return exports.cidade_tycoon_core:NotifyPlayer(src, 'Nao foi possivel validar este contrato.', 'error')
+        end
+    end
+
+    if not exports.cidade_tycoon_core:AddMoney(src, 'bank', finalReward, 'tycoon-freelance-reward') then
+        if mission.jobBoardId then
+            MySQL.update.await([[UPDATE tycoon_job_board
+                SET status = 'taken'
+                WHERE id = ? AND status = 'completed' AND assigned_citizenid = ?]],
+                { mission.jobBoardId, mission.assignedCitizenId })
+        end
+        mission.completing = false
+        return exports.cidade_tycoon_core:NotifyPlayer(src, 'O pagamento falhou. Tente concluir novamente.', 'error')
+    end
     exports.cidade_tycoon_core:AddExperience(src, 150)
     exports.cidade_tycoon_core:LogTransaction(src, finalReward, 'income', 'freelance', ('Entrega Freelance: %s'):format(mission.contractType))
 
@@ -271,6 +342,21 @@ RegisterNetEvent('cidade_tycoon_freelance:server:completeFreelanceMission', func
     MissionState.activeMissions[src] = nil
     syncMissionToStateBag(src, nil)
     exports.cidade_tycoon_core:NotifyPlayer(src, ('Frete finalizado! Recebido: $%d'):format(finalReward), 'success')
+end)
+
+lib.callback.register('cidade_tycoon_freelance:server:cancelMission', function(source)
+    local mission = MissionState.activeMissions[source]
+    if not mission then return { ok = false, message = 'Voce nao possui uma missao ativa.' } end
+    if mission.jobBoardId then
+        MySQL.update.await([[UPDATE tycoon_job_board
+            SET status = 'posted', assigned_citizenid = NULL
+            WHERE id = ? AND status = 'taken' AND assigned_citizenid = ?]],
+            { mission.jobBoardId, mission.assignedCitizenId })
+    end
+    MissionState.activeMissions[source] = nil
+    syncMissionToStateBag(source, nil)
+    TriggerClientEvent('cidade_tycoon_freelance:client:cancelMission', source)
+    return { ok = true, message = 'Missao cancelada.' }
 end)
 
 -- TUTORIAL SKIP
@@ -307,4 +393,57 @@ exports('GetCompanyAndFreelanceContextForSource', function(source)
         activeMission = mission,
         estimatedReward = 2500
     }
+end)
+
+exports('StartJobBoardMission', function(source, jobId)
+    local profile = getProfile(source)
+    if not profile or profile.isSuspended then
+        return { ok = false, message = 'Licenca suspensa ou perfil nao carregado.' }
+    end
+    if MissionState.activeMissions[source] then
+        return { ok = false, message = 'Voce ja possui uma missao ativa.' }
+    end
+
+    jobId = tonumber(jobId)
+    local job = jobId and MySQL.single.await([[SELECT * FROM tycoon_job_board
+        WHERE id = ? AND status = 'taken' AND assigned_citizenid = ?]],
+        { jobId, profile.citizenid }) or nil
+    if not job then return { ok = false, message = 'Contrato indisponivel.' } end
+
+    local origin = decodeCoords(job.origin_coords)
+    local destination = decodeCoords(job.dest_coords)
+    if not origin or not destination then
+        return { ok = false, message = 'Contrato com coordenadas invalidas.' }
+    end
+
+    local totalRequired = jobBoxCount(job.cargo_type)
+    local mission = {
+        missionId = MissionState.sequence,
+        hubId = nil,
+        originCoords = origin,
+        mode = 'job_board',
+        contractType = tostring(job.cargo_type or 'standard'),
+        title = tostring(job.title or 'Contrato logistico'),
+        totalRequired = totalRequired,
+        totalDelivered = 0,
+        collectedFromOrigin = 0,
+        inTrunk = 0,
+        carryingBox = false,
+        carryingSource = nil,
+        vehicleNetId = nil,
+        phase = 'pickup',
+        objective = 'pickup',
+        capacity = math.min(3, totalRequired),
+        cargoHealth = 100,
+        startTime = os.time(),
+        deliveryPoints = {{ coords = destination, required = totalRequired, delivered = 0 }},
+        currentPointIndex = 1,
+        fixedReward = math.max(0, tonumber(job.reward) or 0),
+        jobBoardId = job.id,
+        assignedCitizenId = profile.citizenid,
+    }
+    MissionState.sequence = MissionState.sequence + 1
+    MissionState.activeMissions[source] = mission
+    syncMission(source, mission)
+    return { ok = true, mission = mission, origin = origin }
 end)

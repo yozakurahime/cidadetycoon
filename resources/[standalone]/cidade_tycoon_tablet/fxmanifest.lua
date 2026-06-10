@@ -10,7 +10,6 @@ lua54 'yes'
 
 shared_scripts {
     '@ox_lib/init.lua',
-    '@qbx_core/modules/lib.lua',
 }
 
 server_scripts {
@@ -38,5 +37,6 @@ dependencies {
     'ox_inventory',
     'oxmysql',
     'cidade_tycoon_core',
-    'cidade_tycoon_logistics'
+    'cidade_tycoon_logistics',
+    'cidade_tycoon_freelance'
 }

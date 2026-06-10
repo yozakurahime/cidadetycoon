@@ -1966,6 +1966,38 @@ input:checked + .slider:before {
   grid-column: 2;
 }
 
+.active-job-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-color: rgba(99, 209, 158, 0.35);
+  background: linear-gradient(135deg, rgba(99, 209, 158, 0.13), rgba(255, 255, 255, 0.04));
+}
+
+.active-job-card h4,
+.active-job-card p {
+  margin: 4px 0 0;
+}
+
+.job-status-pill {
+  color: #63d19e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.os-btn-danger {
+  background: rgba(239, 83, 80, 0.16);
+  border: 1px solid rgba(239, 83, 80, 0.4);
+  color: #ff8a88;
+}
+
+.os-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 #app-settings .settings-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;

@@ -115,6 +115,7 @@ end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:openViaTablet', function(empresaId)
 	abertoViaTablet = true
+	menuactive = true
 	if empresaId then
 		empresaAtual = empresaId
 	end
@@ -122,6 +123,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:openViaTablet', function(empresaI
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:closeViaTablet', function()
+	TriggerEvent('cidade_tycoon_tablet:client:truckLogisticsMessage', { hidemenu = true })
 	abertoViaTablet = false
 	menuactive = false
 	TriggerServerEvent('cidade_tycoon_trucklogistics:closeUI')
@@ -320,8 +322,14 @@ end)
 function closeUI()
 	empresaAtual = nil
 	menuactive = false
-	SetNuiFocus(false,false)
-	SendNUIMessage({ hidemenu = true })
+	if abertoViaTablet then
+		TriggerEvent('cidade_tycoon_tablet:client:truckLogisticsMessage', { hidemenu = true })
+		TriggerEvent('cidade_tycoon_tablet:client:closeTruckLogisticsApp')
+		abertoViaTablet = false
+	else
+		SetNuiFocus(false,false)
+		SendNUIMessage({ hidemenu = true })
+	end
 	TriggerServerEvent('cidade_tycoon_trucklogistics:closeUI')
 end
 
@@ -360,25 +368,36 @@ RegisterNUICallback('requestStations', function(data, cb)
 end)
 
 RegisterNUICallback('setFuelWaypoint', function(data, cb)
-    SetNewWaypoint(data.x + 0.0, data.y + 0.0)
-    cb('ok')
+    local stationId = tonumber(data and data.stationId)
+    local station = stationId and Config.postos[stationId] or nil
+    if not station or not station.coords then
+        cb({ ok = false })
+        return
+    end
+
+    SetNewWaypoint(station.coords.x, station.coords.y)
+    notify(('GPS definido para %s.'):format(station.nome), 'success')
+    cb({ ok = true })
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:receiveStations', function(stations)
     local pc = GetEntityCoords(PlayerPedId())
-    print(('^3[FUEL] Client received %d stations^7'):format(stations and #stations or 0))
     -- Calculate distances on client side (GetEntityCoords is client-only)
     for _, s in pairs(stations) do
         local sc = vector3(s.coords.x, s.coords.y, pc.z)
         s.distancia = #(pc - sc) / 1000
     end
-    SendNUIMessage({
+    local payload = {
         action = 'updateStations',
         stations = stations,
         playerX = pc.x,
         playerY = pc.y
-    })
-    print('^3[FUEL] SendNUIMessage updateStations sent to NUI^7')
+    }
+    if abertoViaTablet then
+        TriggerEvent('cidade_tycoon_tablet:client:truckLogisticsMessage', payload)
+    else
+        SendNUIMessage(payload)
+    end
 end)
 
 RegisterNUICallback('depositJerrycan', function(data, cb)

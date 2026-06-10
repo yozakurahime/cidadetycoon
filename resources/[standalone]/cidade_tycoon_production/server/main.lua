@@ -290,10 +290,15 @@ RegisterNetEvent('cidade_tycoon_production:server:finishProduction', function(pr
                                     type = 'success',
                                     icon = 'industry'
                                 })
+                                -- Real-time push update for level up
+                                TriggerClientEvent('cidade_tycoon_tablet:client:pushUpdate', target.source, { type = 'production', refresh = true })
                             end
                         end
                     end
                 end
+                
+                -- Real-time push update for stock change (for the player who produced)
+                TriggerClientEvent('cidade_tycoon_tablet:client:pushUpdate', source, { type = 'production', refresh = true })
             end
         end
     else

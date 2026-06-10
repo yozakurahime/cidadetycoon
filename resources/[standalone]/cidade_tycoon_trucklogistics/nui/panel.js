@@ -124,6 +124,7 @@ window.addEventListener('message', function (event) {
 						</div>
 						<div class="job-actions">${getMyTruckButtons(truck)}<button onclick="sellTruck(${truck.truck_id}, '${truck.truck_name}')" class="btn btn-red white">Vender</button></div>
 					</div>
+					<span style="display:block;margin:6px 0;">${renderSkillBadges(driver, config.habilidades)}</span>
 					<div class="driver-stats-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; background: #f8f9fa; padding: 8px; border-radius: 6px; border: 1px solid #eee;">
 						<div class="d-flex flex-column text-center"><span style="font-size:7px; font-weight:800; color:#919aa3;">MOTOR</span><span style="font-size:10px; font-weight:700;">${(truck.engine/10).toFixed(0)}%</span></div>
 						<div class="d-flex flex-column text-center"><span style="font-size:7px; font-weight:800; color:#919aa3;">CÂMBIO</span><span style="font-size:10px; font-weight:700;">${(truck.transmission/10).toFixed(0)}%</span></div>
@@ -176,6 +177,7 @@ window.addEventListener('message', function (event) {
 						</div>
 					</div>
 
+					<span style="display:block;margin:6px 0;">${renderSkillBadges(driver, config.habilidades)}</span>
 					<div class="driver-stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; cursor:pointer;" onclick="$(this).parent().find('.driver-expanded-content').slideToggle(200)">
 						<div class="d-flex flex-column text-center"><span style="font-size:8px; font-weight:800; color:#919aa3;">ENTREGAS</span><span style="font-size:11px; font-weight:700;">${driver.finished_deliveries || 0}</span></div>
 						<div class="d-flex flex-column text-center"><span style="font-size:8px; font-weight:800; color:#919aa3;">KM TOTAL</span><span style="font-size:11px; font-weight:700;">${(driver.traveled_distance || 0).toFixed(0)}km</span></div>
@@ -192,9 +194,10 @@ window.addEventListener('message', function (event) {
 					<div class="truck-card-img"><img src="${driver.img}" style="width:80px; border-radius:50%;"></div>
 					<div class="truck-card-content text-center">
 						<h3 class="truck-card-title">${driver.name}</h3>
-						<p class="text-muted mb-2" style="font-size:11px;">Custo: ${formatCurrency(driver.price, config)} + ${formatCurrency(driver.price_per_km, config)}/km</p>
-						<div class="mb-3"><div class="d-flex justify-content-center gap-1" style="transform:scale(0.7);">${getDriverLevelHTML(driver.product_type)}</div></div>
-						<button ${config.motoristas && users.exp_level < config.motoristas.nivel_minimo_contratacao ? "disabled" : ""} onclick="hireDriver(${driver.driver_id})" class="btn btn-blue white btn-block">Contratar</button>
+						<p class="text-muted mb-1" style="font-size:10px;">Custo: ${formatCurrency(driver.price, config)} + ${formatCurrency(driver.price_per_km, config)}/km</p>
+						<p class="text-muted mb-2" style="font-size:9px;color:#5c6bc0 !important;">Bônus: +${((parseInt(driver.product_type||0) + parseInt(driver.distance||0) + parseInt(driver.valuable||0) + parseInt(driver.fragile||0) + parseInt(driver.fast||0)) * (config.trabalhos ? config.trabalhos.porcentagem_bonus_habilidades : 7))}% por job</p>
+						${renderSkillBadges(driver, config.habilidades)}
+						<button ${config.motoristas && users.exp_level < config.motoristas.nivel_minimo_contratacao ? "disabled" : ""} onclick="hireDriver(${driver.driver_id})" class="btn btn-blue white btn-block" style="margin-top:8px;">Contratar</button>
 					</div>
 				</div>`);
 		});
@@ -319,7 +322,29 @@ function updateDiagnostics(truck, config) {
 }
 
 function getMyTruckButtons(truck) { if(truck.driver === 0 || truck.driver === '0') return `<button onclick="spawnTruck(${truck.truck_id})" class="btn btn-blue white mr-1">Retirar</button><button onclick="setDriver(null, ${truck.truck_id})" class="btn btn-blue white">Desmarcar</button>`; return `<button onclick="setDriver('0', ${truck.truck_id})" class="btn btn-blue white">Selecionar</button>`; }
-function getDriverLevelHTML(value) { var html = ""; for (var i = 1; i <= 6; i++) html += `<li class="${i <= value ? 'actived' : ''}"></li>`; return html; }
+function getDriverLevelHTML(value) { var html = ""; for (var i = 1; i <= 6; i++) html += '<li class="' + (i <= value ? 'actived' : '') + '"></li>'; return html; }
+
+function renderSkillBadges(driver, habilidades) {
+    if (!habilidades) return '';
+    var skills = ['product_type', 'distance', 'valuable', 'fragile', 'fast'];
+    var html = '<div class="skill-badges">';
+    skills.forEach(function(key) {
+        var h = habilidades[key];
+        if (!h) return;
+        var val = parseInt(driver[key]) || 0;
+        var max = h.max || 3;
+        var pct = Math.round((val / max) * 100);
+        var color = pct >= 80 ? '#63d19e' : (pct >= 40 ? '#ffcc00' : '#919aa3');
+        html += '<div class="skill-badge" title="' + h.nome + ': ' + (h.efeitos[val] || 'Nível ' + val) + '">';
+        html += '<span class="skill-icon">' + h.icone + '</span>';
+        html += '<span class="skill-name">' + h.nome + '</span>';
+        html += '<div class="skill-bar"><div class="skill-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>';
+        html += '<span class="skill-val" style="color:' + color + ';">' + val + '/' + max + '</span>';
+        html += '</div>';
+    });
+    html += '</div>';
+    return html;
+}
 function getDriverAvailableFrotaHTML(myFrota, driver, config) {
 	var html = "", has_truck = false, assignedTruckId = "";
 	myFrota.forEach(truck => {
@@ -347,7 +372,7 @@ function trainDriver(id) {
     post("trainDriver", id); 
 }
 function resolveCrisis(id, opt) { post("resolveCrisis", {driver_id: id, option: opt}); }
-function openPage(pageN) { $(".pages").hide(); const p = [".main-page", ".job-page", ".freight-page", ".skills-page", ".diagnostic-page", ".dealership-page", ".trucks-page", ".recruitment-page", ".drivers-page", ".bank-page", ".fuel-page"]; if (pageN === 10) { $(".fuel-page").show(); post("refreshFuel", {}); requestStations(); } else { $(p[pageN]).show(); } }
+function openPage(pageN) { $(".pages").hide(); const p = [".main-page", ".job-page", ".freight-page", ".skills-page", ".diagnostic-page", ".dealership-page", ".trucks-page", ".recruitment-page", ".drivers-page", ".bank-page", ".fuel-page"]; if (pageN === 10) { $(".fuel-page").css("display", "flex"); post("refreshFuel", {}); requestStations(); } else { $(p[pageN]).show(); } }
 function closeUI() { post("close", "") }
 function startJob(id, r, d) { post("startJob", {id: id, reward: r, distance: d}) }
 function buyTruck(name, price) { post("buyTruck", {truck_name: name, price: price}) }
@@ -401,8 +426,7 @@ function buyStation(stationId) {
 }
 
 function setGPS(stationId) {
-    var s = fuelStations.find(function(x) { return x.id === stationId; });
-    if (s) post("setFuelWaypoint", { x: s.coords.x, y: s.coords.y });
+    post("setFuelWaypoint", { stationId: Number(stationId) });
 }
 
 function selectStation(stationId) {
@@ -434,7 +458,7 @@ function renderStationCards() {
             html += '<div class="fsc-buy-row" onclick="event.stopPropagation();">';
             html += '<input type="number" class="fsc-liters" value="' + Math.min(500, s.estoque) + '" min="50" max="2000" step="50">';
             html += '<button class="btn btn-premium" style="background:#63d19e;" onclick="buyStation(' + s.id + ')">Comprar</button>';
-            html += '<button class="btn btn-sm" style="background:#373a40;color:#fff;" onclick="setGPS(' + s.id + ')">📍</button>';
+            html += '<button class="btn fsc-gps-btn" title="Marcar posto no GPS" onclick="setGPS(' + s.id + ')"><span aria-hidden="true">&#128205;</span><span>GPS</span></button>';
             html += '</div>';
         }
         html += '</div>';

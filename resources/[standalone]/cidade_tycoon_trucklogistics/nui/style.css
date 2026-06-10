@@ -1302,12 +1302,21 @@ body.iframe-mode #myModal .modal-content p {
 /* ==========================================================================
    Fuel Page — Station Cards
    ========================================================================== */
-.fuel-page { display: flex; flex-direction: column; }
-.fuel-topbar { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #1a1c23; border-radius: 8px; margin-bottom: 8px; }
-.fuel-station-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; overflow-y: auto; flex: 1; align-content: start; padding-right: 2px; }
+.fuel-page { flex-direction: column; width: 100%; min-width: 0; box-sizing: border-box; }
+.fuel-topbar { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; align-items: center; gap: 16px; padding: 12px 14px; background: #1a1c23; border: 1px solid #2a2d38; border-radius: 12px; margin-bottom: 10px; }
+.fuel-heading { display: flex; flex-direction: column; min-width: 0; }
+.fuel-heading strong { color: #f4f6f8; font-size: 15px; line-height: 1.2; }
+.fuel-kicker { color: #ff9f43; font-size: 8px; font-weight: 800; letter-spacing: .14em; }
+.fuel-summary { display: flex; align-items: center; gap: 8px; }
+.fuel-summary-item { min-width: 92px; padding: 7px 10px; border: 1px solid #303440; border-radius: 9px; background: #20232c; }
+.fuel-summary-item span { display: block; color: #919aa3; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.fuel-summary-item strong { display: block; margin-top: 2px; color: #63d19e; font-size: 13px; }
+#fuel-stock-display { color: #ff9f43; }
+.fuel-refresh-btn { padding: 8px 12px; border: 1px solid #3b404e; border-radius: 9px; background: #292d38; color: #fff; font-size: 10px; font-weight: 700; }
+.fuel-station-grid { display: grid; width: 100%; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; overflow-y: auto; flex: 1 1 auto; align-content: start; padding-right: 3px; }
 .fuel-station-grid::-webkit-scrollbar { width: 3px; }
 .fuel-station-grid::-webkit-scrollbar-thumb { background: #373a40; border-radius: 3px; }
-.fuel-station-card { background: #1a1c23; border: 1.5px solid #2a2d38; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.15s; }
+.fuel-station-card { min-width: 0; background: #1a1c23; border: 1.5px solid #2a2d38; border-radius: 12px; padding: 11px 12px; cursor: pointer; transition: all 0.15s; }
 .fuel-station-card:hover { border-color: #4a4d58; background: #20222c; }
 .fuel-station-card.selected { border-color: #63d19e; background: #1a2820; }
 .fuel-station-card .fsc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
@@ -1317,7 +1326,35 @@ body.iframe-mode #myModal .modal-content p {
 .fuel-station-card .fsc-stock-label { font-size: 9px; color: #919aa3; }
 .fuel-station-card .fsc-stock-bar { height: 4px; background: #2a2d38; border-radius: 2px; margin-top: 4px; overflow: hidden; }
 .fuel-station-card .fsc-stock-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
-.fuel-station-card .fsc-buy-row { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
-.fuel-station-card .fsc-buy-row input { width: 55px; background: #232636; border: 1px solid #373a40; color: #fff; padding: 4px; border-radius: 4px; text-align: center; font-size: 11px; }
-.fuel-station-card .fsc-buy-row button { font-size: 10px; padding: 4px 10px; }
+.fuel-station-card .fsc-buy-row { display: grid; grid-template-columns: minmax(70px, 110px) minmax(90px, 1fr) auto; gap: 8px; margin-top: 10px; align-items: center; }
+.fuel-station-card .fsc-buy-row input { width: 100%; min-width: 0; background: #232636; border: 1px solid #373a40; color: #fff; padding: 7px; border-radius: 7px; text-align: center; font-size: 11px; }
+.fuel-station-card .fsc-buy-row button { min-height: 30px; font-size: 10px; padding: 6px 10px; }
+.fsc-gps-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #4b5262; background: #292d38; color: #fff; border-radius: 7px; }
+.fuel-jerrycan-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 10px; padding: 10px 12px; border: 1px solid #2a2d38; border-radius: 11px; background: #171a21; }
+.fuel-jerrycan-bar div { display: flex; flex-direction: column; min-width: 0; }
+.fuel-jerrycan-bar strong { color: #f4f6f8; font-size: 11px; }
+.fuel-jerrycan-bar span { color: #919aa3; font-size: 9px; }
+.fuel-jerrycan-bar .btn { background: #ff9f43; color: #15171d; font-size: 10px; font-weight: 800; padding: 7px 12px; white-space: nowrap; }
+
+body.iframe-mode .fuel-station-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+body.iframe-mode .fuel-station-card.selected { grid-column: 1 / -1; }
+
+@media (max-width: 760px) {
+    .fuel-topbar { grid-template-columns: 1fr auto; }
+    .fuel-summary { grid-column: 1 / -1; grid-row: 2; }
+    body.iframe-mode .fuel-station-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .fuel-buy-card, .fuel-station-row, .fuel-map-wrap, .fuel-sections, .fuel-layout, .fuel-header, .fuel-map-panel, .fuel-map-header, .fuel-station-list { display: none; }
+
+/* ==========================================================================
+   Driver Skill Badges
+   ========================================================================== */
+.skill-badges { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin: 4px 0; }
+.skill-badge { display: flex; align-items: center; gap: 3px; background: #f0f2f5; border: 1px solid #e0e3e8; border-radius: 6px; padding: 3px 7px; font-size: 9px; cursor: help; }
+.skill-badge .skill-icon { font-size: 11px; }
+.skill-badge .skill-name { font-weight: 700; color: #313443; min-width: 40px; }
+.skill-badge .skill-bar { width: 40px; height: 3px; background: #dde; border-radius: 2px; overflow: hidden; }
+.skill-badge .skill-fill { height: 100%; border-radius: 2px; }
+.skill-badge .skill-val { font-weight: 800; font-size: 8px; }
+.truck-card .skill-badges { max-width: 200px; margin: 6px auto; }
+.truck-card .skill-bar { width: 25px; }

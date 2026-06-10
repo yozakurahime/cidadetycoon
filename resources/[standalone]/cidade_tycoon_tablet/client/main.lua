@@ -119,7 +119,11 @@ end)
 
 RegisterNUICallback('tablet_mark_hub', function(data, cb)
     if not data or not data.hubId then return cb({ ok = false }) end
-    local hubs = exports.cidade_tycoon_hubs:GetAllHubs()
+    if GetResourceState('cidade_tycoon_hubs') ~= 'started' then
+        return cb({ ok = false, message = 'Hubs indisponiveis.' })
+    end
+    local ok, hubs = pcall(function() return exports.cidade_tycoon_hubs:GetAllHubs() end)
+    if not ok or type(hubs) ~= 'table' then return cb({ ok = false }) end
     for _, hub in ipairs(hubs) do
         if hub.id == data.hubId then
             SetNewWaypoint(hub.coords.x, hub.coords.y)
@@ -243,7 +247,11 @@ RegisterNUICallback('tablet_accept_job', function(data, cb)
 end)
 
 RegisterNUICallback('cancelActiveJob', function(_, cb)
-    cb({ ok = false, message = 'Cancelamento pelo tablet ainda nao esta disponivel.' })
+    if GetResourceState('cidade_tycoon_freelance') ~= 'started' then
+        return cb({ ok = false, message = 'Sistema de entregas indisponivel.' })
+    end
+    local res = lib.callback.await('cidade_tycoon_freelance:server:cancelMission', false)
+    cb(res or { ok = false, message = 'Nao foi possivel cancelar a missao.' })
 end)
 
 RegisterNUICallback('openTruckLogistics', function(_, cb)
@@ -256,11 +264,24 @@ RegisterNUICallback('closeTruckLogistics', function(_, cb)
     cb({ ok = true })
 end)
 
+RegisterNetEvent('cidade_tycoon_tablet:client:pushUpdate', function(data)
+    if isTabletOpen then
+        SendNUIMessage({
+            action = 'pushUpdate',
+            payload = data
+        })
+    end
+end)
+
 RegisterNetEvent('cidade_tycoon_tablet:client:truckLogisticsMessage', function(message)
     SendNUIMessage({
         action = 'truckLogisticsMessage',
         payload = message,
     })
+end)
+
+RegisterNetEvent('cidade_tycoon_tablet:client:closeTruckLogisticsApp', function()
+    SendNUIMessage({ action = 'closeTruckLogisticsApp' })
 end)
 
 RegisterNetEvent('cidade_tycoon_tablet:client:forceCloseTablet', function()

@@ -80,10 +80,11 @@ setupMissionPoints = function()
     if not m then return end
 
     -- 1. Origin Hub Point (Só aparece se o jogador ainda tiver caixas para buscar e não estiver com uma na mão)
-    local hub = sharedConfig.hubs[m.hubId]
-    if m.phase == 'pickup' and hub and m.collectedFromOrigin < m.totalRequired and not m.carryingBox then
+    local hub = m.hubId and sharedConfig.hubs[m.hubId] or nil
+    local origin = m.originCoords or (hub and hub.coords)
+    if m.phase == 'pickup' and origin and m.collectedFromOrigin < m.totalRequired and not m.carryingBox then
         local originPoint = lib.points.new({
-            coords = vec3(hub.coords.x, hub.coords.y, hub.coords.z),
+            coords = vec3(origin.x, origin.y, origin.z),
             distance = 15.0
         })
 
@@ -114,7 +115,7 @@ setupMissionPoints = function()
         end
         table.insert(currentPoints, originPoint)
 
-        ClientRuntimeState.deliveryBlip = AddBlipForCoord(hub.coords.x, hub.coords.y, hub.coords.z)
+        ClientRuntimeState.deliveryBlip = AddBlipForCoord(origin.x, origin.y, origin.z)
         SetBlipSprite(ClientRuntimeState.deliveryBlip, 478)
         SetBlipColour(ClientRuntimeState.deliveryBlip, 5)
         SetBlipRoute(ClientRuntimeState.deliveryBlip, true)
@@ -186,6 +187,13 @@ end
 
 RegisterNetEvent('cidade_tycoon_freelance:client:syncMission', function(mission)
     applyMissionState(mission, true)
+end)
+
+RegisterNetEvent('cidade_tycoon_freelance:client:cancelMission', function()
+    cleanupMissionPoints()
+    toggleBoxVisual(false)
+    ClientRuntimeState.activeMission = nil
+    TriggerEvent('cidade_tycoon_tablet:client:hideFreelanceHUD')
 end)
 
 -- ==========================================

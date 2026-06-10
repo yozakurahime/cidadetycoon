@@ -115,7 +115,7 @@ local function getDashboardForSource(source)
         end)
     end
     payload.staff = bizData and bizData.employees or {}
-    payload.production = bizData and bizData.activeDeliveries or {}
+    payload.routes = bizData and bizData.activeDeliveries or {}
     payload.fleet = {}
     if bizData and bizData.company and bizData.company.id then
         pcall(function()

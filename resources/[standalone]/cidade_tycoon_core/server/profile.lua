@@ -38,6 +38,44 @@ local function createTycoonTables()
             UNIQUE KEY (citizenid)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ]])
+
+    -- Centralized Companies Table (Logistics & Production)
+    MySQL.update.await([[
+        CREATE TABLE IF NOT EXISTS tycoon_companies (
+            id INT NOT NULL AUTO_INCREMENT,
+            citizenid VARCHAR(50) NOT NULL,
+            name VARCHAR(80) NOT NULL DEFAULT 'Nova Empresa',
+            level INT DEFAULT 1,
+            experience INT DEFAULT 0,
+            vault_balance BIGINT NOT NULL DEFAULT 0,
+            warehouse_id INT DEFAULT NULL,
+            upgrades LONGTEXT DEFAULT NULL,
+            is_active TINYINT(1) DEFAULT 1,
+            in_debt_since TIMESTAMP NULL DEFAULT NULL,
+            foreclosed_at TIMESTAMP NULL DEFAULT NULL,
+            primary_product VARCHAR(50) DEFAULT NULL,
+            secondary_product VARCHAR(50) DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY (citizenid)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ]])
+
+    -- Ensure backward compatibility with all fields
+    MySQL.query.await([[
+        ALTER TABLE `tycoon_companies` 
+        ADD COLUMN IF NOT EXISTS `experience` INT DEFAULT 0 AFTER `level`,
+        ADD COLUMN IF NOT EXISTS `vault_balance` BIGINT NOT NULL DEFAULT 0 AFTER `experience`,
+        ADD COLUMN IF NOT EXISTS `warehouse_id` INT DEFAULT NULL AFTER `vault_balance`,
+        ADD COLUMN IF NOT EXISTS `upgrades` LONGTEXT DEFAULT NULL AFTER `warehouse_id`,
+        ADD COLUMN IF NOT EXISTS `is_active` TINYINT(1) DEFAULT 1 AFTER `upgrades`,
+        ADD COLUMN IF NOT EXISTS `in_debt_since` TIMESTAMP NULL DEFAULT NULL AFTER `is_active`,
+        ADD COLUMN IF NOT EXISTS `foreclosed_at` TIMESTAMP NULL DEFAULT NULL AFTER `in_debt_since`,
+        ADD COLUMN IF NOT EXISTS `primary_product` VARCHAR(50) DEFAULT NULL AFTER `foreclosed_at`,
+        ADD COLUMN IF NOT EXISTS `secondary_product` VARCHAR(50) DEFAULT NULL AFTER `primary_product`,
+        ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`;
+    ]])
 end
 
 -- ==========================================

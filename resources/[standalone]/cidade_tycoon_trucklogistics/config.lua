@@ -212,6 +212,48 @@ Config.motoristas = {
 	['max_motoristas_por_player'] = 3			-- Maximum number of drivers the player can hire
 }
 
+-- Skill definitions for drivers
+Config.habilidades = {
+	['product_type'] = { nome = 'ADR', icone = '☣️', desc = 'Transporte de cargas perigosas', max = 3,
+		efeitos = {
+			[1] = 'Explosivos (Classe 1)',
+			[2] = 'Gases Inflamáveis (Classe 2)',
+			[3] = 'Todos os tipos ADR (Classe 1-6)',
+		}
+	},
+	['distance'] = { nome = 'Distância', icone = '🛣️', desc = 'Alcance máximo das rotas', max = 6,
+		efeitos = {
+			[1] = '+7.5 km',
+			[2] = '+8 km',
+			[3] = '+8.5 km',
+			[4] = '+9 km',
+			[5] = '+9.5 km',
+			[6] = '+99 km (ilimitado)',
+		}
+	},
+	['valuable'] = { nome = 'Carga Valiosa', icone = '💎', desc = 'Manuseio de cargas de alto valor', max = 3,
+		efeitos = {
+			[1] = 'Cargas até $50k',
+			[2] = 'Cargas até $200k',
+			[3] = 'Qualquer carga valiosa',
+		}
+	},
+	['fragile'] = { nome = 'Carga Frágil', icone = '📦', desc = 'Manuseio de cargas delicadas', max = 3,
+		efeitos = {
+			[1] = 'Reduz dano em 20%',
+			[2] = 'Reduz dano em 50%',
+			[3] = 'Dano zero em cargas frágeis',
+		}
+	},
+	['fast'] = { nome = 'Velocidade', icone = '⚡', desc = 'Entregas urgentes e bônus de tempo', max = 3,
+		efeitos = {
+			[1] = 'Urgente: +10% recompensa',
+			[2] = 'Urgente: +25% recompensa, -20% tempo',
+			[3] = 'Urgente: +50% recompensa, -40% tempo',
+		}
+	},
+}
+
 -- Here is the definition of the contracts that are generated for drivers to carry out
 Config.trabalhos = {
 	['cooldown'] = 60,						-- Cooldown time (in minutes) for drivers to make contracts and generate money for the company
@@ -309,6 +351,12 @@ Config.postos = { -- Postos de combustível com preços e estoque dinâmicos
 	{ nome = "Pit Stop - Paleto Bay", coords = vector3(176.28, 6599.97, 31.4), preco_base = 45, estoque_max = 1500 },
 	{ nome = "Globe Oil - Chumash", coords = vector3(-3227.72, 802.27, 11.06), preco_base = 41, estoque_max = 2800 },
 	{ nome = "Globe Oil - Banham Canyon", coords = vector3(-2041.74, -350.53, 13.03), preco_base = 43, estoque_max = 2000 },
+}
+
+Config.lotes_combustivel = {
+	[500] = { pickupCost = 15000, deliveryCost = 17250 },
+	[1000] = { pickupCost = 29000, deliveryCost = 33350 },
+	[2000] = { pickupCost = 56000, deliveryCost = 64400 },
 }
 
 Config.habilidade_distancia = {
