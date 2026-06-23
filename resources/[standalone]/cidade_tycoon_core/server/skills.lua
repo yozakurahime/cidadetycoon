@@ -50,7 +50,7 @@ local function trainSkill(source, skillName)
     local profile = exports.cidade_tycoon_core:GetPlayerProfile(source)
     if not profile then return { ok = false, message = 'Perfil nao encontrado.' } end
 
-    if not config.skillDefaults[skillName] then
+    if not config.SkillDefaults[skillName] then
         return { ok = false, message = 'Habilidade invalida.' }
     end
 

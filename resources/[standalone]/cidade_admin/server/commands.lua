@@ -107,45 +107,69 @@ RegisterCommand('warn', function(source, args)
     notifyAdmin(source, ('Jogador %d advertido: %s'):format(targetId, reason), 'success')
 end, false)
 
+-- Helper functions to execute player management directly with correct source context
+local function bringPlayer(adminSource, targetId)
+    local adminPed = GetPlayerPed(adminSource)
+    local targetPed = GetPlayerPed(targetId)
+    if not adminPed or adminPed == 0 or not targetPed or targetPed == 0 then
+        return false, 'Jogador invalido ou offline.'
+    end
+    local coords = GetEntityCoords(adminPed)
+    SetEntityCoords(targetPed, coords.x, coords.y, coords.z + 1.0)
+    return true, ('Jogador %d trazido ate voce.'):format(targetId)
+end
+
+local function gotoPlayer(adminSource, targetId)
+    local adminPed = GetPlayerPed(adminSource)
+    local targetPed = GetPlayerPed(targetId)
+    if not adminPed or adminPed == 0 or not targetPed or targetPed == 0 then
+        return false, 'Jogador invalido ou offline.'
+    end
+    local targetCoords = GetEntityCoords(targetPed)
+    TriggerClientEvent('cidade_admin:client:teleport', adminSource, targetCoords.x, targetCoords.y, targetCoords.z)
+    return true, ('Teleportado ate %d.'):format(targetId)
+end
+
+local function freezePlayer(adminSource, targetId, state)
+    local targetPed = GetPlayerPed(targetId)
+    if not targetPed or targetPed == 0 then
+        return false, 'Jogador invalido ou offline.'
+    end
+    TriggerClientEvent('cidade_admin:client:freezePlayer', targetId, state)
+    local msg = state and ('Jogador %d congelado.'):format(targetId) or ('Jogador %d descongelado.'):format(targetId)
+    return true, msg
+end
+
 RegisterCommand('freeze', function(source, args)
     if not HasPermission(source, 'mod') then return end
     local targetId = tonumber(args[1])
     if not targetId then notifyAdmin(source, 'Use: /freeze <id>', 'error') return end
-    TriggerClientEvent('cidade_admin:client:freezePlayer', targetId, true)
-    notifyAdmin(source, ('Jogador %d congelado.'):format(targetId), 'success')
+    local ok, msg = freezePlayer(source, targetId, true)
+    notifyAdmin(source, msg, ok and 'success' or 'error')
 end, false)
 
 RegisterCommand('unfreeze', function(source, args)
     if not HasPermission(source, 'mod') then return end
     local targetId = tonumber(args[1])
     if not targetId then notifyAdmin(source, 'Use: /unfreeze <id>', 'error') return end
-    TriggerClientEvent('cidade_admin:client:freezePlayer', targetId, false)
-    notifyAdmin(source, ('Jogador %d descongelado.'):format(targetId), 'success')
+    local ok, msg = freezePlayer(source, targetId, false)
+    notifyAdmin(source, msg, ok and 'success' or 'error')
 end, false)
 
 RegisterCommand('bring', function(source, args)
     if not HasPermission(source, 'mod') then return end
     local targetId = tonumber(args[1])
-    if not targetId or not GetPlayerPed(targetId) then
-        notifyAdmin(source, 'Jogador invalido ou offline.', 'error')
-        return
-    end
-    local adminPed = GetPlayerPed(source)
-    local coords = GetEntityCoords(adminPed)
-    SetEntityCoords(GetPlayerPed(targetId), coords.x, coords.y, coords.z + 1.0)
-    notifyAdmin(source, ('Jogador %d trazido ate voce.'):format(targetId), 'success')
+    if not targetId then notifyAdmin(source, 'Use: /bring <id>', 'error') return end
+    local ok, msg = bringPlayer(source, targetId)
+    notifyAdmin(source, msg, ok and 'success' or 'error')
 end, false)
 
 RegisterCommand('goto', function(source, args)
     if not HasPermission(source, 'mod') then return end
     local targetId = tonumber(args[1])
-    if not targetId or not GetPlayerPed(targetId) then
-        notifyAdmin(source, 'Jogador invalido ou offline.', 'error')
-        return
-    end
-    local targetCoords = GetEntityCoords(GetPlayerPed(targetId))
-    TriggerClientEvent('cidade_admin:client:teleport', source, targetCoords.x, targetCoords.y, targetCoords.z)
-    notifyAdmin(source, ('Teleportado ate %d.'):format(targetId), 'success')
+    if not targetId then notifyAdmin(source, 'Use: /goto <id>', 'error') return end
+    local ok, msg = gotoPlayer(source, targetId)
+    notifyAdmin(source, msg, ok and 'success' or 'error')
 end, false)
 
 RegisterCommand('setjob', function(source, args)
@@ -297,12 +321,10 @@ RegisterCommand('tycoonSetLevel', function(source, args)
         notifyAdmin(source, 'Use: /tycoonSetLevel <id> <nivel>', 'error')
         return
     end
-    -- Reset XP and set level
-    local profile = exports.cidade_tycoon_core:GetPlayerProfile(targetId)
-    if profile then
-        profile.level = level
-        profile.experience = 0
-        notifyAdmin(source, ('Level de %d ajustado para %d.'):format(targetId, level), 'success')
+    if exports.cidade_tycoon_core:SetLevel(targetId, level) then
+        notifyAdmin(source, ('Nivel Tycoon de %d definido para %d.'):format(targetId, level), 'success')
+    else
+        notifyAdmin(source, 'Falha ao definir nivel do jogador.', 'error')
     end
 end, false)
 
@@ -327,8 +349,52 @@ RegisterCommand('tycoonSetRep', function(source, args)
         notifyAdmin(source, 'Use: /tycoonSetRep <id> <reputacao>', 'error')
         return
     end
-    exports.cidade_tycoon_core:AddReputation(targetId, rep)
-    notifyAdmin(source, ('Reputacao de %d ajustada.'):format(targetId), 'success')
+    if exports.cidade_tycoon_core:SetReputation(targetId, rep) then
+        notifyAdmin(source, ('Reputacao Tycoon de %d definida para %d.'):format(targetId, rep), 'success')
+    else
+        notifyAdmin(source, 'Falha ao definir reputacao do jogador.', 'error')
+    end
+end, false)
+
+RegisterCommand('tycoonReset', function(source, args)
+    if not HasPermission(source, 'god') then return end
+    local targetId = tonumber(args[1])
+    if not targetId then
+        notifyAdmin(source, 'Use: /tycoonReset <id>', 'error')
+        return
+    end
+    if exports.cidade_tycoon_core:ResetProfile(targetId) then
+        notifyAdmin(source, ('Perfil Tycoon de %d foi resetado para os valores iniciais.'):format(targetId), 'success')
+    else
+        notifyAdmin(source, 'Falha ao resetar perfil do jogador.', 'error')
+    end
+end, false)
+
+RegisterCommand('tycoonSetSkill', function(source, args)
+    if not HasPermission(source, 'admin') then return end
+    local targetId = tonumber(args[1])
+    local skillName = args[2]
+    local level = tonumber(args[3])
+    if not targetId or not skillName or not level then
+        notifyAdmin(source, 'Use: /tycoonSetSkill <id> <nome_skill> <nivel>', 'error')
+        return
+    end
+    local profile = exports.cidade_tycoon_core:GetPlayerProfile(targetId)
+    if not profile then
+        notifyAdmin(source, 'Jogador nao encontrado.', 'error')
+        return
+    end
+    local coreConfig = exports.cidade_tycoon_core:GetCoreConfig()
+    if not coreConfig.SkillDefaults[skillName] then
+        notifyAdmin(source, 'Habilidade invalida.', 'error')
+        return
+    end
+    profile.skills[skillName] = level
+    if exports.cidade_tycoon_core:UpdateSkills(targetId, profile.skills) then
+        notifyAdmin(source, ('Habilidade %s de %d definida para nivel %d.'):format(skillName, targetId, level), 'success')
+    else
+        notifyAdmin(source, 'Falha ao atualizar habilidade.', 'error')
+    end
 end, false)
 
 -- ==========================================
@@ -362,21 +428,29 @@ lib.callback.register('cidade_admin:server:getPlayerList', function(source)
     return players
 end)
 
+lib.callback.register('cidade_admin:server:checkPermission', function(source)
+    return HasPermission(source, 'support')
+end)
+
 lib.callback.register('cidade_admin:server:executeCommand', function(source, command, target)
     if not HasPermission(source, 'mod') then return { ok = false } end
-    -- Execute the command as if the admin typed it
+    local ok, msg
     if command == 'bring' and target then
-        ExecuteCommand(('bring %d'):format(target))
+        ok, msg = bringPlayer(source, target)
     elseif command == 'goto' and target then
-        ExecuteCommand(('goto %d'):format(target))
+        ok, msg = gotoPlayer(source, target)
+    elseif command == 'freeze' and target then
+        ok, msg = freezePlayer(source, target, true)
+    elseif command == 'unfreeze' and target then
+        ok, msg = freezePlayer(source, target, false)
     elseif command == 'kick' and target then
         ExecuteCommand(('kick %d'):format(target))
-    elseif command == 'freeze' and target then
-        ExecuteCommand(('freeze %d'):format(target))
-    elseif command == 'unfreeze' and target then
-        ExecuteCommand(('unfreeze %d'):format(target))
+        ok = true
     end
-    return { ok = true }
+    if msg then
+        notifyAdmin(source, msg, ok and 'success' or 'error')
+    end
+    return { ok = ok or false }
 end)
 
 -- ==========================================

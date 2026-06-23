@@ -390,6 +390,48 @@ local function openTycoonTools()
             end,
         },
         {
+            title = 'Setar Reputacao',
+            description = 'Define a reputacao Tycoon de um jogador.',
+            icon = 'award',
+            iconColor = '#ff9f0a',
+            onSelect = function()
+                local input = lib.inputDialog('Setar Reputacao Tycoon', {
+                    { type = 'select', label = 'Jogador', options = playerOptions, icon = 'user' },
+                    { type = 'number', label = 'Reputacao', icon = 'award', required = true, default = 0 },
+                })
+                if input then
+                    ExecuteCommand(('tycoonSetRep %d %d'):format(input[1], input[2]))
+                end
+            end,
+        },
+        {
+            title = 'Setar Habilidade',
+            description = 'Define o nivel de uma habilidade Tycoon.',
+            icon = 'graduation-cap',
+            iconColor = '#bf5af2',
+            onSelect = function()
+                local input = lib.inputDialog('Setar Habilidade Tycoon', {
+                    { type = 'select', label = 'Jogador', options = playerOptions, icon = 'user' },
+                    { 
+                        type = 'select', 
+                        label = 'Habilidade', 
+                        options = {
+                            { value = 'skill_logistics', label = 'Logistica' },
+                            { value = 'skill_long_distance', label = 'Longa Distancia' },
+                            { value = 'skill_fragile', label = 'Carga Fragil' },
+                            { value = 'skill_valuable', label = 'Carga Valiosa' },
+                            { value = 'skill_hazardous', label = 'Carga Perigosa' },
+                        }, 
+                        icon = 'gears' 
+                    },
+                    { type = 'slider', label = 'Nivel', min = 0, max = 5, default = 0, icon = 'hashtag' },
+                })
+                if input then
+                    ExecuteCommand(('tycoonSetSkill %d %s %d'):format(input[1], input[2], input[3]))
+                end
+            end,
+        },
+        {
             title = 'Dar Tablet',
             description = 'Garante um tablet a um jogador.',
             icon = 'tablet',
@@ -400,6 +442,28 @@ local function openTycoonTools()
                 })
                 if input then
                     ExecuteCommand(('giveItem %d tablet 1'):format(input[1]))
+                end
+            end,
+        },
+        {
+            title = 'Resetar Perfil',
+            description = 'Reseta completamente a progressao Tycoon de um jogador.',
+            icon = 'user-ninja',
+            iconColor = '#ff3b30',
+            onSelect = function()
+                local input = lib.inputDialog('Resetar Perfil Tycoon', {
+                    { type = 'select', label = 'Jogador', options = playerOptions, icon = 'user' },
+                })
+                if input then
+                    local confirm = lib.alertDialog({
+                        header = 'Confirmar Reset',
+                        content = 'Voce tem certeza que deseja resetar completamente a progressao Tycoon deste jogador? Esta acao nao pode ser desfeita.',
+                        centered = true,
+                        cancel = true,
+                    })
+                    if confirm == 'confirm' then
+                        ExecuteCommand(('tycoonReset %d'):format(input[1]))
+                    end
                 end
             end,
         },
@@ -594,12 +658,22 @@ end)
 -- COMMAND TO OPEN MENU
 -- ==========================================
 
+local function checkPermissionAndOpen()
+    lib.callback('cidade_admin:server:checkPermission', false, function(hasPerm)
+        if hasPerm then
+            openAdminMenu()
+        else
+            notify('Voce nao tem permissao para abrir o painel administrativo.', 'error')
+        end
+    end)
+end
+
 RegisterCommand('admin', function()
-    openAdminMenu()
+    checkPermissionAndOpen()
 end, false)
 
 RegisterCommand('painel', function()
-    openAdminMenu()
+    checkPermissionAndOpen()
 end, false)
 
 -- Key mapping

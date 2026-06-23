@@ -340,6 +340,85 @@ exports('UpdateProfileField', function(source, field, value)
     return false
 end)
 
+-- ==========================================
+-- TYCOON MODIFICATION EXPORTS
+-- ==========================================
+
+local function updateSkills(source, skillsTable)
+    local profile = getPlayerProfile(source)
+    if profile then
+        profile.skills = skillsTable
+        MySQL.update.await('UPDATE tycoon_players SET skills = ? WHERE citizenid = ?', { json.encode(skillsTable), profile.citizenid })
+        syncPlayerState(source, profile)
+        return true
+    end
+    return false
+end
+exports('UpdateSkills', updateSkills)
+
+local function setLevel(source, level)
+    local profile = getPlayerProfile(source)
+    if profile then
+        profile.level = tonumber(level) or 1
+        profile.experience = 0
+        profile.maxExperience = profile.level * config.ExperiencePerLevel
+        MySQL.update.await('UPDATE tycoon_players SET level = ?, experience = ? WHERE citizenid = ?', { profile.level, profile.experience, profile.citizenid })
+        syncPlayerState(source, profile)
+        return true
+    end
+    return false
+end
+exports('SetLevel', setLevel)
+
+local function resetProfile(source)
+    local citizenId = exports.cidade_tycoon_core:GetCitizenId(source)
+    if not citizenId then return false end
+
+    local licenses = {}
+    local skills = config.SkillDefaults
+    local upgrades = {}
+
+    local profile = {
+        citizenid = citizenId,
+        level = 1,
+        experience = 0,
+        maxExperience = config.ExperiencePerLevel,
+        reputation = 0,
+        licenses = licenses,
+        skills = skills,
+        upgrades = upgrades,
+        isSuspended = false,
+        taxStreak = 0,
+        reputationFiscal = 0,
+        hybridScore = 100,
+        activePlate = nil,
+        hasCompany = false,
+        companyName = nil,
+        companyWarehouseId = nil
+    }
+
+    MySQL.update.await([[
+        UPDATE tycoon_players 
+        SET level = 1, experience = 0, reputation = 0, licenses = ?, skills = ?, upgrades = ?, is_suspended = 0, tax_streak = 0, reputation_fiscal = 0, hybrid_score = 100, active_plate = NULL
+        WHERE citizenid = ?
+    ]], { json.encode(licenses), json.encode(skills), json.encode(upgrades), citizenId })
+
+    PlayerProfiles[citizenId] = profile
+    syncPlayerState(source, profile)
+    return true
+end
+exports('ResetProfile', resetProfile)
+
+local function syncPlayerStateExport(source)
+    local profile = getPlayerProfile(source)
+    if profile then
+        syncPlayerState(source, profile)
+        return true
+    end
+    return false
+end
+exports('SyncPlayerState', syncPlayerStateExport)
+
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     for cid, profile in pairs(PlayerProfiles) do
