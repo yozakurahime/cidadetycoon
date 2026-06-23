@@ -1,11 +1,12 @@
 local config = require 'shared.config'
 local sharedVehicles = require 'shared.vehicles'
 
--- Configuration for Taxes
-local TAX_INTERVAL = 7 * 24 * 3600 -- 7 dias em segundos
-local HUB_TAX_RATE = 0.02 -- 2% do valor de compra
-local IPVA_POPULAR = 500
-local IPVA_LUXO = 15000
+-- Tax configuration (from shared config)
+local taxCfg = config.taxConfig
+local TAX_INTERVAL = taxCfg.intervalDays * 24 * 3600
+local HUB_TAX_RATE = taxCfg.hubTaxRate
+local IPVA_POPULAR = taxCfg.ipvaPopular
+local IPVA_LUXO = taxCfg.ipvaLuxo
 
 -- ==========================================
 -- TAX CALCULATION
@@ -73,6 +74,11 @@ lib.callback.register('cidade_tycoon_core:server:getPendingTaxes', function(sour
 end)
 
 lib.callback.register('cidade_tycoon_core:server:payTaxes', function(source)
+    -- Rate limit: max 1 call per 2 seconds
+    if not exports.cidade_tycoon_core:CheckRateLimit(source, 'pay_taxes', 2000) then
+        return { ok = false, message = 'Aguarde antes de realizar outra operacao.' }
+    end
+
     local taxes = calculatePlayerTaxes(source)
     if not taxes or taxes.total <= 0 then return { ok = false, message = 'Nenhum imposto pendente.' } end
 
@@ -101,16 +107,15 @@ end)
 -- Background thread to check for overdue taxes and suspend players
 CreateThread(function()
     while true do
-        Wait(30 * 60000) -- Check every 30 minutes
-        local players = GetPlayers()
-        -- In a real scenario, we'd query the DB for all players who are past due and not suspended
-        MySQL.query('SELECT citizenid FROM tycoon_players WHERE last_upkeep_at < NOW() - INTERVAL 7 DAY AND is_suspended = 0', {}, function(result)
-            if result then
-                for _, row in ipairs(result) do
-                    MySQL.update('UPDATE tycoon_players SET is_suspended = 1 WHERE citizenid = ?', { row.citizenid })
-                    print(("^1[Tycoon:Finance]^7 Jogador %s suspenso por falta de pagamento de impostos."):format(row.citizenid))
-                end
-            end
+        Wait(taxCfg.suspensionCheckInterval * 60000) -- Check every N minutes
+        local success, result = pcall(function()
+            return MySQL.query.await('SELECT citizenid FROM tycoon_players WHERE last_upkeep_at < NOW() - INTERVAL 7 DAY AND is_suspended = 0', {})
         end)
+        if success and result then
+            for _, row in ipairs(result) do
+                MySQL.update.await('UPDATE tycoon_players SET is_suspended = 1 WHERE citizenid = ?', { row.citizenid })
+                print(('^1[Tycoon:Finance]^7 Jogador %s suspenso por falta de pagamento de impostos.'):format(row.citizenid))
+            end
+        end
     end
 end)

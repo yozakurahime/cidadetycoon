@@ -19,6 +19,7 @@ Config.AnimTime = 2 * 1000 -- 2 * 1000 = 2 seconds (ATM animation)
 Config.Societies = { -- Which societies have bank accounts
 	"police",
 	"ambulance",
+	"mechanic",
 }
 
 Config.SocietyAccessRanks = { -- Which ranks of the society have access to it

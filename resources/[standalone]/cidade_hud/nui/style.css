@@ -5,14 +5,14 @@
 	--gold-soft: rgba(226, 179, 90, 0.2);
 	--paper: #f8f9fa;
 	--muted: rgba(255, 255, 255, 0.55);
-	
+
 	/* Glassmorphism Variables */
 	--glass-bg: rgba(10, 12, 18, 0.35);
 	--glass-bg-strong: rgba(6, 8, 12, 0.55);
 	--glass-border: rgba(255, 255, 255, 0.08);
 	--glass-border-light: rgba(255, 255, 255, 0.15);
 	--glass-glow: rgba(255, 255, 255, 0.03);
-	
+
 	/* Brand Colors (iOS Style Vibrancy) */
 	--health: #ff453a;
 	--armour: #0a84ff;
@@ -30,7 +30,8 @@
 	padding: 0;
 }
 
-html, body {
+html,
+body {
 	height: 100%;
 	overflow: hidden;
 	font-family: 'Inter', -apple-system, sans-serif;
@@ -46,7 +47,9 @@ body.preview {
 		#07090e;
 }
 
-.hidden { display: none !important; }
+.hidden {
+	display: none !important;
+}
 
 /* Main overlay fade-in animation */
 .overlay {
@@ -55,8 +58,13 @@ body.preview {
 	letter-spacing: 0;
 }
 
-.overlay.ready { opacity: 1; }
-.overlay.off { opacity: 0; }
+.overlay.ready {
+	opacity: 1;
+}
+
+.overlay.off {
+	opacity: 0;
+}
 
 /* Safe Zone for Ultrawide compatibility (iOS Dynamic Margins) */
 .hud-safe-zone {
@@ -106,7 +114,7 @@ body.preview {
 	font-weight: 800;
 	font-size: 15px;
 	letter-spacing: 0.05em;
-	box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.15);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 12px rgba(0, 0, 0, 0.15);
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
 }
@@ -139,8 +147,9 @@ body.preview {
 	gap: 20px;
 	background: var(--glass-bg);
 	border: 1px solid var(--glass-border);
-	border-radius: 23px; /* Perfect iOS Pill */
-	box-shadow: 
+	border-radius: 23px;
+	/* Perfect iOS Pill */
+	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.08),
 		0 8px 32px 0 rgba(0, 0, 0, 0.25);
 	backdrop-filter: blur(25px);
@@ -153,7 +162,11 @@ body.preview {
 	text-align: right;
 }
 
-.location small, .clock small, .gear-badge small, .fuel-label small, .vital-label small {
+.location small,
+.clock small,
+.gear-badge small,
+.fuel-label small,
+.vital-label small {
 	display: block;
 	color: var(--muted);
 	font-family: 'Inter', sans-serif;
@@ -220,20 +233,27 @@ body.preview {
 	transition: all 250ms cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.range i:nth-child(2) { height: 9px; }
-.range i:nth-child(3) { height: 14px; }
+.range i:nth-child(2) {
+	height: 9px;
+}
+
+.range i:nth-child(3) {
+	height: 14px;
+}
 
 /* Active States */
 .voice.level-1 .range i:first-child,
 .voice.level-2 .range i:nth-child(-n+2),
-.voice.level-3 .range i { 
-	background: var(--gold); 
+.voice.level-3 .range i {
+	background: var(--gold);
 	box-shadow: 0 0 6px var(--gold-soft);
 }
-.voice.talking .mic { 
+
+.voice.talking .mic {
 	color: #fff;
-	text-shadow: 0 0 8px rgba(255,255,255,0.4);
+	text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
 }
+
 .voice.talking .range i {
 	background: var(--green) !important;
 	box-shadow: 0 0 8px rgba(48, 209, 88, 0.4);
@@ -251,7 +271,7 @@ body.preview {
 	background: var(--glass-bg);
 	border: 1px solid var(--glass-border);
 	border-radius: 18px;
-	box-shadow: 
+	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.08),
 		0 8px 32px 0 rgba(0, 0, 0, 0.25);
 	backdrop-filter: blur(20px);
@@ -272,10 +292,10 @@ body.preview {
 	color: #fff;
 }
 
-.radio.transmitting { 
+.radio.transmitting {
 	border-color: rgba(48, 209, 88, 0.4);
 	background: rgba(48, 209, 88, 0.05);
-	box-shadow: 
+	box-shadow:
 		0 0 12px rgba(48, 209, 88, 0.1),
 		inset 0 1px 0 rgba(255, 255, 255, 0.08),
 		0 8px 32px 0 rgba(0, 0, 0, 0.25);
@@ -411,8 +431,15 @@ body.preview {
 }
 
 @keyframes fadeIn {
-	from { opacity: 0; transform: translateY(5px); }
-	to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(5px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 /* ==========================================
@@ -441,7 +468,7 @@ body.preview {
 	border: 1px solid rgba(255, 255, 255, 0.14);
 	padding: 11px 22px;
 	border-radius: 18px;
-	box-shadow: 
+	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.16),
 		inset 0 -1px 0 rgba(0, 0, 0, 0.28),
 		0 16px 42px rgba(0, 0, 0, 0.42);
@@ -583,11 +610,16 @@ body.preview {
 	border: 1px solid rgba(255, 255, 255, 0.12);
 	width: 38px;
 	height: 38px;
-	border-radius: 50%; /* Perfect Circle */
-	box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+	border-radius: 50%;
+	/* Perfect Circle */
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.gear-badge small { display: none; } /* Hide MARCHA label to keep it clean */
+.gear-badge small {
+	display: none;
+}
+
+/* Hide MARCHA label to keep it clean */
 
 .gear-badge strong {
 	font-family: 'Outfit', sans-serif;
@@ -640,7 +672,8 @@ body.preview {
 	font-weight: 800;
 	letter-spacing: 0.08em;
 	padding: 3px 8px;
-	border-radius: 8px; /* Rounded pill flags */
+	border-radius: 8px;
+	/* Rounded pill flags */
 	color: rgba(255, 255, 255, 0.2);
 	border: 1px solid rgba(255, 255, 255, 0.05);
 	background: rgba(255, 255, 255, 0.02);
@@ -669,15 +702,13 @@ body.preview {
 	bottom: 120px;
 	transform: translateX(-50%);
 	width: 290px;
-	padding: 12px 18px;
-	background: var(--glass-bg-strong);
-	border: 1px solid var(--glass-border-light);
-	border-radius: 20px;
-	box-shadow: 
-		inset 0 1px 0 rgba(255, 255, 255, 0.12),
-		0 12px 40px rgba(0, 0, 0, 0.45);
-	backdrop-filter: blur(25px);
-	-webkit-backdrop-filter: blur(25px);
+	padding: 0;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
 }
 
 .progress-heading {
@@ -700,10 +731,11 @@ body.preview {
 }
 
 .progress-track {
-	height: 3px;
-	background: rgba(255, 255, 255, 0.1);
-	border-radius: 1.5px;
+	height: 4px;
+	background: rgba(0, 0, 0, 0.32);
+	border-radius: 999px;
 	overflow: hidden;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
 }
 
 .progress-track span {
@@ -711,44 +743,192 @@ body.preview {
 	height: 100%;
 	width: 0;
 	background: var(--gold);
-	border-radius: 1.5px;
+	border-radius: inherit;
+	box-shadow: 0 0 10px var(--gold-soft);
 }
 
 /* ==========================================
    ANIMATIONS
    ========================================== */
 @keyframes slideDown {
-	from { transform: translateY(-30px); opacity: 0; }
-	to { transform: translateY(0); opacity: 1; }
+	from {
+		transform: translateY(-30px);
+		opacity: 0;
+	}
+
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
 }
 
 @keyframes slideUp {
-	from { transform: translateY(40px); opacity: 0; }
-	to { transform: translateY(0); opacity: 1; }
+	from {
+		transform: translateY(40px);
+		opacity: 0;
+	}
+
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
 }
 
 @keyframes slideInRight {
-	from { transform: translateX(30px); opacity: 0; }
-	to { transform: translateX(0); opacity: 1; }
+	from {
+		transform: translateX(30px);
+		opacity: 0;
+	}
+
+	to {
+		transform: translateX(0);
+		opacity: 1;
+	}
 }
 
 @keyframes pulseRed {
-	0%, 100% { 
-		color: rgba(255, 69, 58, 0.4); 
+
+	0%,
+	100% {
+		color: rgba(255, 69, 58, 0.4);
 		border-color: rgba(255, 69, 58, 0.1);
 		background: rgba(255, 69, 58, 0.02);
 	}
-	50% { 
-		color: #ff453a; 
+
+	50% {
+		color: #ff453a;
 		border-color: rgba(255, 69, 58, 0.35);
 		background: rgba(255, 69, 58, 0.12);
 		box-shadow: 0 0 8px rgba(255, 69, 58, 0.2);
 	}
 }
 
+/* --- CAR SILHOUETTE --- */
+.car-silhouette {
+	position: relative;
+	width: 50px;
+	height: 80px;
+	margin-left: 1rem;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.car-body {
+	position: relative;
+	width: 32px;
+	height: 70px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 6px;
+	background: rgba(0, 0, 0, 0.4);
+	box-sizing: border-box;
+}
+
+.car-part {
+	position: absolute;
+	background-color: var(--green);
+	box-shadow: 0 0 5px var(--green);
+	transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.car-part.health-good {
+	background-color: var(--green);
+	box-shadow: 0 0 5px var(--green);
+}
+
+.car-part.health-ok {
+	background-color: var(--gold);
+	box-shadow: 0 0 5px var(--gold);
+}
+
+.car-part.health-bad {
+	background-color: var(--hunger);
+	box-shadow: 0 0 5px var(--hunger);
+}
+
+.car-part.health-critical {
+	background-color: var(--health);
+	box-shadow: 0 0 5px var(--health);
+	animation: pulse 1s infinite alternate;
+}
+
+/* Part specific sizing and positioning */
+.car-part.engine {
+	top: 5%;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 16px;
+	height: 10px;
+	border-radius: 2px;
+}
+
+.car-part.transmission {
+	top: 25%;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 10px;
+	height: 12px;
+	border-radius: 2px;
+}
+
+.car-part.suspension {
+	top: 45%;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 20px;
+	height: 6px;
+	border-radius: 2px;
+}
+
+.car-part.brakes {
+	top: 60%;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 12px;
+	height: 6px;
+	border-radius: 2px;
+}
+
+/* Tires */
+.car-part.tire {
+	width: 5px;
+	height: 12px;
+	border-radius: 2px;
+}
+
+.car-part.tire-fl {
+	top: 15%;
+	left: -6px;
+}
+
+.car-part.tire-fr {
+	top: 15%;
+	right: -6px;
+}
+
+.car-part.tire-rl {
+	bottom: 15%;
+	left: -6px;
+}
+
+.car-part.tire-rr {
+	bottom: 15%;
+	right: -6px;
+}
+
 /* RWD Layout */
 @media (max-width: 1366px) {
-	.scene-header { top: 20px; }
-	.location { display: none; }
-	.bottom-ui { gap: 18px; padding: 10px 18px; }
+	.scene-header {
+		top: 20px;
+	}
+
+	.location {
+		display: none;
+	}
+
+	.bottom-ui {
+		gap: 18px;
+		padding: 10px 18px;
+	}
 }

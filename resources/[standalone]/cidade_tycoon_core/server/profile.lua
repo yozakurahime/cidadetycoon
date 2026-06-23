@@ -255,7 +255,7 @@ local function addExperience(source, amount)
         leveledUp = true
     end
 
-    MySQL.update('UPDATE tycoon_players SET level = ?, experience = ? WHERE citizenid = ?', { profile.level, profile.experience, profile.citizenid })
+    MySQL.update.await('UPDATE tycoon_players SET level = ?, experience = ? WHERE citizenid = ?', { profile.level, profile.experience, profile.citizenid })
     syncPlayerState(source, profile)
 
     if leveledUp then
@@ -308,6 +308,37 @@ exports('UpdateTutorialStep', function(source, step)
 end)
 
 exports('ClearProfileCache', function(cid) PlayerProfiles[cid] = nil end)
+
+-- Update a specific database field on tycoon_players
+exports('UpdateProfileField', function(source, field, value)
+    if not source or not field then return false end
+    local profile = exports.cidade_tycoon_core:GetPlayerProfile(source)
+    if not profile or not profile.citizenid then return false end
+
+    -- Whitelist of allowed fields for security
+    local allowedFields = {
+        active_plate = true,
+        is_suspended = true,
+        reputation_fiscal = true,
+        hybrid_score = true,
+        company_name = true,
+        tax_streak = true,
+    }
+
+    if not allowedFields[field] then
+        print(('^1[Tycoon:Core:Security]^7 Tentativa de atualizar campo nao autorizado: %s'):format(field))
+        return false
+    end
+
+    local success = MySQL.update.await(('UPDATE tycoon_players SET %s = ? WHERE citizenid = ?'):format(field), { value, profile.citizenid })
+    if success then
+        -- Update in-memory profile if it exists
+        profile[field] = value
+        syncPlayerState(source, profile)
+        return true
+    end
+    return false
+end)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end

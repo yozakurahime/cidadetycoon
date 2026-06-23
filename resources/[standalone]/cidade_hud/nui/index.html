@@ -4,13 +4,11 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Cidade Tycoon - HUD</title>
-	<!-- Modern Fonts -->
 	<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="style.css">
 </head>
 <body>
 	<main id="overlay" class="overlay">
-		<!-- Safe Zone wrapper for top elements to support Ultrawide -->
 		<div class="hud-safe-zone">
 			<header class="scene-header">
 				<div class="brand">
@@ -20,7 +18,6 @@
 						<small>ROLEPLAY STUDIO</small>
 					</div>
 				</div>
-
 				<div class="scene-meta">
 					<div class="location">
 						<small>LOCALIZACAO</small>
@@ -36,17 +33,14 @@
 					</div>
 				</div>
 			</header>
-
 			<div id="radio" class="radio hidden">
 				<span>RADIO</span>
 				<strong id="radio-frequency">--</strong>
 			</div>
 		</div>
 
-		<!-- Bottom Unified Dashboard (Center Aligned) -->
 		<div class="dashboard-wrapper">
 			<section class="bottom-ui">
-				<!-- Tycoon Status (Left) -->
 				<div id="tycoon" class="tycoon-panel hidden">
 					<div class="tycoon-meta">
 						<div class="identity-name">
@@ -69,7 +63,6 @@
 					</div>
 				</div>
 
-				<!-- Vitals (Always Visible) -->
 				<div class="vitals-panel">
 					<div class="vital health">
 						<div class="vital-label"><small>VIDA</small><strong id="health-value">100</strong></div>
@@ -83,8 +76,6 @@
 						<div class="vital-label"><small>STAMINA</small><strong id="stamina-value">100</strong></div>
 						<div class="bar-track"><span id="stamina"></span></div>
 					</div>
-					
-					<!-- Legacy survival metrics (hidden by default) -->
 					<div class="vital hunger hidden">
 						<div class="vital-label"><small>ENERGIA</small><strong id="hunger-value">100</strong></div>
 						<div class="bar-track"><span id="hunger"></span></div>
@@ -93,13 +84,12 @@
 						<div class="vital-label"><small>HIDRATACAO</small><strong id="thirst-value">100</strong></div>
 						<div class="bar-track"><span id="thirst"></span></div>
 					</div>
-					<div class="vital stress hidden">
+					<div class="vital stress">
 						<div class="vital-label"><small>STRESS</small><strong id="stress-value">0</strong></div>
 						<div class="bar-track"><span id="stress"></span></div>
 					</div>
 				</div>
 
-				<!-- Vehicle Diagnostics (Visible in Car) -->
 				<div id="vehicle" class="vehicle-panel hidden">
 					<div class="speedometer-section">
 						<div class="speed-number">
@@ -111,7 +101,7 @@
 							<strong id="gear">N</strong>
 						</div>
 					</div>
-					
+
 					<div class="vehicle-info-section">
 						<div class="fuel">
 							<div class="fuel-label">
@@ -120,17 +110,37 @@
 							</div>
 							<div class="bar-track"><span id="fuel"></span></div>
 						</div>
-						
 						<div class="vehicle-flags">
 							<span id="belt" class="flag">CINTO</span>
 							<span id="lock" class="flag">TRAVA</span>
+						</div>
+					</div>
+
+					<div class="veh-health">
+						<div class="veh-health-label">
+							<small>MOTOR (SAUDE)</small>
+							<strong id="veh-health-value">100%</strong>
+						</div>
+						<div class="bar-track"><span id="veh-health-fill"></span></div>
+					</div>
+
+					<div class="car-silhouette">
+						<div class="car-body">
+							<div id="part-engine" class="car-part engine"></div>
+							<div id="part-transmission" class="car-part transmission"></div>
+ 								<div id="part-body" class="car-part body"></div>
+							<div id="part-suspension" class="car-part suspension"></div>
+							<div id="part-brakes" class="car-part brakes"></div>
+							<div id="part-tire-fl" class="car-part tire tire-fl"></div>
+							<div id="part-tire-fr" class="car-part tire tire-fr"></div>
+							<div id="part-tire-rl" class="car-part tire tire-rl"></div>
+							<div id="part-tire-rr" class="car-part tire tire-rr"></div>
 						</div>
 					</div>
 				</div>
 			</section>
 		</div>
 
-		<!-- Action Progress Bar -->
 		<section id="progress" class="progress hidden">
 			<div class="progress-heading">
 				<span id="progress-label">PROCESSANDO</span>

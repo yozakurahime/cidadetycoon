@@ -1,4 +1,5 @@
-local logisticsConfig = require '@cidade_tycoon_logistics/config/shared'
+local success, logisticsConfig = pcall(require, '@cidade_tycoon_logistics/config/shared')
+if not success then logisticsConfig = {} end
 
 local WarehousePrices = {
     [1] = 50000,
@@ -6,10 +7,81 @@ local WarehousePrices = {
     [3] = 225000,
 }
 
+local isDebug = false
 local function DebugLog(text, ...)
-    print(string.format("^2[Tycoon:Server:Tablet]^7 %s", string.format(text, ...)))
+    if isDebug then
+        print(string.format("^2[Tycoon:Server:Tablet]^7 %s", string.format(text, ...)))
+    end
 end
 
+local function normalizePlate(plate)
+    return exports.cidade_tycoon_core:NormalizePlate(plate)
+end
+
+local function buildMaintenanceStatus(status, vehicleModel)
+    status = type(status) == 'table' and status or {}
+    local isElectric = exports.cidade_tycoon_core:IsVehicleElectric(vehicleModel)
+    local tireHealth = math.min(
+        status.tire_lf_health or status.tires_health or 100,
+        status.tire_rf_health or status.tires_health or 100,
+        status.tire_lr_health or status.tires_health or 100,
+        status.tire_rr_health or status.tires_health or 100
+    )
+
+    local engineCondition = isElectric and (status.battery_health or 100) or (status.engine_health or 100)
+    local transmissionCondition = isElectric and 100 or (status.transmission_health or 100)
+    local overall = math.floor(math.min(
+        engineCondition,
+        transmissionCondition,
+        status.brakes_health or 100,
+        status.suspension_health or 100,
+        tireHealth,
+        status.body_health or 100
+    ))
+
+    local subsystems = {}
+    if isElectric then
+        subsystems[#subsystems + 1] = { subsystem = 'battery', label = 'Bateria', condition = status.battery_health or 100 }
+    else
+        subsystems[#subsystems + 1] = { subsystem = 'engine', label = 'Motor', condition = status.engine_health or 100 }
+        subsystems[#subsystems + 1] = { subsystem = 'transmission', label = 'Transmissao', condition = status.transmission_health or 100 }
+    end
+    subsystems[#subsystems + 1] = { subsystem = 'brakes', label = 'Freios', condition = status.brakes_health or 100 }
+    subsystems[#subsystems + 1] = { subsystem = 'suspension', label = 'Suspensao', condition = status.suspension_health or 100 }
+    subsystems[#subsystems + 1] = { subsystem = 'tires', label = 'Pneus', condition = tireHealth }
+    subsystems[#subsystems + 1] = { subsystem = 'body', label = 'Lataria', condition = status.body_health or 100 }
+
+    local mileage = tonumber(status.mileage) or 0
+    local recommendation = 'Revisao em dia'
+    if overall <= 40 then
+        recommendation = 'Manutencao urgente recomendada'
+    elseif overall <= 70 then
+        recommendation = 'Agendar revisao preventiva'
+    end
+
+    return {
+        overall_condition = overall,
+        condition = overall,
+        odometer_km = mileage,
+        mileage = mileage,
+        last_service_odometer_km = tonumber(status.last_service_odometer_km) or 0,
+        next_service_due_km = mileage + 2500,
+        next_service_recommendation = recommendation,
+        outstanding_balance = tonumber(status.outstanding_balance) or 0,
+        body_health = status.body_health or 100,
+        battery_charge = isElectric and (status.battery_charge or 100) or nil,
+        subsystems = subsystems,
+    }
+end
+
+-- Load debug flag from core config
+local function initDebug()
+    local ok, cfg = pcall(exports.cidade_tycoon_core.GetCoreConfig)
+    if ok and cfg then
+        isDebug = cfg.isDebug or false
+    end
+end
+initDebug()
 local function getWarehouseList()
     local warehouses = {}
     for id, warehouse in pairs(logisticsConfig.warehouses or {}) do
@@ -70,7 +142,9 @@ local function getDashboardForSource(source)
     local payload = {}
 
     -- Debug: log de dados do perfil inicial
-    print(("[Tycoon:Tablet:Debug] Carregando dashboard para Source: %s, CitizenId: %s"):format(tostring(source), tostring(citizenId)))
+    DebugLog("Carregando dashboard para Source: %s, CitizenId: %s", tostring(source), tostring(citizenId))
+
+    local player = exports.cidade_tycoon_core:GetFrameworkPlayer(source)
 
     -- 2. Profile Base Data
     payload.name = profile.companyName
@@ -78,6 +152,7 @@ local function getDashboardForSource(source)
     payload.experience = profile.experience
     payload.maxExperience = profile.maxExperience
     payload.licenses = profile.licenses
+    payload.job = player and player.PlayerData.job.name or 'unemployed'
 
     -- 3. Money Data (Structure expected by frontend: { bank, cash })
     payload.money = { bank = 0, cash = 0 }
@@ -85,7 +160,7 @@ local function getDashboardForSource(source)
         payload.money.bank = exports.cidade_tycoon_core:GetMoneyBalance(source, 'bank') or 0
         payload.money.cash = exports.cidade_tycoon_core:GetMoneyBalance(source, 'cash') or 0
     end)
-    print(("[Tycoon:Tablet:Debug] Saldo resolvido - Banco: %s, Carteira: %s"):format(tostring(payload.money.bank), tostring(payload.money.cash)))
+    DebugLog("Saldo resolvido - Banco: %s, Carteira: %s", tostring(payload.money.bank), tostring(payload.money.cash))
 
     -- 4. Fetch Business Data (Logistics)
     local bizData = nil
@@ -127,17 +202,35 @@ local function getDashboardForSource(source)
     payload.garage = { vehicles = {} }
     local success, err = pcall(function()
         local vehicles = MySQL.query.await('SELECT id, vehicle, plate, garage, state FROM player_vehicles WHERE citizenid = ?', { citizenId })
-        print(("[Tycoon:Tablet:Debug] Veiculos encontrados no banco de dados para %s: %s"):format(tostring(citizenId), tostring(vehicles and #vehicles or 0)))
         if vehicles then
+            -- Batch fetch ALL vehicle statuses in a single query
+            local plates = {}
+            for _, veh in ipairs(vehicles) do
+                plates[#plates + 1] = veh.plate
+            end
+
+            local statusMap = {}
+            if #plates > 0 then
+                local placeholders = {}
+                local params = {}
+                for i, plate in ipairs(plates) do
+                    placeholders[#placeholders + 1] = '?'
+                    params[#params + 1] = normalizePlate(plate)
+                end
+                local statusRows = MySQL.query.await(([[SELECT * FROM tycoon_vehicle_status WHERE REPLACE(UPPER(plate), ' ', '') IN (%s)]]):format(table.concat(placeholders, ',')), params)
+                if statusRows then
+                    for _, row in ipairs(statusRows) do
+                        statusMap[normalizePlate(row.plate)] = row
+                    end
+                end
+            end
+
             for _, veh in ipairs(vehicles) do
                 -- Tycoon Matrix Enrichment
                 local tycoonData = nil
-                local ok, err2 = pcall(function()
+                pcall(function()
                     tycoonData = exports.cidade_tycoon_core:GetVehicleData(veh.vehicle)
                 end)
-                if not ok then
-                    print(("^1[Tycoon:Tablet:Error] Falha ao chamar GetVehicleData para %s: %s^7"):format(tostring(veh.vehicle), tostring(err2)))
-                end
 
                 if tycoonData then
                     veh.label = tycoonData.label
@@ -146,32 +239,11 @@ local function getDashboardForSource(source)
                     veh.branch = tycoonData.branch
                     veh.capacity = tycoonData.capacity
                     veh.layer = tycoonData.layer
-                else
-                    print(("[Tycoon:Tablet:Warning] Nao foi possivel obter Matrix Data para o veiculo %s"):format(tostring(veh.vehicle)))
                 end
 
-                local status = nil
-                local ok3, err3 = pcall(function()
-                    status = MySQL.single.await('SELECT * FROM tycoon_vehicle_status WHERE plate = ?', { veh.plate })
-                end)
-                if not ok3 then
-                    print(("^1[Tycoon:Tablet:Error] Falha ao consultar tycoon_vehicle_status para placa %s: %s^7"):format(tostring(veh.plate), tostring(err3)))
-                end
-
-                if status then
-                    -- Compute overall condition
-                    status.overall_condition = math.floor(((status.engine_health or 100) + (status.tires_health or 100)) / 2)
-                    veh.maintenance = status
-                else
-                    veh.maintenance = {
-                        overall_condition = 100,
-                        odometer_km = 0,
-                        engine_health = 100,
-                        brakes_health = 100,
-                        tires_health = 100,
-                        fuel_health = 100
-                    }
-                end
+                -- Lookup status from batch map instead of individual query
+                local status = statusMap[normalizePlate(veh.plate)]
+                veh.maintenance = buildMaintenanceStatus(status, veh.vehicle)
             end
             payload.garage.vehicles = vehicles
         end
@@ -221,6 +293,10 @@ lib.callback.register('cidade_tycoon_tablet:server:advanceTutorialStep', functio
 end)
 
 lib.callback.register('cidade_tycoon_tablet:server:purchaseCompany', function(source, warehouseId)
+    -- Rate limit + input validation
+    if not exports.cidade_tycoon_core:CheckRateLimit(source, 'purchase_company', 5000) then
+        return { ok = false, message = 'Aguarde antes de tentar novamente.' }
+    end
     warehouseId = tonumber(warehouseId)
     local warehouse = warehouseId and logisticsConfig.warehouses and logisticsConfig.warehouses[warehouseId]
     if not warehouse then return { ok = false, message = 'Galpao invalido.' } end
@@ -346,4 +422,165 @@ end, true)
 AddEventHandler('qbx_core:server:onPlayerLoaded', function(source)
     -- Ensure player has the tool
     exports.cidade_tycoon_core:EnsureStarterItem(source, 'tablet', 1)
+end)
+
+-- ==========================================
+-- CUSTOMS PENDING ORDERS CALLBACKS
+-- ==========================================
+
+
+lib.callback.register('cidade_tycoon_tablet:server:payOperationalDebt', function(source, vehicleId)
+    return { ok = false, message = 'Nenhum debito operacional pendente para este veiculo.' }
+end)
+lib.callback.register('cidade_tycoon_tablet:server:getCustomsOrders', function(source)
+    local src = source
+    local player = exports.cidade_tycoon_core:GetFrameworkPlayer(src)
+    if not player then return { clientOrders = {}, mechanicOrders = {}, isMechanic = false } end
+    local citizenId = exports.cidade_tycoon_core:GetCitizenId(player)
+    local isMechanic = player.PlayerData.job.name == 'mechanic'
+
+    local clientOrders = MySQL.query.await([[
+        SELECT * FROM tycoon_customs_orders
+        WHERE client_citizenid = ? AND status = 'pending'
+        ORDER BY created_at DESC
+    ]], { citizenId }) or {}
+
+    local mechanicOrders = {}
+    if isMechanic then
+        mechanicOrders = MySQL.query.await([[
+            SELECT * FROM tycoon_customs_orders
+            WHERE mechanic_citizenid = ? AND status = 'pending'
+            ORDER BY created_at DESC
+        ]], { citizenId }) or {}
+    end
+
+    return {
+        clientOrders = clientOrders,
+        mechanicOrders = mechanicOrders,
+        isMechanic = isMechanic
+    }
+end)
+
+lib.callback.register('cidade_tycoon_tablet:server:payCustomsOrder', function(source, orderId)
+    if not exports.cidade_tycoon_core:CheckRateLimit(source, 'pay_customs', 3000) then
+        return { ok = false, message = 'Aguarde antes de realizar outra operacao.' }
+    end
+    orderId = tonumber(orderId)
+    if not orderId or orderId <= 0 then
+        return { ok = false, message = 'Ordem de servico invalida.' }
+    end
+    local src = source
+    local player = exports.cidade_tycoon_core:GetFrameworkPlayer(src)
+    if not player then return { ok = false, message = 'Jogador inválido.' } end
+    local citizenId = exports.cidade_tycoon_core:GetCitizenId(player)
+
+    local order = MySQL.single.await('SELECT * FROM tycoon_customs_orders WHERE id = ? AND client_citizenid = ? AND status = \'pending\'', { orderId, citizenId })
+    if not order then return { ok = false, message = 'Ordem de serviço não encontrada ou já paga.' } end
+
+    -- Check balance
+    local bankBalance = exports.cidade_tycoon_core:GetMoneyBalance(player, 'bank')
+    if bankBalance < order.total then
+        return { ok = false, message = 'Saldo bancário insuficiente.' }
+    end
+
+    -- Remove money
+    if exports.cidade_tycoon_core:RemoveMoney(player, 'bank', order.total, 'tycoon-customs-order-payment') then
+        local modsTable = json.decode(order.mods)
+
+        -- Save mods to vehicle (player_vehicles table)
+        local saveSuccess = false
+        pcall(function()
+            local normalizedPlate = tostring(order.plate):gsub('^%s*(.-)%s*$', '%1')
+            local affected = MySQL.update.await('UPDATE player_vehicles SET mods = ? WHERE plate = ? OR TRIM(plate) = ?', { order.mods, order.plate, normalizedPlate })
+            saveSuccess = (affected and affected > 0)
+        end)
+
+        if saveSuccess then
+            -- Update order status
+            MySQL.update.await('UPDATE tycoon_customs_orders SET status = \'paid\' WHERE id = ?', { orderId })
+
+            -- Route Payment: Mechanic Labor Fee and Parts Subtotal
+            local feeVal = tonumber(order.fee) or 0
+            local subtotalVal = tonumber(order.subtotal) or 0
+
+            -- 1. Labor fee to Mechanic (handles online and offline states)
+            if feeVal > 0 then
+                local mechanicCitizenId = order.mechanic_citizenid
+                local mechanicPlayer = exports.cidade_tycoon_core:GetPlayerFromCitizenId(mechanicCitizenId)
+
+                if mechanicPlayer then
+                    -- Mechanic is online: AddMoney directly
+                    exports.cidade_tycoon_core:AddMoney(mechanicPlayer, 'bank', feeVal, 'tycoon-mechanic-labor-fee')
+                    local mechanicSource = mechanicPlayer.PlayerData.source
+                    TriggerClientEvent('ox_lib:notify', mechanicSource, {
+                        title = 'Ordem de Serviço Paga',
+                        description = ('Você recebeu R$%d pela OS pendente do veículo %s.'):format(feeVal, order.plate),
+                        type = 'success'
+                    })
+                else
+                    -- Mechanic is offline: Safe transactional database update of player's JSON bank money
+                    pcall(function()
+                        local result = MySQL.single.await('SELECT money FROM players WHERE citizenid = ?', { mechanicCitizenId })
+                        if result and result.money then
+                            local moneyTable = json.decode(result.money)
+                            if moneyTable and moneyTable.bank then
+                                moneyTable.bank = moneyTable.bank + feeVal
+                                MySQL.update.await('UPDATE players SET money = ? WHERE citizenid = ?', { json.encode(moneyTable), mechanicCitizenId })
+                            end
+                        end
+                    end)
+                end
+            end
+
+            -- 2. Parts cost (subtotal) goes to society_mechanic fund
+            if subtotalVal > 0 then
+                exports.okokBanking:AddSocietyMoney('society_mechanic', subtotalVal)
+            end
+
+            -- Log transaction
+            exports.cidade_tycoon_core:LogTransaction(src, order.total, 'expense', 'customization', ('Pagamento OS Pendente: %s'):format(order.plate))
+
+            -- Broadcast work order published event
+            local itemsList = json.decode(order.items) or {}
+            local clientName = player.PlayerData.charinfo.firstname .. ' ' .. player.PlayerData.charinfo.lastname
+            TriggerEvent('cidade_tycoon_customs:server:createWorkOrder', {
+                plate = order.plate,
+                client = clientName,
+                mechanic = order.mechanic_name,
+                total = order.total,
+                items = itemsList
+            })
+
+            -- Sync modifications to the spawned vehicle if active
+            TriggerClientEvent('cidade_tycoon_customs:client:applyPaidMods', -1, order.plate, modsTable)
+
+            return { ok = true, message = 'Ordem de serviço paga com sucesso! Modificações aplicadas ao veículo.' }
+        else
+            -- Refund on database fail
+            exports.cidade_tycoon_core:AddMoney(player, 'bank', order.total, 'tycoon-customs-order-refund')
+            return { ok = false, message = 'Erro ao salvar modificações no banco de dados. Reembolsado.' }
+        end
+    end
+
+    return { ok = false, message = 'Falha no processamento financeiro.' }
+end)
+
+lib.callback.register('cidade_tycoon_tablet:server:cancelCustomsOrder', function(source, orderId)
+    local src = source
+    local player = exports.cidade_tycoon_core:GetFrameworkPlayer(src)
+    if not player or player.PlayerData.job.name ~= 'mechanic' then
+        return { ok = false, message = 'Apenas mecânicos podem cancelar ordens de serviço.' }
+    end
+    local citizenId = exports.cidade_tycoon_core:GetCitizenId(player)
+
+    local changed = MySQL.update.await([[
+        UPDATE tycoon_customs_orders
+        SET status = 'cancelled'
+        WHERE id = ? AND mechanic_citizenid = ? AND status = 'pending'
+    ]], { orderId, citizenId })
+
+    if changed and changed > 0 then
+        return { ok = true, message = 'Ordem de serviço cancelada com sucesso.' }
+    end
+    return { ok = false, message = 'Ordem de serviço não encontrada ou já processada.' }
 end)

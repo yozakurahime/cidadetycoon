@@ -752,6 +752,11 @@ return {
         weight = 1500,
     },
 
+    ['battery'] = {
+        label = 'Bateria Elétrica',
+        weight = 15000,
+    },
+
     -- TYCOON SCRAP ITEMS
     ['mechanical_scrap'] = {
         label = 'Sucata Mecânica',
@@ -861,6 +866,26 @@ return {
         label = 'Peças de Transmissão',
         weight = 3500,
     },
+    ['transmission_street_kit'] = {
+        label = 'Transmissao Street',
+        weight = 3800,
+    },
+    ['transmission_sport_kit'] = {
+        label = 'Transmissao Sport',
+        weight = 3900,
+    },
+    ['transmission_race_kit'] = {
+        label = 'Transmissao Corrida',
+        weight = 4100,
+    },
+    ['drivetrain_conversion_fwd'] = {
+        label = 'Kit Conversao FWD',
+        weight = 5200,
+    },
+    ['drivetrain_conversion_rwd'] = {
+        label = 'Kit Conversao RWD',
+        weight = 6100,
+    },
     ['reinforced_frame'] = {
         label = 'Chassi Reforçado',
         weight = 5000,
@@ -870,6 +895,14 @@ return {
     ['performance_brakes'] = {
         label = 'Freios Esportivos',
         weight = 2500,
+    },
+    ['brake_sport_kit'] = {
+        label = 'Kit de Freio Sport',
+        weight = 2700,
+    },
+    ['brake_race_kit'] = {
+        label = 'Kit de Freio Corrida',
+        weight = 2900,
     },
     ['drift_tires'] = {
         label = 'Pneus de Drift',
@@ -891,7 +924,18 @@ return {
         label = 'Controle de Tração',
         weight = 1500,
     },
-
+    ['performance_kit_drag'] = {
+        label = 'Kit Drag Race',
+        weight = 12000,
+    },
+    ['performance_kit_drift'] = {
+        label = 'Kit Drift',
+        weight = 10000,
+    },
+    ['performance_kit_race'] = {
+        label = 'Kit Corrida',
+        weight = 11000,
+    },
     -- ILEGAL
     ['refined_powder'] = {
         label = 'Pó Refinado',
@@ -926,5 +970,14 @@ return {
     ['advanced_repair_kit'] = {
         label = 'Kit de Reparo Avançado',
         weight = 4000,
+    },
+    ['car_jack'] = {
+        label = 'Macaco Hidráulico',
+        weight = 8500,
+        description = 'Usado para levantar veículos e trocar pneus.',
+        allowArmed = true,
+        client = {
+            image = 'macaco_hidraulico.png',
+        }
     },
 }

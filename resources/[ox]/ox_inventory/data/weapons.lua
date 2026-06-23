@@ -692,9 +692,10 @@ return {
 		},
 
 		['WEAPON_WRENCH'] = {
-			label = 'Wrench',
-			weight = 2500,
+			label = 'Chave Inglesa',
+			weight = 1200,
 			durability = 0.1,
+            description = 'Usada como arma branca ou para manutenção de veículos.'
 		},
 
 		['WEAPON_PRECISIONRIFLE'] = {
@@ -703,11 +704,11 @@ return {
 			durability = 0.4,
 			ammoname = 'ammo-sniper'
 		},
-
+        
 		['WEAPON_TACTICALRIFLE'] = {
 			label = 'Tactical Rifle',
-			weight = 3400,
-			durability = 0.03,
+			weight = 3500,
+			durability = 0.05,
 			ammoname = 'ammo-rifle'
 		},
 

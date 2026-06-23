@@ -1,5 +1,3 @@
-local logisticsConfig = require '@cidade_tycoon_logistics/config/shared'
-
 local tabletOpen = false
 local tabletProp = nil
 
@@ -13,15 +11,15 @@ end
 
 local function forceCloseTabletUi()
     if not tabletOpen then return end
-    
+
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'closeTablet' })
-    
+
     if tabletProp and DoesEntityExist(tabletProp) then
         DeleteEntity(tabletProp)
         tabletProp = nil
     end
-    
+
     tabletOpen = false
     local ped = PlayerPedId()
     ClearPedTasks(ped)
@@ -39,13 +37,13 @@ local function openTablet(startApp)
     PlaySoundFrontend(-1, "Event_Message_In", "GTAO_FM_Events_Soundset", 1)
 
     local res = lib.callback.await('cidade_tycoon_tablet:server:getDashboard', false)
-    if not res then 
+    if not res then
         notifyTablet('Falha ao sincronizar dados operacionais.', 'error')
-        return 
+        return
     end
 
     local ped = PlayerPedId()
-    
+
     -- Animation: Use tablet (allows movement with flag 49)
     lib.requestAnimDict("amb@world_human_seat_wall_tablet@female@base", 5000)
     TaskPlayAnim(ped, "amb@world_human_seat_wall_tablet@female@base", "base", 8.0, 1.0, -1, 49, 0, false, false, false)
@@ -117,6 +115,11 @@ RegisterNUICallback('refreshDashboard', function(_, cb)
     cb({ ok = true, payload = res })
 end)
 
+
+RegisterNUICallback('tablet_pay_operational_debt', function(data, cb)
+    local res = lib.callback.await('cidade_tycoon_tablet:server:payOperationalDebt', false, data and data.vehicleId)
+    cb(res or { ok = false, message = 'Falha ao processar debito operacional.' })
+end)
 RegisterNUICallback('tablet_mark_hub', function(data, cb)
     if not data or not data.hubId then return cb({ ok = false }) end
     if GetResourceState('cidade_tycoon_hubs') ~= 'started' then
@@ -201,7 +204,7 @@ RegisterNUICallback('tablet_spawn_vehicle', function(data, cb)
     pcall(function()
         response = lib.callback.await('cidade_garagem_eye:server:spawnVehicleFromTablet', 3000, vehicleId, garageName, accessPointIndex)
     end)
-    
+
     if not response or not response.ok then
         cb({ ok = false, message = response and response.message or 'Nao foi possivel retirar o veiculo.' })
         return
@@ -224,14 +227,6 @@ RegisterNUICallback('tablet_pay_financing', function(data, cb)
 
     local res = lib.callback.await('cidade_tycoon_market:server:payInstallment', false, financingId)
     cb(res or { ok = false, message = 'Nao foi possivel pagar a parcela.' })
-end)
-
-RegisterNUICallback('purchaseCompany', function(data, cb)
-    local warehouseId = tonumber(data and data.warehouseId)
-    if not warehouseId then return cb({ ok = false, message = 'Galpao invalido.' }) end
-
-    local res = lib.callback.await('cidade_tycoon_tablet:server:purchaseCompany', false, warehouseId)
-    cb(res or { ok = false, message = 'Nao foi possivel criar a empresa.' })
 end)
 
 RegisterNUICallback('tablet_accept_job', function(data, cb)
@@ -305,6 +300,23 @@ RegisterNetEvent('cidade_tycoon_tablet:client:driverCrisisAlert', function(crisi
 end)
 
 -- Sincronização de Relógio delegada nativamente ao JavaScript da interface CEF (app.js)
+
+RegisterNUICallback('getCustomsOrders', function(_, cb)
+    local res = lib.callback.await('cidade_tycoon_tablet:server:getCustomsOrders', false)
+    cb(res)
+end)
+
+RegisterNUICallback('payCustomsOrder', function(data, cb)
+    if not data or not data.orderId then return cb({ ok = false, message = 'ID da ordem inválido.' }) end
+    local res = lib.callback.await('cidade_tycoon_tablet:server:payCustomsOrder', false, data.orderId)
+    cb(res)
+end)
+
+RegisterNUICallback('cancelCustomsOrder', function(data, cb)
+    if not data or not data.orderId then return cb({ ok = false, message = 'ID da ordem inválido.' }) end
+    local res = lib.callback.await('cidade_tycoon_tablet:server:cancelCustomsOrder', false, data.orderId)
+    cb(res)
+end)
 
 AddEventHandler('onResourceStop', function(res)
     if res == GetCurrentResourceName() then forceCloseTabletUi() end

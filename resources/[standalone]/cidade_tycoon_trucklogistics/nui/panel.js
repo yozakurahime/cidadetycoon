@@ -124,7 +124,7 @@ window.addEventListener('message', function (event) {
 						</div>
 						<div class="job-actions">${getMyTruckButtons(truck)}<button onclick="sellTruck(${truck.truck_id}, '${truck.truck_name}')" class="btn btn-red white">Vender</button></div>
 					</div>
-					<span style="display:block;margin:6px 0;">${renderSkillBadges(driver, config.habilidades)}</span>
+					<span style="display:block;margin:6px 0;">${renderSkillBadges(d, config.habilidades)}</span>
 					<div class="driver-stats-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; background: #f8f9fa; padding: 8px; border-radius: 6px; border: 1px solid #eee;">
 						<div class="d-flex flex-column text-center"><span style="font-size:7px; font-weight:800; color:#919aa3;">MOTOR</span><span style="font-size:10px; font-weight:700;">${(truck.engine/10).toFixed(0)}%</span></div>
 						<div class="d-flex flex-column text-center"><span style="font-size:7px; font-weight:800; color:#919aa3;">CÂMBIO</span><span style="font-size:10px; font-weight:700;">${(truck.transmission/10).toFixed(0)}%</span></div>
@@ -325,7 +325,7 @@ function getMyTruckButtons(truck) { if(truck.driver === 0 || truck.driver === '0
 function getDriverLevelHTML(value) { var html = ""; for (var i = 1; i <= 6; i++) html += '<li class="' + (i <= value ? 'actived' : '') + '"></li>'; return html; }
 
 function renderSkillBadges(driver, habilidades) {
-    if (!habilidades) return '';
+    if (!driver || !habilidades) return '';
     var skills = ['product_type', 'distance', 'valuable', 'fragile', 'fast'];
     var html = '<div class="skill-badges">';
     skills.forEach(function(key) {
@@ -348,12 +348,14 @@ function renderSkillBadges(driver, habilidades) {
 function getDriverAvailableFrotaHTML(myFrota, driver, config) {
 	var html = "", has_truck = false, assignedTruckId = "";
 	myFrota.forEach(truck => {
+		var tData = config.concessionaria[truck.truck_name];
+		if (!tData) return;
 		if (truck.driver == driver.driver_id) { 
 			has_truck = true; 
 			assignedTruckId = truck.truck_id; 
-			html += `<option selected="selected" truck_id="${truck.truck_id}" driver_id="${driver.driver_id}">${config.concessionaria[truck.truck_name].name}</option>`; 
+			html += `<option selected="selected" truck_id="${truck.truck_id}" driver_id="${driver.driver_id}">${tData.name}</option>`; 
 		} else if (truck.driver === null || truck.driver === undefined || truck.driver === false) { 
-			html += `<option truck_id="${truck.truck_id}" driver_id="${driver.driver_id}">${config.concessionaria[truck.truck_name].name}</option>`; 
+			html += `<option truck_id="${truck.truck_id}" driver_id="${driver.driver_id}">${tData.name}</option>`; 
 		}
 	});
 	return (has_truck ? `<option driver_id="0" truck_id="${assignedTruckId}">Remover Veículo</option>` : `<option selected="selected">Designar Veículo</option>`) + html;

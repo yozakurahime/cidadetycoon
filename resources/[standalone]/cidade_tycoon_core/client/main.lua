@@ -1,9 +1,33 @@
 TycoonCore = TycoonCore or {}
 
 local plates = require 'shared.plates'
+local config = require 'shared.config'
+
+local electricHashes = {}
+for name, _ in pairs(config.ElectricVehicles or {}) do
+    electricHashes[GetHashKey(name)] = true
+end
+
+local function isVehicleElectric(model)
+    if not model then return false end
+    if type(model) == 'number' then
+        return electricHashes[model] or false
+    elseif type(model) == 'string' then
+        local modelLower = model:lower()
+        if config.ElectricVehicles[modelLower] then return true end
+        return electricHashes[GetHashKey(modelLower)] or false
+    end
+    return false
+end
 
 exports('NormalizePlate', function(plate)
     return plates.normalizePlate(plate)
+end)
+
+exports('IsVehicleElectric', isVehicleElectric)
+
+exports('GetCoreConfig', function()
+    return config
 end)
 
 exports('GetCityConfig', function()
@@ -12,6 +36,10 @@ end)
 
 exports('GetPartData', function(itemName)
     return TycoonCore.GetPartData(itemName)
+end)
+
+exports('GetVehicleMatrix', function()
+    return TycoonCore.VehicleMatrix
 end)
 
 -- Debug/Safety: Force Clear NUI Focus

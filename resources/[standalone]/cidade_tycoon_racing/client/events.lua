@@ -62,7 +62,7 @@ RegisterNetEvent('cidade_tycoon_racing:client:startGlobalEvent', function(data)
     end
 
     activePoints[data.eventId] = { point = point, blip = blip }
-    notifyRacing('CARGA DE ALTA PRIORIDADE DETECTADA: ' .. data.label, 'warning')
+    notifyRacing('CARGA DE ALTA PRIORIDADE DETECTADA: ' .. (data.label or 'Misteriosa'), 'warning')
 end)
 
 RegisterNetEvent('cidade_tycoon_racing:client:stopGlobalEvent', function(data)

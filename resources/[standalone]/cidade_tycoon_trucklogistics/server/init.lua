@@ -89,6 +89,39 @@ CreateThread(function()
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ]])
 
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS `trucker_active_jobs` (
+            `user_id` VARCHAR(50) NOT NULL,
+            `job_type` VARCHAR(20) NOT NULL,
+            `company_key` VARCHAR(32) NOT NULL,
+            `contract_data` LONGTEXT DEFAULT NULL,
+            `distance` DOUBLE NOT NULL DEFAULT 0,
+            `reward` BIGINT NOT NULL DEFAULT 0,
+            `truck_id` INT UNSIGNED DEFAULT NULL,
+            `payload` LONGTEXT DEFAULT NULL,
+            `started_at` INT UNSIGNED NOT NULL,
+            `earliest_finish_at` INT UNSIGNED NOT NULL,
+            `status` VARCHAR(20) NOT NULL DEFAULT 'active',
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`user_id`),
+            INDEX `idx_trucker_active_jobs_status` (`status`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ]])
+
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS `trucker_transactions` (
+            `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `user_id` VARCHAR(50) NOT NULL,
+            `transaction_type` VARCHAR(20) NOT NULL,
+            `amount` BIGINT NOT NULL,
+            `reason` VARCHAR(100) NOT NULL,
+            `balance_after` BIGINT NOT NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            INDEX `idx_trucker_transactions_user_created` (`user_id`, `created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ]])
+
     -- Clean up legacy remote bootdey avatar URLs to point to local assets
     MySQL.query.await([[
         UPDATE trucker_drivers 
@@ -132,4 +165,6 @@ CreateThread(function()
         ALTER TABLE `trucker_available_contracts` 
         ADD COLUMN IF NOT EXISTS `coop` TINYINT(1) DEFAULT 0
     ]])
+
+    MySQL.update.await("UPDATE trucker_active_jobs SET status = 'active' WHERE status = 'completing'")
 end)

@@ -1,6 +1,7 @@
-local logisticsConfig = require '@cidade_tycoon_logistics/config/shared'
-
 local spawnedProps = {}
+local npcEntity = nil
+
+local Config = require 'config'
 
 local function notifyAutoParts(message, type)
     lib.notify({
@@ -13,42 +14,91 @@ local function notifyAutoParts(message, type)
     end
 end
 
--- 1. DYNAMIC SHELF OPENER
-function OpenShelfMenu(shelfKey)
-    local shelf = Config.Shelves[shelfKey]
-    if not shelf then return end
+---------------------------------------------------------------------------
+-- UI DA LOJA DE PEÇAS (NPC)
+---------------------------------------------------------------------------
 
+function OpenPurchaseDialog(itemName, partData)
+    local input = lib.inputDialog('Comprar ' .. partData.label, {
+        {
+            type = 'number',
+            label = 'Quantidade',
+            description = 'Máximo de ' .. Config.MaxPurchasePerTurn .. ' por vez.',
+            icon = 'hashtag',
+            default = 1,
+            min = 1,
+            max = Config.MaxPurchasePerTurn
+        }
+    })
+
+    if not input then return end
+    local amount = input[1]
+
+    local res = lib.callback.await('cidade_tycoon_autoparts:server:purchasePart', false, itemName, amount)
+    notifyAutoParts(res.message, res.ok and 'success' or 'error')
+end
+
+function OpenCategoryMenu(category)
     local options = {}
-    for _, itemName in ipairs(shelf.items) do
+
+    for _, itemName in ipairs(category.items) do
         local part = exports.cidade_tycoon_core:GetPartData(itemName)
         if part then
             table.insert(options, {
                 title = part.label,
                 description = ('Preço: $%d | Peso: %.1fkg'):format(part.price, part.weight / 1000),
+                image = "nui://ox_inventory/web/images/" .. itemName .. ".png", -- Imagem linda do ox_inventory
+                icon = 'box',
                 onSelect = function()
-                    local res = lib.callback.await('cidade_tycoon_autoparts:server:purchasePart', false, itemName, 1)
-                    notifyAutoParts(res.message, res.ok and 'success' or 'error')
+                    OpenPurchaseDialog(itemName, part)
                 end
             })
         end
     end
 
     lib.registerContext({
-        id = 'tycoon_autoparts_' .. shelfKey,
-        title = shelf.title,
+        id = 'tycoon_autoparts_category_' .. category.id,
+        title = category.title,
+        menu = 'tycoon_autoparts_main',
         options = options
     })
-    lib.showContext('tycoon_autoparts_' .. shelfKey)
+    lib.showContext('tycoon_autoparts_category_' .. category.id)
 end
 
--- 2. RECYCLING STATION
+function OpenAutoPartsMain()
+    local options = {}
+
+    for _, cat in ipairs(Config.ShopCategories) do
+        table.insert(options, {
+            title = cat.title,
+            description = cat.description,
+            icon = cat.icon,
+            onSelect = function()
+                OpenCategoryMenu(cat)
+            end
+        })
+    end
+
+    lib.registerContext({
+        id = 'tycoon_autoparts_main',
+        title = 'Catálogo de Peças Tycoon',
+        options = options
+    })
+    lib.showContext('tycoon_autoparts_main')
+end
+
+---------------------------------------------------------------------------
+-- ESTAÇÃO DE RECICLAGEM
+---------------------------------------------------------------------------
+
 function OpenRecyclingStation()
     local options = {}
     for _, opt in ipairs(Config.Recycling.options) do
         table.insert(options, {
             title = opt.title,
-            description = ('Gera: %dx %s para o galpão.'):format(opt.amount, opt.reward),
+            description = ('Gera: %dx %s para o armazém da empresa.'):format(opt.amount, opt.reward),
             icon = opt.icon,
+            image = "nui://ox_inventory/web/images/" .. opt.item .. ".png",
             onSelect = function()
                 local res = lib.callback.await('cidade_tycoon_autoparts:server:recycleScrap', false, opt.item)
                 notifyAutoParts(res.message, res.ok and 'success' or 'error')
@@ -64,11 +114,62 @@ function OpenRecyclingStation()
     lib.showContext('tycoon_autoparts_recycling')
 end
 
--- SPAWN PHYSICAL PROPS AND ATTACH TARGETS
+---------------------------------------------------------------------------
+-- SPAWN DE ENTIDADES (NPC e LIXEIRAS)
+---------------------------------------------------------------------------
+
+local function createNpc()
+    print("[Tycoon:AutoParts] Starting createNpc...")
+    local modelHash = GetHashKey(Config.NPC.model)
+
+    RequestModel(modelHash)
+    local timeout = GetGameTimer() + 5000
+    while not HasModelLoaded(modelHash) and GetGameTimer() < timeout do
+        Wait(100)
+    end
+
+    if not HasModelLoaded(modelHash) then
+        print("^1[Tycoon:AutoParts] ERROR: Failed to load NPC model: " .. tostring(Config.NPC.model) .. "^7")
+        return
+    end
+
+    local heading = Config.NPC.heading or (Config.NPC.coords.w or 0.0)
+    print("[Tycoon:AutoParts] Spawning ped at X: " .. Config.NPC.coords.x .. " Y: " .. Config.NPC.coords.y .. " Z: " .. Config.NPC.coords.z)
+
+    npcEntity = CreatePed(4, modelHash, Config.NPC.coords.x, Config.NPC.coords.y, Config.NPC.coords.z - 1.0, heading, false, false)
+    SetEntityHeading(npcEntity, heading)
+    FreezeEntityPosition(npcEntity, true)
+    SetEntityInvincible(npcEntity, true)
+    SetBlockingOfNonTemporaryEvents(npcEntity, true)
+    TaskStartScenarioInPlace(npcEntity, Config.NPC.scenario, 0, true)
+
+    exports.ox_target:addLocalEntity(npcEntity, {
+        {
+            name = 'tycoon_autoparts_npc',
+            icon = 'fa-solid fa-cart-shopping',
+            label = 'Falar com Vendedor de Peças',
+            onSelect = OpenAutoPartsMain,
+            distance = 2.5
+        }
+    })
+
+    -- Criar Blip
+    local blip = AddBlipForCoord(Config.NPC.coords.x, Config.NPC.coords.y, Config.NPC.coords.z)
+    SetBlipSprite(blip, Config.NPC.blip.sprite)
+    SetBlipDisplay(blip, 4)
+    SetBlipScale(blip, Config.NPC.blip.scale)
+    SetBlipColour(blip, Config.NPC.blip.color)
+    SetBlipAsShortRange(blip, true)
+    BeginTextCommandSetBlipName("STRING")
+    AddTextComponentString(Config.NPC.blip.label)
+    EndTextCommandSetBlipName(blip)
+
+    SetModelAsNoLongerNeeded(modelHash)
+    print("[Tycoon:AutoParts] NPC spawned successfully!")
+end
+
 local function createPhysicalInteractionPoint(coords, modelName, label, icon, onSelectFunc, floatingText)
     local modelHash = GetHashKey(modelName)
-    
-    if not IsModelInCdimage(modelHash) then return nil end
 
     RequestModel(modelHash)
     local timer = GetGameTimer() + 5000
@@ -76,15 +177,13 @@ local function createPhysicalInteractionPoint(coords, modelName, label, icon, on
         Wait(100)
     end
 
-    if not HasModelLoaded(modelHash) then
-        return nil
-    end
-    
+    if not HasModelLoaded(modelHash) then return nil end
+
     local obj = CreateObject(modelHash, coords.x, coords.y, coords.z - 1.0, false, false, false)
     SetEntityHeading(obj, 0.0)
     FreezeEntityPosition(obj, true)
     SetEntityInvincible(obj, true)
-    
+
     exports.ox_target:addLocalEntity(obj, {
         {
             name = 'tycoon_obj_' .. tostring(obj),
@@ -94,7 +193,7 @@ local function createPhysicalInteractionPoint(coords, modelName, label, icon, on
             distance = 2.5
         }
     })
-    
+
     table.insert(spawnedProps, {
         entity = obj,
         text = floatingText or label,
@@ -104,42 +203,19 @@ local function createPhysicalInteractionPoint(coords, modelName, label, icon, on
 end
 
 CreateThread(function()
-    Wait(3000)
-    
-    if not logisticsConfig or not logisticsConfig.warehouses then
-        print("^1[Tycoon:AutoParts]^7 ERRO: Tabela de galpões não encontrada no shared config.")
-        return
-    end
-    
-    for id, warehouse in pairs(logisticsConfig.warehouses) do
-        local base = warehouse.productionCoords
-        if base then
-            -- 1. Mechanical Shelf (Left)
-            createPhysicalInteractionPoint(
-                vec3(base.x - 2.5, base.y, base.z), 
-                "prop_table_03", 
-                Config.Shelves['mechanical'].label, 
-                Config.Shelves['mechanical'].icon, 
-                function() OpenShelfMenu('mechanical') end,
-                Config.Shelves['mechanical'].color .. Config.Shelves['mechanical'].label
-            )
+    Wait(2000)
 
-            -- 2. Maintenance Shelf (Right)
-            createPhysicalInteractionPoint(
-                vec3(base.x + 2.5, base.y, base.z), 
-                "prop_table_03b", 
-                Config.Shelves['maintenance'].label, 
-                Config.Shelves['maintenance'].icon, 
-                function() OpenShelfMenu('maintenance') end,
-                Config.Shelves['maintenance'].color .. Config.Shelves['maintenance'].label
-            )
+    -- 1. Spawn NPC na Concessionária
+    createNpc()
 
-            -- 3. Recycling Bin (Back)
+    -- 2. Spawn Lixeiras de Reciclagem nos Galpões
+    if Config.WarehouseLocations then
+        for _, base in ipairs(Config.WarehouseLocations) do
             createPhysicalInteractionPoint(
-                vec3(base.x, base.y - 2.5, base.z), 
-                "prop_ld_bin_01", 
-                Config.Recycling.label, 
-                Config.Recycling.icon, 
+                vec3(base.x, base.y - 2.5, base.z),
+                "prop_ld_bin_01",
+                Config.Recycling.label,
+                "fa-solid fa-" .. Config.Recycling.icon,
                 OpenRecyclingStation,
                 Config.Recycling.color .. Config.Recycling.label
             )
@@ -147,7 +223,7 @@ CreateThread(function()
     end
 end)
 
--- THREAD VISUAL: labels vinculados as entidades reais das prateleiras.
+-- THREAD VISUAL: Textos flutuantes (apenas para as lixeiras agora)
 CreateThread(function()
     while true do
         local wait = 1500
@@ -185,11 +261,12 @@ end
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
+
+    if DoesEntityExist(npcEntity) then DeleteEntity(npcEntity) end
+
     for _, prop in ipairs(spawnedProps) do
         if DoesEntityExist(prop.entity) then DeleteEntity(prop.entity) end
     end
 end)
 
-exports('OpenAutoPartsShop', function()
-    OpenShelfMenu('maintenance')
-end)
+exports('OpenAutoPartsShop', OpenAutoPartsMain)

@@ -3,16 +3,17 @@ TycoonCore = TycoonCore or {}
 local config = require 'shared.config'
 
 local function getRecoveryCost(plate)
+    local feeCfg = config.recoveryFeeConfig or { baseFee = 5000, tierMultipliers = {} }
     local vehicleRow = MySQL.single.await('SELECT vehicle FROM player_vehicles WHERE plate = ?', { plate })
-    if not vehicleRow then return config.recoveryFeeConfig.baseFee end
+    if not vehicleRow then return feeCfg.baseFee end
 
     local modelName = vehicleRow.vehicle
     local vehicleData = exports.cidade_tycoon_core:GetVehicleData(modelName)
-    local baseFee = config.recoveryFeeConfig.baseFee
+    local baseFee = feeCfg.baseFee
     local multiplier = 1.0
 
     if vehicleData then
-        multiplier = config.recoveryFeeConfig.tierMultipliers[vehicleData.tier] or 1.0
+        multiplier = feeCfg.tierMultipliers[vehicleData.tier] or 1.0
     end
 
     local finalCost = math.floor(baseFee * multiplier)

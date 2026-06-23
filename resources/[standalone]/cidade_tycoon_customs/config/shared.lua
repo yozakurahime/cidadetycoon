@@ -1,4 +1,4 @@
-Config = {}
+local Config = {}
 
 Config.Prices = {
     ['primaryColor'] = 500,
@@ -10,7 +10,8 @@ Config.Prices = {
     ['neonToggle'] = 1000,
     ['neonColor'] = 500,
     ['xenonColor'] = 800,
-    ['wash'] = 50
+    ['wash'] = 50,
+    ['visualMod'] = 1200
 }
 
 Config.WheelCategories = {
@@ -28,5 +29,11 @@ Config.WheelCategories = {
 
 -- Proximity Settings
 Config.WorkshopDistance = 15.0 -- Max distance from warehouse center
+
+Config.Workshops = {
+    vector3(1176.0, -3246.5, 7.0),
+    vector3(1080.0, -2000.0, 31.0),
+    vector3(-110.0, 6335.0, 31.5),
+}
 
 return Config

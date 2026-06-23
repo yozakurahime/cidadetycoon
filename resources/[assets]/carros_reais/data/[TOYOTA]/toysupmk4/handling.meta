@@ -4,7 +4,7 @@
     <Item type="CHandlingData">
       <handlingName>toysupmk4</handlingName>
       <fMass value="1790.000000" />
-      <fInitialDragCoeff value="0.3100000" />
+      <fInitialDragCoeff value="1.800000" />
       <fDownforceModifier value="1.510000" />
       <fPercentSubmerged value="72.000000" />
       <vecCentreOfMassOffset x="0.000000" y="0.010000" z="0.300000" />

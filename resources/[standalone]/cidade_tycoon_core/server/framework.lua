@@ -201,6 +201,70 @@ local function getPlayerFromCitizenId(citizenId)
     return nil
 end
 
+-- ==========================================
+-- METADATA WRAPPERS
+-- ==========================================
+local function setPlayerMeta(source, key, value)
+    if not source or source <= 0 then return false end
+
+    if isResourceReady('qbx_core') then
+        local player = exports.qbx_core:GetPlayer(source)
+        if player and player.Functions then
+            player.Functions.SetMetaData(key, value)
+            return true
+        end
+    end
+
+    -- Fallback: use state bag
+    Player(source).state:set(key, value, true)
+    return true
+end
+
+local function getPlayerMeta(source, key)
+    if not source or source <= 0 then return nil end
+
+    if isResourceReady('qbx_core') then
+        local player = exports.qbx_core:GetPlayer(source)
+        if player and player.PlayerData and player.PlayerData.metadata then
+            return player.PlayerData.metadata[key]
+        end
+    end
+
+    -- Fallback: read from state bag
+    local state = Player(source).state
+    return state[key]
+end
+
+local function getPlayerJob(source)
+    if not source or source <= 0 then return nil end
+
+    if isResourceReady('qbx_core') then
+        local player = exports.qbx_core:GetPlayer(source)
+        if player and player.PlayerData and player.PlayerData.job then
+            return player.PlayerData.job
+        end
+    end
+
+    return nil
+end
+
+local electricHashes = {}
+for name, _ in pairs(config.ElectricVehicles or {}) do
+    electricHashes[GetHashKey(name)] = true
+end
+
+local function isVehicleElectric(model)
+    if not model then return false end
+    if type(model) == 'number' then
+        return electricHashes[model] or false
+    elseif type(model) == 'string' then
+        local modelLower = model:lower()
+        if config.ElectricVehicles[modelLower] then return true end
+        return electricHashes[GetHashKey(modelLower)] or false
+    end
+    return false
+end
+
 -- Exports
 exports('GetFrameworkPlayer', getFrameworkPlayer)
 exports('GetCitizenId', getCitizenId)
@@ -213,12 +277,11 @@ exports('IsResourceReady', isResourceReady)
 exports('EnsureStarterItem', ensureStarterItem)
 exports('CreateUseableItem', createUseableItem)
 exports('HasPermission', hasPermission)
+exports('SetPlayerMeta', setPlayerMeta)
+exports('GetPlayerMeta', getPlayerMeta)
+exports('GetPlayerJob', getPlayerJob)
+exports('IsVehicleElectric', isVehicleElectric)
 exports('GetCoreConfig', function() return config end)
-
--- Add missing server exports used by other modules
-exports('GetCoreConfig', function()
-    return config
-end)
 
 exports('NormalizePlate', function(plate)
     local plates = require 'shared.plates'

@@ -46,6 +46,42 @@
 		return String(Math.max(0, Math.round(Number(value) || 0))).padStart(3, "0");
 	}
 
+	function getHealthClass(health) {
+		if (health >= 75) return 'health-good';
+		if (health >= 50) return 'health-ok';
+		if (health >= 25) return 'health-bad';
+		return 'health-critical';
+	}
+
+	function updateVehicleStatus(status, isElectric) {
+		if (!status) return;
+
+		const parts = {
+			'engine': status.engine_health || 100,
+			'transmission': status.transmission_health || 100,
+				'body': status.body_health !== undefined ? status.body_health : 100,
+			'suspension': status.suspension_health || 100,
+			'brakes': status.brakes_health || 100,
+			'tire-fl': status.tire_lf_health !== undefined ? status.tire_lf_health : (status.tires_health || 100),
+			'tire-fr': status.tire_rf_health !== undefined ? status.tire_rf_health : (status.tires_health || 100),
+			'tire-rl': status.tire_lr_health !== undefined ? status.tire_lr_health : (status.tires_health || 100),
+			'tire-rr': status.tire_rr_health !== undefined ? status.tire_rr_health : (status.tires_health || 100),
+		};
+
+		for (const [part, health] of Object.entries(parts)) {
+			const el = $(`part-${part}`);
+			if (el) {
+				el.className = `car-part ${part.split('-')[0]} ${part}`;
+				el.classList.add(getHealthClass(health));
+				if (isElectric && (part === 'engine' || part === 'transmission')) {
+					el.style.display = "none";
+				} else {
+					el.style.display = "block";
+				}
+			}
+		}
+	}
+
 	function updateVehicle(item) {
 		const speed = Math.max(0, Number(item.speed) || 0);
 		const fuel = clamp(item.fuel);
@@ -61,6 +97,32 @@
 		$("fuel").style.width = `${fuel}%`;
 		$("belt").classList.toggle("active", item.cinto === true);
 		$("lock").classList.toggle("active", Number(item.locked) >= 2 || item.locked === true);
+
+		const fuelLabel = document.querySelector(".fuel-label small");
+		if (fuelLabel) {
+			fuelLabel.textContent = item.isElectric ? "CARGA" : "COMBUSTIVEL";
+		}
+
+		// Overall vehicle health bar
+		const healthLabel = document.querySelector(".veh-health-label small");
+		if (healthLabel) {
+			healthLabel.textContent = item.isElectric ? "BATERIA (SAUDE)" : "MOTOR (SAUDE)";
+		}
+		const healthFill = $("veh-health-fill");
+		if (healthFill) {
+			const avgHealth = clamp(item.avgHealth || 100);
+			healthFill.style.width = `${avgHealth}%`;
+		}
+		const healthValue = $("veh-health-value");
+		if (healthValue) {
+			const avgHealth = clamp(item.avgHealth || 100);
+			healthValue.textContent = `${Math.round(avgHealth)}%`;
+			healthValue.className = getHealthClass(avgHealth);
+		}
+
+		if (item.vehStatus) {
+			updateVehicleStatus(item.vehStatus, item.isElectric);
+		}
 	}
 
 	function runProgress(item) {
@@ -87,6 +149,7 @@
 		progressFrame = requestAnimationFrame(draw);
 	}
 
+	// Dynamic level & mission updates
 	function updateTycoon(item) {
 		const tycoonPanel = $("tycoon");
 		if (!item.level) {
@@ -137,6 +200,10 @@
 		if (item.exibCombustivel !== undefined) {
 			const hideFuel = item.exibCombustivel === false;
 			document.querySelector(".fuel").classList.toggle("hidden", hideFuel);
+		}
+		if (item.exibStress !== undefined) {
+			const hideStress = item.exibStress === false;
+			document.querySelector(".vital.stress").classList.toggle("hidden", hideStress);
 		}
 
 		switch (item.action) {
@@ -213,7 +280,9 @@
 			fuel: 63,
 			gear: 4,
 			locked: 2,
-			cinto: true
+			cinto: true,
+			isElectric: false,
+			avgHealth: 78
 		}, "*");
 	}
 }());

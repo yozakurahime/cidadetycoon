@@ -1,6 +1,6 @@
 return {
     stress = {
-        enableStress = true, -- If false, it will disable stress for everyone
+        enableStress = false, -- Cidade HUD owns stress gain/relief.
     },
 
     menu = { -- Don't touch

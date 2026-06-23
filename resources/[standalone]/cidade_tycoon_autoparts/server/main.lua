@@ -1,22 +1,48 @@
 local activeTransactions = {}
 
+local Config = require 'config'
+
 local function DebugLog(text, ...)
     print(string.format("^6[Tycoon:Server:AutoParts]^7 %s", string.format(text, ...)))
 end
 
--- Helper: Check if player is near any warehouse
+-- Helper: Check if player is near any warehouse (for recycling)
 local function isNearAnyWarehouse(source)
     local pCoords = GetEntityCoords(GetPlayerPed(source))
-    local logisticsConfig = require '@cidade_tycoon_logistics/config/shared'
-    
-    for _, warehouse in pairs(logisticsConfig.warehouses) do
-        if warehouse.productionCoords then
-            if #(pCoords - warehouse.productionCoords) < Config.ProximityThreshold then
-                return true
-            end
+
+    for _, coords in ipairs(Config.WarehouseLocations) do
+        if #(pCoords - coords) < Config.ProximityThreshold then
+            return true
         end
     end
     return false
+end
+
+-- Helper: Check if player is near the NPC (for purchasing)
+local function isNearNPC(source)
+    local pCoords = GetEntityCoords(GetPlayerPed(source))
+    local npcCoords = vector3(Config.NPC.coords.x, Config.NPC.coords.y, Config.NPC.coords.z)
+    if #(pCoords - npcCoords) < Config.ProximityThreshold then
+        return true
+    end
+    return false
+end
+
+local function getPlayerCompany(source)
+    local player = exports.cidade_tycoon_core:GetFrameworkPlayer(source)
+    local citizenId = exports.cidade_tycoon_core:GetCitizenId(player)
+    if not citizenId then return nil end
+
+    local company = MySQL.single.await('SELECT id FROM tycoon_companies WHERE citizenid = ?', { citizenId })
+    if company then return company end
+
+    return MySQL.single.await([[
+        SELECT c.id
+        FROM tycoon_company_members m
+        JOIN tycoon_companies c ON c.id = m.company_id
+        WHERE m.citizenid = ?
+        LIMIT 1
+    ]], { citizenId })
 end
 
 -- Market Shop (Parts)
@@ -27,7 +53,7 @@ lib.callback.register('cidade_tycoon_autoparts:server:purchasePart', function(so
     if activeTransactions[src] then return { ok = false, message = 'Aguarde a transação anterior terminar.' } end
     activeTransactions[src] = true
 
-    local result = pcall(function()
+    local ok, result = pcall(function()
         -- 2. Input Validation
         amount = math.floor(tonumber(amount) or 0)
         if amount <= 0 or amount > Config.MaxPurchasePerTurn then
@@ -35,8 +61,8 @@ lib.callback.register('cidade_tycoon_autoparts:server:purchasePart', function(so
         end
 
         -- 3. Proximity Check
-        if not isNearAnyWarehouse(src) then
-            return { ok = false, message = 'Você está muito longe da prateleira.' }
+        if not isNearNPC(src) then
+            return { ok = false, message = 'Você está muito longe do vendedor.' }
         end
 
         local partData = exports.cidade_tycoon_core:GetPartData(itemName)
@@ -67,7 +93,12 @@ lib.callback.register('cidade_tycoon_autoparts:server:purchasePart', function(so
     end)
 
     activeTransactions[src] = nil
-    return result
+    if ok then
+        return result
+    end
+
+    DebugLog("Erro em compra de autopecas: %s", tostring(result))
+    return { ok = false, message = 'Erro interno ao processar compra.' }
 end)
 
 -- Recycling Logic (Scrap -> Warehouse Materials)
@@ -77,14 +108,14 @@ lib.callback.register('cidade_tycoon_autoparts:server:recycleScrap', function(so
     if activeTransactions[src] then return { ok = false, message = 'Aguarde...' } end
     activeTransactions[src] = true
 
-    local result = pcall(function()
+    local ok, result = pcall(function()
         -- 1. Proximity Check
         if not isNearAnyWarehouse(src) then
             return { ok = false, message = 'Aproxime-se da caçamba de reciclagem.' }
         end
 
         local player = exports.cidade_tycoon_core:GetFrameworkPlayer(src)
-        local company = exports.cidade_tycoon_logistics:GetCompanyData(src)
+        local company = getPlayerCompany(src)
         if not company then return { ok = false, message = 'Apenas donos de empresa podem reciclar.' } end
 
         -- 2. Config Lookup
@@ -120,5 +151,10 @@ lib.callback.register('cidade_tycoon_autoparts:server:recycleScrap', function(so
     end)
 
     activeTransactions[src] = nil
-    return result
+    if ok then
+        return result
+    end
+
+    DebugLog("Erro em reciclagem de autopecas: %s", tostring(result))
+    return { ok = false, message = 'Erro interno ao processar reciclagem.' }
 end)

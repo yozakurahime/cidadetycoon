@@ -7,7 +7,7 @@ The primary user interface for Tycoon players. It consolidates data from all mod
 - **Exports/Events consumed:**
     - `cidade_tycoon_core`: Fetches profile data, transaction history, and handles notifications.
     - `cidade_tycoon_freelance`: Retrieves active mission context.
-    - `cidade_tycoon_logistics`: Gets business-level data (Fleet, Employees, Warehouses).
+    - `cidade_tycoon_trucklogistics`: Opens the dedicated trucking company interface.
     - `cidade_tycoon_maintenance`: Fetches upgrade data and vehicle status alerts.
     - `cidade_tycoon_market`: Retrieves active financing contracts.
 - **State Bags:** Listens to `tycoonProfile` for instant UI updates.

@@ -1812,7 +1812,6 @@ input:checked + .slider:before {
 
 #app-cityhall .app-body,
 #app-finance .app-body,
-#app-business .app-body,
 #app-jobs .app-body,
 #app-settings .app-body {
   display: flex;
@@ -1894,26 +1893,11 @@ input:checked + .slider:before {
   overflow: hidden;
 }
 
-#app-business #business-setup-view:not(.hidden),
-#app-business #business-main-view:not(.hidden) {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-}
-
 .warehouse-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 12px;
-}
-
-#business-main-view .tab-container {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .tab-header {
@@ -2078,4 +2062,120 @@ input:checked + .slider:before {
 @keyframes crisisPulse {
   0%, 100% { box-shadow: 0 0 8px rgba(255, 50, 50, 0.4); }
   50% { box-shadow: 0 0 18px rgba(255, 50, 50, 0.7); }
+}
+
+.os-select {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: var(--font-family-ui);
+  border-radius: 8px;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.os-select:focus {
+  border-color: var(--color-primary);
+}
+.os-select option {
+  background: #141418;
+  color: #fff;
+}
+
+/* ==========================================================================
+   APP: Oficina & Serviços (Pending Customs Orders)
+   ========================================================================== */
+.orders-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 24px;
+}
+
+.order-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+}
+
+.order-card-header .plate {
+  font-weight: 800;
+  font-size: 14px;
+  background: var(--color-primary);
+  color: var(--text-dark);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.order-card-header .date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.order-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.order-card-body .meta-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.order-card-body .meta-label {
+  color: var(--text-muted);
+}
+
+.order-card-body .meta-value {
+  font-weight: 500;
+}
+
+.order-items-box {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 8px;
+  max-height: 80px;
+  overflow-y: auto;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-item-line {
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: space-between;
+}
+
+.order-card-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 12px;
 }

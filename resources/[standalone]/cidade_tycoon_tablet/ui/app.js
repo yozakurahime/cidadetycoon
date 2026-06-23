@@ -296,6 +296,10 @@ function triggerAppRender(appId) {
     window.renderJobs(window.OSState.payload);
   } else if (appId === 'production') {
     window.renderProduction();
+  } else if (appId === 'mechanic-orders') {
+    window.renderMechanicOrders();
+  } else if (appId === 'client-orders') {
+    window.renderClientOrders();
   }
 }
 
@@ -568,7 +572,7 @@ window.addEventListener('message', (event) => {
          window.refreshOS();
       }
     }
-  } else if (data.action === 'truckLogisticsMessage') {
+  } else if (data.action === 'driverCrisisAlert') {
     window.showDriverCrisisAlert(data.payload || {});
   } else if (data.action === 'truckLogisticsMessage') {
     postTruckLogisticsToIframe(data.payload || {});
@@ -1213,4 +1217,149 @@ window.renderHome = function(payload) {
   const xpPercent = ((payload.experience || 0) / (payload.maxExperience || 2000)) * 100;
   document.getElementById('home-xp-fill').style.width = `${xpPercent}%`;
   document.getElementById('home-xp-text').textContent = `${(payload.experience || 0).toLocaleString()} / ${(payload.maxExperience || 2000).toLocaleString()} XP`;
+
+  const mechIcon = document.getElementById('mechanic-app-icon');
+  if (mechIcon) {
+    mechIcon.style.display = (payload.job === 'mechanic') ? 'block' : 'none';
+  }
+};
+
+window.renderMechanicOrders = function() {
+  const container = document.getElementById('mechanic-orders-container');
+  if (!container) return;
+
+  container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Carregando ordens...</div>`;
+
+  window.postNUI('getCustomsOrders').then(res => {
+    if (!res || !res.mechanicOrders || res.mechanicOrders.length === 0) {
+      container.innerHTML = `<div class="empty-state">Nenhuma ordem de serviço pendente criada por você.</div>`;
+      return;
+    }
+
+    container.innerHTML = res.mechanicOrders.map(order => {
+      const items = JSON.parse(order.items || "[]");
+      const dateStr = new Date(order.created_at).toLocaleString('pt-BR');
+      return `
+        <div class="order-card" id="mechanic-order-${order.id}">
+          <div class="order-card-header">
+            <span class="plate">${escapeHTML(order.plate)}</span>
+            <span class="date">${escapeHTML(dateStr)}</span>
+          </div>
+          <div class="order-card-body">
+            <div class="meta-row">
+              <span class="meta-label">Passaporte Cliente:</span>
+              <span class="meta-value">#${order.client_citizenid}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Subtotal:</span>
+              <span class="meta-value">$${order.subtotal.toLocaleString()}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Taxa do Mecânico:</span>
+              <span class="meta-value">$${order.fee.toLocaleString()}</span>
+            </div>
+            <div class="meta-row" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px;">
+              <span class="meta-label" style="font-weight: bold;">Total Geral:</span>
+              <span class="meta-value" style="font-weight: bold; color: var(--color-success);">$${order.total.toLocaleString()}</span>
+            </div>
+            <div class="order-items-box">
+              ${items.map(it => `<div class="order-item-line"><span>${escapeHTML(it.split(' ($')[0])}</span><span>$${escapeHTML(it.split(' ($')[1]?.replace(')', '') || '0')}</span></div>`).join('')}
+            </div>
+          </div>
+          <div class="order-card-footer">
+            <button class="os-btn os-btn-danger cancel-order-btn" data-id="${order.id}" style="width: 100%;">
+              <i class="fa-solid fa-trash-can"></i> Cancelar OS
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.cancel-order-btn').forEach(btn => {
+      btn.onclick = function() {
+        const orderId = Number(this.getAttribute('data-id'));
+        btn.disabled = true;
+        window.postNUI('cancelCustomsOrder', { orderId: orderId }).then(resp => {
+          if (resp && resp.ok) {
+            window.showToast('Oficina', resp.message || 'Ordem cancelada.');
+            window.renderMechanicOrders();
+          } else {
+            window.showToast('Erro', (resp && resp.message) || 'Erro ao cancelar ordem.');
+            btn.disabled = false;
+          }
+        });
+      };
+    });
+  });
+};
+
+window.renderClientOrders = function() {
+  const container = document.getElementById('client-orders-container');
+  if (!container) return;
+
+  container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Carregando ordens...</div>`;
+
+  window.postNUI('getCustomsOrders').then(res => {
+    if (!res || !res.clientOrders || res.clientOrders.length === 0) {
+      container.innerHTML = `<div class="empty-state">Nenhuma ordem de serviço pendente aguardando seu pagamento.</div>`;
+      return;
+    }
+
+    container.innerHTML = res.clientOrders.map(order => {
+      const items = JSON.parse(order.items || "[]");
+      const dateStr = new Date(order.created_at).toLocaleString('pt-BR');
+      return `
+        <div class="order-card" id="client-order-${order.id}">
+          <div class="order-card-header">
+            <span class="plate">${escapeHTML(order.plate)}</span>
+            <span class="date">${escapeHTML(dateStr)}</span>
+          </div>
+          <div class="order-card-body">
+            <div class="meta-row">
+              <span class="meta-label">Mecânico:</span>
+              <span class="meta-value">${escapeHTML(order.mechanic_name)}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Subtotal:</span>
+              <span class="meta-value">$${order.subtotal.toLocaleString()}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Taxa do Mecânico:</span>
+              <span class="meta-value">$${order.fee.toLocaleString()}</span>
+            </div>
+            <div class="meta-row" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px;">
+              <span class="meta-label" style="font-weight: bold;">Total Geral:</span>
+              <span class="meta-value" style="font-weight: bold; color: var(--color-success);">$${order.total.toLocaleString()}</span>
+            </div>
+            <div class="order-items-box">
+              ${items.map(it => `<div class="order-item-line"><span>${escapeHTML(it.split(' ($')[0])}</span><span>$${escapeHTML(it.split(' ($')[1]?.replace(')', '') || '0')}</span></div>`).join('')}
+            </div>
+          </div>
+          <div class="order-card-footer">
+            <button class="os-btn os-btn-primary pay-order-btn" data-id="${order.id}" style="width: 100%;">
+              <i class="fa-solid fa-credit-card"></i> Pagar e Aplicar
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.pay-order-btn').forEach(btn => {
+      btn.onclick = function() {
+        const orderId = Number(this.getAttribute('data-id'));
+        btn.disabled = true;
+        window.postNUI('payCustomsOrder', { orderId: orderId }).then(resp => {
+          if (resp && resp.ok) {
+            window.showToast('Serviços', resp.message || 'Ordem paga com sucesso!');
+            window.renderClientOrders();
+            // Refresh main dashboard balance
+            window.refreshOS();
+          } else {
+            window.showToast('Erro', (resp && resp.message) || 'Erro ao processar pagamento.');
+            btn.disabled = false;
+          }
+        });
+      };
+    });
+  });
 };

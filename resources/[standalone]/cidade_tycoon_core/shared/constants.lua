@@ -10,12 +10,17 @@ TycoonCore.Constants = {
         market = 'cidade_tycoon_market',
         autoparts = 'cidade_tycoon_autoparts',
         hubs = 'cidade_tycoon_hubs',
-        dealership = 'cidade_tycoon_dealership',
         cityhall = 'cidade_tycoon_cityhall',
-        social = 'cidade_tycoon_social',
-        events = 'cidade_tycoon_events',
         racing = 'cidade_tycoon_racing',
-        tools = 'cidade_tycoon_tools',
+        production = 'cidade_tycoon_production',
+        logistics = 'cidade_tycoon_logistics',
+        mining = 'cidade_tycoon_mining',
+        scrapyard = 'cidade_tycoon_scrapyard',
+        trucklogistics = 'cidade_tycoon_trucklogistics',
+        mechanic = 'cidade_tycoon_mechanic',
+        customs = 'cidade_tycoon_customs',
+        worldbuilder = 'cidade_tycoon_worldbuilder',
+        spawn = 'cidade_tycoon_spawn',
     }
 }
 

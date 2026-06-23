@@ -883,37 +883,42 @@ end
 
 CreateThread(function()
     while true do
-        local effectInterval = getEffectInterval(stress)
-        if stress >= 100 then
-            local blurIntensity = getBlurIntensity(stress)
-            local fallRepeat = math.random(2, 4)
-            local ragdollTimeout = fallRepeat * 1750
-            TriggerScreenblurFadeIn(1000.0)
-            Wait(blurIntensity)
-            TriggerScreenblurFadeOut(1000.0)
+        if not config.stress.screenEffects then
+            Wait(60000)
+        else
+            local effectInterval = getEffectInterval(stress)
+            if stress >= 100 then
+                local blurIntensity = getBlurIntensity(stress)
+                local fallRepeat = math.random(2, 4)
+                local ragdollTimeout = fallRepeat * 1750
+                TriggerScreenblurFadeIn(1000.0)
+                Wait(blurIntensity)
+                TriggerScreenblurFadeOut(1000.0)
 
-            if not IsPedRagdoll(cache.ped) and IsPedOnFoot(cache.ped) and not IsPedSwimming(cache.ped) then
-                local forwardVector = GetEntityForwardVector(cache.ped)
-                SetPedToRagdollWithFall(cache.ped, ragdollTimeout, ragdollTimeout, 1, forwardVector.x, forwardVector.y, forwardVector.z, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-            end
+                if not IsPedRagdoll(cache.ped) and IsPedOnFoot(cache.ped) and not IsPedSwimming(cache.ped) then
+                    local forwardVector = GetEntityForwardVector(cache.ped)
+                    SetPedToRagdollWithFall(cache.ped, ragdollTimeout, ragdollTimeout, 1, forwardVector.x, forwardVector.y, forwardVector.z, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+                end
 
-            Wait(1000)
-            for _ = 1, fallRepeat, 1 do
-                Wait(750)
-                DoScreenFadeOut(200)
                 Wait(1000)
-                DoScreenFadeIn(200)
+                for _ = 1, fallRepeat, 1 do
+                    Wait(750)
+                    DoScreenFadeOut(200)
+                    Wait(1000)
+                    DoScreenFadeIn(200)
+                    TriggerScreenblurFadeIn(1000.0)
+                    Wait(blurIntensity)
+                    TriggerScreenblurFadeOut(1000.0)
+                end
+            elseif stress >= config.stress.minForShaking then
+                local blurIntensity = getBlurIntensity(stress)
                 TriggerScreenblurFadeIn(1000.0)
                 Wait(blurIntensity)
                 TriggerScreenblurFadeOut(1000.0)
             end
-        elseif stress >= config.stress.minForShaking then
-            local blurIntensity = getBlurIntensity(stress)
-            TriggerScreenblurFadeIn(1000.0)
-            Wait(blurIntensity)
-            TriggerScreenblurFadeOut(1000.0)
+
+            Wait(effectInterval)
         end
-        Wait(effectInterval)
     end
 end)
 

@@ -656,3 +656,62 @@ lib.callback.register('cidade_garagem_eye:server:forceRecoverVehicle', function(
 
     return result
 end)
+
+-- ==========================================
+-- BATCH VERIFY VEHICLE OWNERSHIP FOR PARKING
+-- ==========================================
+lib.callback.register('cidade_garagem_eye:server:findNearestOwnedVehicle', function(source, vehiclesData)
+    local src = source
+    local player = exports.qbx_core:GetPlayer(src)
+    if not player or not vehiclesData or #vehiclesData == 0 then return nil end
+
+    local citizenId = player.PlayerData.citizenid
+    local pCoords = GetEntityCoords(GetPlayerPed(src))
+
+    -- Build unique plate list + lookup map
+    local plates = {}
+    local plateToData = {}
+    for _, v in ipairs(vehiclesData) do
+        local plate = tostring(v.plate):gsub('%s+', ''):upper()
+        if plate ~= '' and not plateToData[plate] then
+            plates[#plates + 1] = plate
+            plateToData[plate] = v
+        end
+    end
+
+    if #plates == 0 then return nil end
+
+    -- Single batch query instead of N individual queries
+    local placeholders = {}
+    for i = 1, #plates do placeholders[i] = '?' end
+    local owned = {}
+    local rows = MySQL.query.await(('SELECT plate, citizenid FROM player_vehicles WHERE plate IN (%s)'):format(table.concat(placeholders, ',')), plates)
+    if rows then
+        for _, row in ipairs(rows) do
+            if row.citizenid == citizenId then
+                owned[tostring(row.plate):gsub('%s+', ''):upper()] = true
+            end
+        end
+    end
+
+    -- Find closest owned vehicle
+    local closestDist, closestPlate, closestNetId = math.huge, nil, nil
+    for _, v in ipairs(vehiclesData) do
+        local plate = tostring(v.plate):gsub('%s+', ''):upper()
+        if owned[plate] then
+            local dist = #(pCoords - vector3(v.x, v.y, v.z))
+            if dist < closestDist then
+                closestDist, closestPlate, closestNetId = dist, plate, v.netId
+            end
+        end
+    end
+
+    -- Verify entity still exists
+    if closestNetId then
+        local entity = NetworkGetEntityFromNetworkId(closestNetId)
+        if entity and entity ~= 0 and DoesEntityExist(entity) then
+            return { plate = closestPlate, netId = closestNetId }
+        end
+    end
+    return nil
+end)

@@ -14,6 +14,7 @@ shared_scripts {
 }
 
 server_scripts {
+    '@oxmysql/lib/MySQL.lua',
     'server/main.lua',
 }
 
@@ -23,6 +24,8 @@ client_scripts {
 
 dependencies {
     'ox_lib',
+    'ox_target',
     'ox_inventory',
+    'oxmysql',
     'cidade_tycoon_core'
 }

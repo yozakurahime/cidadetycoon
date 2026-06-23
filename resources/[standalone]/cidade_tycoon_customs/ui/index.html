@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customizacao Tycoon</title>
+    <!-- FontAwesome with local fallback -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" id="fa-cdn">
+    <!-- Outfit Font with local fallback -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" id="outfit-cdn">
+    <style>
+        /* Local fallback for Outfit font if CDN fails */
+        @font-face {
+            font-family: 'Outfit Fallback';
+            src: local('Segoe UI'), local('Arial'), local('sans-serif');
+        }
+    </style>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Left Side: Categories and Controls -->
+    <div id="customs-container" class="glass-panel" style="display: none;">
+        <div class="sidebar-categories">
+            <div class="brand-header">
+                <i class="fa-solid fa-screwdriver-wrench brand-logo"></i>
+                <div class="brand-text">
+                    <h1>TYCOON</h1>
+                    <span>CUSTOMS</span>
+                </div>
+            </div>
+
+            <div class="categories-list">
+                <button class="category-btn active" data-category="paint">
+                    <i class="fa-solid fa-palette"></i> Pintura
+                </button>
+                <button class="category-btn" data-category="wheels">
+                    <i class="fa-solid fa-circle-dot"></i> Rodas
+                </button>
+                <button class="category-btn" data-category="visual">
+                    <i class="fa-solid fa-car-side"></i> Pecas
+                </button>
+                <button class="category-btn" data-category="neon">
+                    <i class="fa-solid fa-lightbulb"></i> Neon
+                </button>
+                <button class="category-btn" data-category="xenon">
+                    <i class="fa-solid fa-bolt"></i> Xenon
+                </button>
+                <button class="category-btn" data-category="windows">
+                    <i class="fa-solid fa-window-maximize"></i> Vidros
+                </button>
+                <button class="category-btn" data-category="services">
+                    <i class="fa-solid fa-handshake-angle"></i> Servicos
+                </button>
+            </div>
+
+            <div class="sidebar-footer">
+                <span id="workshop-tag"><i class="fa-solid fa-location-dot"></i> Oficina Autorizada</span>
+            </div>
+        </div>
+
+        <!-- Center: Interaction Area / Mod Controls -->
+        <div class="main-controls">
+            <div class="control-header">
+                <h2 id="category-title">Personalizacao de Pintura</h2>
+                <p id="category-desc">Escolha as cores primarias, secundarias e acabamentos perolados.</p>
+            </div>
+
+            <div class="control-body">
+                <!-- Paint Submenu -->
+                <div class="submenu-content active" id="submenu-paint">
+                    <div class="option-group">
+                        <h3>Cor Primaria</h3>
+                        <div class="paint-slider-container">
+                            <input type="range" min="0" max="159" value="0" class="custom-slider" id="primary-color-slider">
+                            <div class="slider-val-badge">ID: <span id="primary-color-val">0</span></div>
+                        </div>
+                        <div class="preset-colors" id="primary-presets"></div>
+                    </div>
+
+                    <div class="option-group">
+                        <h3>Cor Secundaria</h3>
+                        <div class="paint-slider-container">
+                            <input type="range" min="0" max="159" value="0" class="custom-slider" id="secondary-color-slider">
+                            <div class="slider-val-badge">ID: <span id="secondary-color-val">0</span></div>
+                        </div>
+                        <div class="preset-colors" id="secondary-presets"></div>
+                    </div>
+
+                    <div class="option-group">
+                        <h3>Acabamento Perolado</h3>
+                        <div class="paint-slider-container">
+                            <input type="range" min="0" max="159" value="0" class="custom-slider" id="pearlescent-slider">
+                            <div class="slider-val-badge">ID: <span id="pearlescent-val">0</span></div>
+                        </div>
+                    </div>
+
+                    <div class="option-group">
+                        <h3>Cor das Rodas</h3>
+                        <div class="paint-slider-container">
+                            <input type="range" min="0" max="159" value="0" class="custom-slider" id="wheel-color-slider">
+                            <div class="slider-val-badge">ID: <span id="wheel-color-val">0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wheels Submenu -->
+                <div class="submenu-content" id="submenu-wheels">
+                    <div class="option-group">
+                        <h3>Tipo de Roda</h3>
+                        <select id="wheel-type-select" class="custom-select">
+                            <!-- Populated dynamically from server data -->
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <h3>Modelo de Roda</h3>
+                        <div class="wheel-list-container">
+                            <button class="wheel-option-btn active" data-wheel="-1">Roda Original</button>
+                            <div id="wheels-grid" class="wheels-grid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visual Parts Submenu -->
+                <div class="submenu-content" id="submenu-visual">
+                    <div class="option-group">
+                        <h3>Pecas Visuais Disponiveis</h3>
+                        <div id="visual-mods-list" class="visual-mods-list"></div>
+                    </div>
+                </div>
+
+                <!-- Neon Submenu -->
+                <div class="submenu-content" id="submenu-neon">
+                    <div class="option-group">
+                        <div class="toggle-container">
+                            <h3>Luzes de Neon Subaquaticas</h3>
+                            <label class="switch">
+                                <input type="checkbox" id="neon-toggle">
+                                <span class="slider-toggle"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="option-group" id="neon-color-group" style="opacity: 0.5; pointer-events: none;">
+                        <h3>Cor do Neon (RGB)</h3>
+                        <div class="rgb-inputs">
+                            <div class="rgb-field">
+                                <label>Vermelho (R)</label>
+                                <input type="range" min="0" max="255" value="255" class="custom-slider red-slider" id="neon-r">
+                                <span id="neon-r-val">255</span>
+                            </div>
+                            <div class="rgb-field">
+                                <label>Verde (G)</label>
+                                <input type="range" min="0" max="255" value="255" class="custom-slider green-slider" id="neon-g">
+                                <span id="neon-g-val">255</span>
+                            </div>
+                            <div class="rgb-field">
+                                <label>Azul (B)</label>
+                                <input type="range" min="0" max="255" value="255" class="custom-slider blue-slider" id="neon-b">
+                                <span id="neon-b-val">255</span>
+                            </div>
+                        </div>
+                        <div class="color-preview-box" id="neon-preview"></div>
+                    </div>
+                </div>
+
+                <!-- Xenon Submenu -->
+                <div class="submenu-content" id="submenu-xenon">
+                    <div class="option-group">
+                        <div class="toggle-container">
+                            <h3>Farois Xenon de Alta Intensidade</h3>
+                            <label class="switch">
+                                <input type="checkbox" id="xenon-toggle">
+                                <span class="slider-toggle"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="option-group" id="xenon-color-group" style="opacity: 0.5; pointer-events: none;">
+                        <h3>Cor dos Farois Xenon</h3>
+                        <select id="xenon-color-select" class="custom-select">
+                            <option value="255">Padrao</option>
+                            <option value="0">Branco Frio</option>
+                            <option value="1">Azul Claro</option>
+                            <option value="2">Azul Escuro</option>
+                            <option value="3">Turquesa</option>
+                            <option value="4">Verde Alface</option>
+                            <option value="5">Verde Limao</option>
+                            <option value="6">Amarelo</option>
+                            <option value="7">Laranja Dourado</option>
+                            <option value="8">Vermelho</option>
+                            <option value="9">Rosa Choque</option>
+                            <option value="10">Rosa Choque Forte</option>
+                            <option value="11">Roxo Violeta</option>
+                            <option value="12">Roxo Escuro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Windows Submenu -->
+                <div class="submenu-content" id="submenu-windows">
+                    <div class="option-group">
+                        <h3>Grau de Insulfilm (Tonalidade)</h3>
+                        <div class="window-tints-grid">
+                            <button class="tint-btn active" data-tint="0">
+                                <div class="tint-preview tint-none"></div>
+                                <span>Nenhum</span>
+                            </button>
+                            <button class="tint-btn" data-tint="3">
+                                <div class="tint-preview tint-light"></div>
+                                <span>Claro (30%)</span>
+                            </button>
+                            <button class="tint-btn" data-tint="2">
+                                <div class="tint-preview tint-medium"></div>
+                                <span>Medio (50%)</span>
+                            </button>
+                            <button class="tint-btn" data-tint="1">
+                                <div class="tint-preview tint-dark"></div>
+                                <span>Escuro (75%)</span>
+                            </button>
+                            <button class="tint-btn" data-tint="4">
+                                <div class="tint-preview tint-limo"></div>
+                                <span>Limo (95%)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services Submenu -->
+                <div class="submenu-content" id="submenu-services">
+                    <div class="service-card">
+                        <i class="fa-solid fa-soap service-icon"></i>
+                        <div class="service-info">
+                            <h3>Lavagem Profissional & Polimento</h3>
+                            <p>Remove sujeira acumulada e deixa a lataria brilhando.</p>
+                            <span class="service-price" id="wash-price">$50</span>
+                        </div>
+                        <button class="glass-btn glass-btn-primary" id="apply-wash-btn">Lavagem Completa</button>
+                    </div>
+                    <div class="service-card">
+                        <i class="fa-solid fa-eye service-icon"></i>
+                        <div class="service-info">
+                            <h3>Comparacao Antes/Depois</h3>
+                            <p>Segure ESPACO para ver o estado original do veiculo.</p>
+                        </div>
+                        <button class="glass-btn" id="toggle-before-after">
+                            <i class="fa-solid fa-eye"></i> Comparar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side: Ordem de Servico (Work Order Panel) -->
+    <div id="ordem-servico-panel" class="glass-panel" style="display: none;">
+        <div class="panel-header">
+            <h2>Ordem de Servico</h2>
+            <div class="vehicle-badge">
+                <span id="veh-model">Karin Asterope</span>
+                <span id="veh-plate" class="plate-badge">ABC 1234</span>
+            </div>
+        </div>
+
+        <!-- Client Form -->
+        <div class="os-form">
+            <div class="form-field">
+                <label><i class="fa-solid fa-user-tie"></i> Nome do Mecanico</label>
+                <input type="text" id="os-mechanic-input" placeholder="Mecanico Responsavel" value="" readonly>
+            </div>
+
+            <div class="form-field select-only-mechanic">
+                <label><i class="fa-solid fa-user"></i> ID/Passaporte do Cliente</label>
+                <input type="number" id="os-client-id-input" placeholder="Ex: 12" min="1">
+            </div>
+
+            <div class="form-field select-only-mechanic">
+                <label><i class="fa-solid fa-dollar-sign"></i> Taxa do Mecanico</label>
+                <input type="number" id="os-fee-input" placeholder="Ex: 500" min="0" value="0">
+            </div>
+        </div>
+
+        <!-- Cart list -->
+        <div class="cart-section">
+            <h3>Servicos Selecionados</h3>
+            <div class="cart-items" id="cart-items-list">
+                <!-- Dynamic Cart Items -->
+                <div class="empty-cart-message">Nenhuma alteracao selecionada.</div>
+            </div>
+        </div>
+
+        <!-- Pricing Summary -->
+        <div class="pricing-summary">
+            <div class="price-row">
+                <span>Subtotal</span>
+                <span id="os-subtotal">$0</span>
+            </div>
+            <div class="price-row total-row">
+                <span>Total Geral</span>
+                <span id="os-total">$0</span>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons-group">
+            <button class="glass-btn glass-btn-primary action-btn" id="btn-pay-direct">
+                <i class="fa-solid fa-credit-card"></i> Pagar e Salvar
+            </button>
+            <button class="glass-btn action-btn select-only-mechanic" id="btn-bill-client">
+                <i class="fa-solid fa-file-invoice-dollar"></i> Cobrar Cliente
+            </button>
+            <button class="glass-btn action-btn" id="btn-print-os">
+                <i class="fa-solid fa-print"></i> Publicar OS
+            </button>
+            <button class="glass-btn danger-btn action-btn" id="btn-cancel-customs">
+                <i class="fa-solid fa-xmark"></i> Cancelar Tudo
+            </button>
+        </div>
+    </div>
+
+    <!-- JS files -->
+    <script>
+    // FontAwesome CDN fallback detection
+    window.addEventListener('load', function() {
+        var sheets = document.styleSheets;
+        var faLoaded = false;
+        for (var i = 0; i < sheets.length; i++) {
+            if (sheets[i].href && sheets[i].href.indexOf('font-awesome') > -1) {
+                faLoaded = true;
+                break;
+            }
+        }
+        if (!faLoaded) {
+            var fallback = document.createElement('style');
+            fallback.textContent = '.fa-solid, .fa-regular, .fa-brands, .fas, .far, .fab { font-family: sans-serif; font-size: 0; } .fa-solid:before, .fas:before { content: "\\25A0"; font-size: 16px; }';
+            document.head.appendChild(fallback);
+        }
+    });
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>

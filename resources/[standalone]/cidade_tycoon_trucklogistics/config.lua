@@ -189,6 +189,14 @@ Config.contratos = {
 	}
 }
 
+Config.ServerValidation = {
+	deliveryRadius = 20.0,
+	fuelDeliveryRadius = 25.0,
+	minimumContractSeconds = 45,
+	minimumFuelMissionSeconds = 90,
+	maxValidationSpeedKmh = 240.0,
+}
+
 -- Here is the definition of the drivers that are generated for the players to hire
 Config.motoristas = {
 	['cooldown'] = 45,							-- Cooldown time (in minutes) to generate a new driver

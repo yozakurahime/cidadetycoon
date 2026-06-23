@@ -1,5 +1,6 @@
 -- Qbox client APIs are accessed through exports when needed.
 local truck,truck_blip,trailer,trailer_blip,rentTruck,route_blip
+local completionPending = false
 local openFuelPageOnLoad = false
 menuactive = false
 empresaAtual = nil
@@ -127,6 +128,32 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:closeViaTablet', function()
 	abertoViaTablet = false
 	menuactive = false
 	TriggerServerEvent('cidade_tycoon_trucklogistics:closeUI')
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:activeJobAvailable', function(jobType)
+	local label = jobType == 'fuel' and 'missao de combustivel' or 'contrato de entrega'
+	notify(('Voce possui %s em andamento. Retire seu caminhao para retomar.'):format(label), 'inform')
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:completionResult', function(jobType, accepted)
+	completionPending = false
+	if not accepted then return end
+
+	if IsEntityAVehicle(trailer) then DeleteVehicle(trailer) end
+	if trailer_blip then RemoveBlip(trailer_blip) end
+	if route_blip then RemoveBlip(route_blip) end
+	trailer = nil
+	trailer_blip = nil
+	route_blip = nil
+	PlaySoundFrontend(-1, "PROPERTY_PURCHASE", "HUD_AWARDS", 0)
+
+	CreateThreadNow(function()
+		if jobType == 'fuel' then
+			showScaleform("SUCESSO", "Combustível Entregue com Sucesso!", 3)
+		else
+			showScaleform(Lang[Config.lang]['success'], Lang[Config.lang]['finished_job'], 3)
+		end
+	end)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:open', function(dados,update)
@@ -411,16 +438,16 @@ RegisterNUICallback('refreshFuel', function(data, cb)
     cb('ok')
 end)
 
-RegisterNetEvent('cidade_tycoon_trucklogistics:startFuelMission', function(liters, coords, empresaId)
+RegisterNetEvent('cidade_tycoon_trucklogistics:startFuelMission', function(liters, coords, empresaId, resuming)
 	if not IsEntityAVehicle(truck) then
 		notify("Você precisa retirar o seu caminhão da garagem primeiro para iniciar esta missão!", "error")
-		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission')
+		if not resuming then TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission') end
 		return
 	end
 
 	if trailer or rentTruck then
 		notify(Lang[Config.lang]['already_has_cargo'], "error")
-		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission')
+		if not resuming then TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission') end
 		return
 	end
 
@@ -432,7 +459,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startFuelMission', function(liter
 	trailer, trailer_blip = spawnVehicle(model, rx, ry, rz, rh, 1000, 1000, 1000, 1000, 479, 5, "Tanque de Combustível")
 	if not trailer then
 		notify("Erro ao criar o tanque de combustível na refinaria!", "error")
-		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission')
+		if not resuming then TriggerServerEvent('cidade_tycoon_trucklogistics:cancelFuelMission') end
 		return
 	end
 
@@ -516,25 +543,9 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startFuelMission', function(liter
 							DrawMarker(30, cx, cy, cz - 0.6, 0, 0, 0, 90.0, ch, 0.0, 3.0, 1.0, 10.0, 0, 255, 0, 50, 0, 0, 0, 0)
 							drawTxt("Pressione [E] para descarregar o combustível", 8, 0.5, 0.90, 0.50, 255, 255, 255, 180)
 							
-							if IsControlJustPressed(0, 38) then
-								BringVehicleToHalt(truck, 2.5, 1, false)
-								Wait(10)
-								DoScreenFadeOut(500)
-								Wait(500)
-								DeleteVehicle(trailer)
-								RemoveBlip(trailer_blip)
-								RemoveBlip(route_blip)
-								PlaySoundFrontend(-1, "PROPERTY_PURCHASE", "HUD_AWARDS", 0)
-								Wait(1000)
-								DoScreenFadeIn(1000)
-								CreateThreadNow(function()
-									showScaleform("SUCESSO", "Combustível Entregue com Sucesso!", 3)
-								end)
-								trailer = nil
-								trailer_blip = nil
-								route_blip = nil
-								TriggerServerEvent("cidade_tycoon_trucklogistics:finishFuelMission", liters)
-								break
+							if IsControlJustPressed(0, 38) and not completionPending then
+								completionPending = true
+								TriggerServerEvent("cidade_tycoon_trucklogistics:finishFuelMission")
 							end
 						else
 							drawTxt("Estacione de ré na vaga indicada", 8, 0.5, 0.90, 0.50, 255, 255, 255, 180)
@@ -546,7 +557,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startFuelMission', function(liter
 
 			-- Verifica integridade do reboque
 			local bodyhealth = GetVehicleBodyHealth(trailer)
-			if bodyhealth <= 150 then
+			if not completionPending and bodyhealth <= 150 then
 				PlaySoundFrontend(-1, "PROPERTY_PURCHASE", "HUD_AWARDS", 0)
 				notify("A carga de combustível foi destruída!", "error")
 				RemoveBlip(trailer_blip)
@@ -560,7 +571,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startFuelMission', function(liter
 			end
 
 			-- Cancelar missão (Tecla F6 / Config)
-			if IsControlPressed(0, Config.contratos['cancel_contrato']) then
+			if not completionPending and IsControlPressed(0, Config.contratos['cancel_contrato']) then
 				DeleteVehicle(trailer)
 				RemoveBlip(trailer_blip)
 				RemoveBlip(route_blip)
@@ -629,6 +640,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:spawnTruck', function(truck_data)
 	truck,truck_blip = spawnVehicle(truck_data.truck_name,x,y,z,h,truck_data.body,truck_data.engine,truck_data.transmission,truck_data.wheels,477,26,Lang[Config.lang]['truck_blip'])
 	notify(Lang[Config.lang]['already_is_in_garage'], "success")
 	loading = false
+	TriggerServerEvent('cidade_tycoon_trucklogistics:requestActiveJob')
 
 	local timer = 5
 	local engineH = 1000
@@ -686,9 +698,15 @@ end)
 -- INICIAR TRABALHO
 -----------------------------------------------------------------------------------------------------------------------------------------
 
-RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job_distance,reward,truck_data)
+RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job_distance,reward,truck_data,resuming,companyKey)
 	local isRental = (tonumber(data.contract_type) == 0 or data.contract_type == false or data.contract_type == '0')
-	local key = empresaAtual
+	local key = companyKey or empresaAtual or 'trucker_1'
+	empresaAtual = key
+	local function cancelReservation()
+		if not resuming then
+			TriggerServerEvent('cidade_tycoon_trucklogistics:cancelContract')
+		end
+	end
 	if not IsEntityAVehicle(trailer) then
 		DeleteVehicle(trailer)
 		RemoveBlip(trailer_blip)
@@ -700,7 +718,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 	end
 	if trailer or rentTruck then
 		notify(Lang[Config.lang]['already_has_cargo'], "error")
-		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelContract')
+		cancelReservation()
 		return
 	end
 
@@ -715,12 +733,12 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 	end
 	if isRental and truck then
 		notify(Lang[Config.lang]['must_store_truck'], "error")
-		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelContract')
+		cancelReservation()
 		return
 	end
 	if not isRental and not IsEntityAVehicle(truck) then
 		notify(Lang[Config.lang]['loading_truck'], "error")
-		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelContract')
+		cancelReservation()
 		return
 	end
 
@@ -740,7 +758,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 				if i <= 1 then
 					notify(Lang[Config.lang]['occupied_places'], 'error')
 					loading = false
-					TriggerServerEvent('cidade_tycoon_trucklogistics:cancelContract')
+					cancelReservation()
 					return
 				end
 			else
@@ -751,7 +769,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 		truck,truck_blip = spawnVehicle(data.truck,x,y,z,h,1000,1000,1000,1000,477,26,Lang[Config.lang]['rented_truck_blip'])
 		if not truck then
 			loading = false
-			TriggerServerEvent('cidade_tycoon_trucklogistics:cancelContract')
+			cancelReservation()
 			return
 		end
 		rentTruck = true
@@ -773,7 +791,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 				end
 				notify(Lang[Config.lang]['occupied_places'], "error")
 				loading = false
-				TriggerServerEvent('cidade_tycoon_trucklogistics:cancelContract')
+				cancelReservation()
 				return
 			end
 		else
@@ -785,7 +803,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 	if not trailer then
 		if isRental and truck then DeleteVehicle(truck) end
 		loading = false
-		TriggerServerEvent('cidade_tycoon_trucklogistics:cancelContract')
+		cancelReservation()
 		return
 	end
 	notify(Lang[Config.lang]['started_job'], "success")
@@ -815,26 +833,10 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 			if distance <= 4.0 and veh == truck and angleDifference(GetEntityHeading(truck), h) <= 15.0 and angleDifference(GetEntityHeading(trailer), h) <= 15.0 and IsEntityAttachedToEntity(truck,trailer) then
 				DrawMarker(30,x,y,z-0.6,0,0,0,90.0,h,0.0,3.0,1.0,10.0,0,255,0,50,0,0,0,0)
 				drawTxt(Lang[Config.lang]['press_e_to_park'], 8,0.5,0.90,0.50,255,255,255,180)
-				if IsControlJustPressed(0,38) then
+				if IsControlJustPressed(0,38) and not completionPending then
 					BringVehicleToHalt(truck, 2.5, 1, false)
-					Citizen.Wait(10)
-					DoScreenFadeOut(500)
-					Citizen.Wait(500)
-					local trailerHealth = GetVehicleBodyHealth(trailer)
-					DeleteVehicle(trailer)
-					RemoveBlip(trailer_blip)
-					RemoveBlip(route_blip)
-					PlaySoundFrontend(-1, "PROPERTY_PURCHASE", "HUD_AWARDS", 0)
-					Citizen.Wait(1000)
-					DoScreenFadeIn(1000)
-					Citizen.CreateThreadNow(function()
-						showScaleform(Lang[Config.lang]['success'], Lang[Config.lang]['finished_job'], 3)
-					end)
-					trailer = nil
-					trailer_blip = nil
-					route_blip = nil
-					TriggerServerEvent("cidade_tycoon_trucklogistics:finishJob",data,job_distance,reward,truck_data,GetVehicleEngineHealth(truck),GetVehicleBodyHealth(truck),trailerHealth)
-					break
+					completionPending = true
+					TriggerServerEvent("cidade_tycoon_trucklogistics:finishJob", GetVehicleEngineHealth(truck), GetVehicleBodyHealth(truck))
 				end
 			else
 				drawTxt(Lang[Config.lang]['park_your_truck'], 8,0.5,0.90,0.50,255,255,255,180)
@@ -843,7 +845,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 		end
 		
 		local bodyhealth = GetVehicleBodyHealth(trailer)
-		if bodyhealth <= 150 then
+		if not completionPending and bodyhealth <= 150 then
 			PlaySoundFrontend(-1, "PROPERTY_PURCHASE", "HUD_AWARDS", 0)
 			notify(Lang[Config.lang]['failed'], "error")
 			
@@ -857,7 +859,7 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data,job
 			break
 		end
 
-		if IsControlPressed(0,Config.contratos['cancel_contrato']) then
+		if not completionPending and IsControlPressed(0,Config.contratos['cancel_contrato']) then
 			DeleteVehicle(trailer)
 			RemoveBlip(trailer_blip)
 			RemoveBlip(route_blip)

@@ -205,6 +205,25 @@ Config.Products = {
     -- ╔══════════════════════════════════════════════════════════════╗
     -- ║ ILEGAIS — ARMAS, MUNIÇÃO E EXPLOSIVOS (Nível 10-17)       ║
     -- ╚══════════════════════════════════════════════════════════════╝
+    ["drivetrain_conversion_fwd"] = {
+        label = "Kit Conversao FWD",
+        type = "legal", minLevel = 15,
+        requirements = { { item = "transmission_parts", count = 4 }, { item = "mechanical_parts", count = 4 }, { item = "steel_plate", count = 4 } },
+        processTime = 60000,
+    },
+    ["drivetrain_conversion_rwd"] = {
+        label = "Kit Conversao RWD",
+        type = "legal", minLevel = 16,
+        requirements = { { item = "transmission_parts", count = 5 }, { item = "mechanical_parts", count = 5 }, { item = "steel_plate", count = 5 }, { item = "aluminum_plate", count = 3 } },
+        processTime = 65000,
+    },
+    ["drivetrain_conversion_awd"] = {
+        label = "Kit Conversao AWD",
+        type = "legal", minLevel = 17,
+        requirements = { { item = "transmission_parts", count = 6 }, { item = "mechanical_parts", count = 6 }, { item = "electronic_circuit", count = 3 }, { item = "steel_plate", count = 6 } },
+        processTime = 72000,
+    },
+
     ["refined_powder"] = {
         label = "Pó Refinado",
         type = "illegal", minLevel = 10,

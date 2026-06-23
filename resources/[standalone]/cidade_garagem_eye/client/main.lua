@@ -235,6 +235,75 @@ local function parkCurrentVehicle(garageName)
     notify('Veiculo guardado na garagem.', 'success')
 end
 
+local function parkNearbyVehicle(garageName)
+    local ped = PlayerPedId()
+    local pCoords = GetEntityCoords(ped)
+
+    -- Collect ALL nearby vehicle data in a single pass (no per-vehicle callbacks!)
+    local vehicles = GetGamePool('CVehicle')
+    local batch = {}
+
+    for _, veh in ipairs(vehicles) do
+        if DoesEntityExist(veh) and GetPedInVehicleSeat(veh, -1) == 0 then
+            local vehCoords = GetEntityCoords(veh)
+            local dist = #(pCoords - vehCoords)
+            if dist <= 15.0 then
+                local plate = GetVehicleNumberPlateText(veh)
+                if plate and plate ~= '' then
+                    batch[#batch + 1] = {
+                        plate = plate,
+                        netId = NetworkGetNetworkIdFromEntity(veh),
+                        x = vehCoords.x,
+                        y = vehCoords.y,
+                        z = vehCoords.z,
+                    }
+                end
+            end
+        end
+    end
+
+    if #batch == 0 then
+        notify('Nenhum veiculo estacionado proximo encontrado.', 'error')
+        return
+    end
+
+    -- Single server call: batch checks all plates and returns closest owned vehicle
+    local result = lib.callback.await('cidade_garagem_eye:server:findNearestOwnedVehicle', false, batch)
+    if not result then
+        notify('Nenhum veiculo seu encontrado estacionado proximo.', 'error')
+        return
+    end
+
+    local entity = NetworkGetEntityFromNetworkId(result.netId)
+    if not entity or entity == 0 then
+        notify('Veiculo nao encontrado. Tente novamente.', 'error')
+        return
+    end
+
+    local confirm = lib.alertDialog({
+        header = 'Guardar Veiculo',
+        content = ('Deseja guardar o veiculo **%s** (placa: %s) na garagem?'):format(
+            getVehicleLabel((GetDisplayNameFromVehicleModel(GetEntityModel(entity))):lower()),
+            result.plate
+        ),
+        centered = true,
+        cancel = true,
+        labels = {
+            confirm = 'Guardar',
+            cancel = 'Cancelar',
+        },
+    })
+
+    if confirm ~= 'confirm' then return end
+
+    lib.callback.await('qbx_garages:server:parkVehicle', false,
+        result.netId,
+        lib.getVehicleProperties(entity),
+        garageName
+    )
+    notify(('Veiculo %s guardado na garagem.'):format(result.plate), 'success')
+end
+
 local function getHealthIndicator(health)
     local val = tonumber(health) or 100
     if val >= 85 then return '🟢' end
@@ -505,7 +574,19 @@ local function setupGaragePoints()
                                         onSelect = function()
                                             parkCurrentVehicle(self.garageName)
                                         end,
-                                    }
+                                    },
+                                    {
+                                        name = ('cidade_garagem_eye_parknear_%s'):format(self.pointId),
+                                        icon = 'fa-solid fa-car-side',
+                                        label = 'Guardar veiculo estacionado',
+                                        distance = 2.8,
+                                        canInteract = function()
+                                            return not cache.vehicle
+                                        end,
+                                        onSelect = function()
+                                            parkNearbyVehicle(self.garageName)
+                                        end,
+                                    },
                                 })
                             end
                             SetModelAsNoLongerNeeded(GARAGE_PED_MODEL)
@@ -539,7 +620,18 @@ local function setupGaragePoints()
                                         onSelect = function()
                                             parkCurrentVehicle(self.garageName)
                                         end,
-                                    }
+                                    },
+                                    {
+                                        name = ('cidade_garagem_eye_fallback_parknear_%s'):format(self.pointId),
+                                        icon = 'fa-solid fa-car-side',
+                                        label = 'Guardar veiculo estacionado',
+                                        canInteract = function()
+                                            return not cache.vehicle
+                                        end,
+                                        onSelect = function()
+                                            parkNearbyVehicle(self.garageName)
+                                        end,
+                                    },
                                 }
                             })
                             fallbackZones[self.pointId] = zoneId

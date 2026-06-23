@@ -24,6 +24,7 @@ shared_scripts {
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/framework.lua',
+    'server/rate_limiter.lua',
     'server/chat_cooldown.lua',
     'server/finance.lua',
     'server/debug.lua',

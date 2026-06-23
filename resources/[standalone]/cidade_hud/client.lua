@@ -1,5 +1,6 @@
-local fomeSede = config_fomeSede
-local exibCombustivel = config_combustivel
+local fomeSede = HudConfig.fomeSede
+local exibCombustivel = HudConfig.combustivel
+local exibStress = HudConfig.stress
 local hudoff = false
 local inCar = false
 local vehicle = 0
@@ -12,7 +13,11 @@ local function Notify(tipo, mensagem)
     elseif tipo == "negado" or tipo == "erro" or tipo == "fome" or tipo == "sede" then
         notifyType = "error"
     end
-    exports.qbx_core:Notify(mensagem, notifyType)
+    lib.notify({
+        title = 'HUD',
+        description = mensagem,
+        type = notifyType,
+    })
 end
 
 local function sendChanged(key, message)
@@ -39,15 +44,15 @@ local function getStress()
 end
 
 local function getPlayerIdentity()
-    local playerData = exports.qbx_core:GetPlayerData() or {}
-    local charinfo = playerData.charinfo or {}
+    local qbxPlayer = exports.qbx_core:GetPlayerData() or {}
+    local charinfo = qbxPlayer.charinfo or {}
     local firstName = charinfo.firstname or ""
     local lastName = charinfo.lastname or ""
     local fullName = ("%s %s"):format(firstName, lastName):gsub("^%s*(.-)%s*$", "%1")
 
     return {
         playerName = fullName ~= "" and fullName or GetPlayerName(PlayerId()),
-        passport = playerData.citizenid or tostring(GetPlayerServerId(PlayerId())),
+        passport = qbxPlayer.citizenid or tostring(GetPlayerServerId(PlayerId())),
     }
 end
 
@@ -83,6 +88,7 @@ local function getCommonMessage(action)
         month = month,
         fomeSede = fomeSede,
         exibCombustivel = exibCombustivel,
+        exibStress = exibStress,
         inCar = inCar,
     }
 end
@@ -110,9 +116,78 @@ CreateThread(function()
                 gear = "R"
             end
 
+            local isElectric = exports.cidade_tycoon_core:IsVehicleElectric(GetEntityModel(vehicle))
+            if isElectric and gear ~= "R" and gear ~= "N" then
+                gear = "D"
+            end
+
+            local vehStatus = nil
+            if Entity(vehicle).state['tycoon:status'] then
+                vehStatus = Entity(vehicle).state['tycoon:status']
+            else
+                -- Request initial status if missing
+                lib.callback('cidade_tycoon_maintenance:server:getVehicleStatus', false, function(data)
+                    if data and data.subsystems then
+                        local convertedStatus = {}
+                        for _, sub in ipairs(data.subsystems) do
+                            if sub.key == 'engine' then
+                                convertedStatus.engine_health = sub.health
+                            elseif sub.key == 'transmission' then
+                                convertedStatus.transmission_health = sub.health
+                            elseif sub.key == 'battery' then
+                                convertedStatus.battery_health = sub.health
+                            elseif sub.key == 'brakes' then
+                                convertedStatus.brakes_health = sub.health
+                            elseif sub.key == 'suspension' then
+                                convertedStatus.suspension_health = sub.health
+                            elseif sub.key == 'tire_lf' then
+                                convertedStatus.tire_lf_health = sub.health
+                            elseif sub.key == 'tire_rf' then
+                                convertedStatus.tire_rf_health = sub.health
+                            elseif sub.key == 'tire_lr' then
+                                convertedStatus.tire_lr_health = sub.health
+                            elseif sub.key == 'tire_rr' then
+                                convertedStatus.tire_rr_health = sub.health
+                            end
+                        end
+                        Entity(vehicle).state:set('tycoon:status', convertedStatus, true)
+                    end
+                end, GetVehicleNumberPlateText(vehicle))
+            end
+
             local fuel = GetVehicleFuelLevel(vehicle)
             if DecorExistOn(vehicle, "bzfuel_level") then
                 fuel = DecorGetFloat(vehicle, "bzfuel_level")
+            end
+
+            if isElectric then
+                if vehStatus and vehStatus.battery_charge then
+                    fuel = vehStatus.battery_charge  -- battery_charge = nivel de carga atual
+                else
+                    fuel = 100.0
+                end
+            end
+
+            -- Calculate average component health for the overall bar indicator
+            local avgHealth = 100.0
+            if vehStatus then
+                local healths = {}
+                if isElectric then
+                    table.insert(healths, vehStatus.battery_health or 100.0)
+                else
+                    table.insert(healths, vehStatus.engine_health or 100.0)
+                    table.insert(healths, vehStatus.transmission_health or 100.0)
+                end
+                table.insert(healths, vehStatus.brakes_health or 100.0)
+                table.insert(healths, vehStatus.suspension_health or 100.0)
+                table.insert(healths, vehStatus.tire_lf_health or (vehStatus.tires_health or 100.0))
+                table.insert(healths, vehStatus.tire_rf_health or (vehStatus.tires_health or 100.0))
+                table.insert(healths, vehStatus.tire_lr_health or (vehStatus.tires_health or 100.0))
+                table.insert(healths, vehStatus.tire_rr_health or (vehStatus.tires_health or 100.0))
+                table.insert(healths, vehStatus.body_health or 100.0)
+                local sum = 0
+                for _, h in ipairs(healths) do sum = sum + h end
+                avgHealth = sum / #healths
             end
 
             sendChanged("vehicle", {
@@ -124,6 +199,9 @@ CreateThread(function()
                 cinto = LocalPlayer.state.seatbelt == true,
                 exibCombustivel = exibCombustivel,
                 inCar = true,
+                vehStatus = vehStatus,
+                isElectric = isElectric,
+                avgHealth = clamp(avgHealth),
             })
             Wait(100)
         else
@@ -146,34 +224,89 @@ CreateThread(function()
     end
 end)
 
+-- Consolidated stress management thread (driving, shooting, screen effects)
 CreateThread(function()
+    local tickCount = 0
     while true do
-        if inCar and DoesEntityExist(vehicle) and GetEntitySpeed(vehicle) * 3.6 >= 90 then
-            TriggerServerEvent("hud:server:GainStress", math.random(1, 3))
-        end
-        Wait(10000)
-    end
-end)
+        Wait(250)
+        tickCount = tickCount + 1
+        local ped = PlayerPedId()
 
-CreateThread(function()
-    while true do
-        if IsPedShooting(PlayerPedId()) and math.random() <= 0.1 then
+        -- Stress from shooting (every tick, ~4x/sec)
+        if IsPedShooting(ped) and math.random() <= 0.1 then
             TriggerServerEvent("hud:server:GainStress", math.random(1, 5))
         end
-        Wait(250)
+
+        -- Stress from high speed & screen blur (every 40 ticks = ~10sec)
+        if tickCount % 40 == 0 then
+            local currentVehicle = GetVehiclePedIsIn(ped, false)
+            if currentVehicle ~= 0 and DoesEntityExist(currentVehicle) and GetEntitySpeed(currentVehicle) * 3.6 >= 90 then
+                TriggerServerEvent("hud:server:GainStress", math.random(1, 3))
+            end
+
+            if getStress() >= 60 then
+                TriggerScreenblurFadeIn(500.0)
+                Wait(1000)
+                TriggerScreenblurFadeOut(500.0)
+            end
+        end
     end
 end)
 
+-- Passive stress relief thread (interval-based)
 CreateThread(function()
     while true do
-        if getStress() >= 60 then
-            TriggerScreenblurFadeIn(500.0)
-            Wait(1000)
-            TriggerScreenblurFadeOut(500.0)
+        Wait(HudConfig.stress_passive_interval or 60000)
+
+        if HudConfig.stress_passive_relief and getStress() > 0 then
+            local ped = PlayerPedId()
+            if not IsPedInAnyVehicle(ped, false)
+                and not IsPedShooting(ped)
+                and not IsPedInMeleeCombat(ped)
+                and not IsPedSprinting(ped)
+                and not IsPedRunning(ped)
+                and not IsPauseMenuActive()
+            then
+                TriggerServerEvent("hud:server:RelieveStress", HudConfig.stress_passive_amount or 1)
+            end
         end
-        Wait(15000)
     end
 end)
+
+RegisterCommand("relaxar", function()
+    if not HudConfig.stress_relax_command then return end
+
+    local ped = PlayerPedId()
+    if getStress() <= 0 then
+        Notify("sucesso", "Você já está sem stress.")
+        return
+    end
+
+    if IsPedInAnyVehicle(ped, false) then
+        Notify("negado", "Saia do veículo para relaxar.")
+        return
+    end
+
+    if IsPedShooting(ped) or IsPedInMeleeCombat(ped) or IsPedSprinting(ped) or IsPedRunning(ped) then
+        Notify("negado", "Pare em um lugar seguro para relaxar.")
+        return
+    end
+
+    local duration = HudConfig.stress_relax_duration or 15000
+    FreezeEntityPosition(ped, true)
+    TaskStartScenarioInPlace(ped, "WORLD_HUMAN_YOGA", 0, true)
+    SendNUIMessage({
+        type = "ui",
+        display = true,
+        time = duration,
+        text = "RELAXANDO"
+    })
+
+    Wait(duration)
+    ClearPedTasks(ped)
+    FreezeEntityPosition(ped, false)
+    TriggerServerEvent("hud:server:RequestStressRelief", HudConfig.stress_relax_amount or 15)
+end, false)
 
 local currentMissionData = nil
 

@@ -2,6 +2,7 @@ local RESOURCE = GetCurrentResourceName()
 local isOpen = {}
 local eventLocks = {}
 local activeJobs = {}
+local sourceUsers = {}
 local CoopBonusTime = 0
 
 -- Forward declarations for functions called before their definition
@@ -13,7 +14,9 @@ end
 
 local function citizenId(source)
     local p = corePlayer(source)
-    return p and p.PlayerData.citizenid
+    local userId = p and p.PlayerData.citizenid
+    if userId then sourceUsers[source] = userId end
+    return userId
 end
 
 local function playerSourceByCitizenId(citizenId)
@@ -47,9 +50,20 @@ local function clone(t)
     return res
 end
 
+local function decodeJson(value)
+    if type(value) ~= 'string' or value == '' then return nil end
+    local ok, decoded = pcall(json.decode, value)
+    return ok and decoded or nil
+end
+
 local function notify(source, message, notifyType)
     local kind = notifyType == 'primary' and 'inform' or (notifyType or 'inform')
     exports.cidade_tycoon_core:NotifyPlayer(source, message, kind)
+end
+
+local function completionResult(source, jobType, accepted, message)
+    if message then notify(source, message, accepted and 'success' or 'error') end
+    TriggerClientEvent('cidade_tycoon_trucklogistics:completionResult', source, jobType, accepted == true)
 end
 
 local function queueOfflineNotification(userId, message, notifyType)
@@ -66,24 +80,135 @@ local function withLock(source, fn)
     end
 end
 
-local function companyDebit(userId, amount)
+local function recordTransaction(userId, transactionType, amount, reason)
+    local balance = MySQL.scalar.await('SELECT money FROM trucker_users WHERE user_id = ?', { userId })
+    if balance == nil then return end
+    MySQL.insert.await([[
+        INSERT INTO trucker_transactions (user_id, transaction_type, amount, reason, balance_after)
+        VALUES (?, ?, ?, ?, ?)
+    ]], { userId, transactionType, amount, reason or 'unspecified', balance })
+end
+
+local function companyDebit(userId, amount, reason)
     amount = positiveInteger(amount)
     if not userId or not amount then return false end
     local changed = MySQL.update.await(
         'UPDATE trucker_users SET money = money - ? WHERE user_id = ? AND money >= ?',
         { amount, userId, amount }
     )
+    if changed and changed > 0 then
+        recordTransaction(userId, 'debit', -amount, reason)
+        return true
+    end
+    return false
+end
+
+local function companyCredit(userId, amount, reason, countsAsEarnings)
+    amount = positiveInteger(amount)
+    if not userId or not amount then return false end
+    local query = countsAsEarnings
+        and 'UPDATE trucker_users SET money = money + ?, total_earned = total_earned + ? WHERE user_id = ?'
+        or 'UPDATE trucker_users SET money = money + ? WHERE user_id = ?'
+    local params = countsAsEarnings and { amount, amount, userId } or { amount, userId }
+    local changed = MySQL.update.await(query, params)
+    if changed and changed > 0 then
+        recordTransaction(userId, 'credit', amount, reason)
+        return true
+    end
+    return false
+end
+
+local function hydrateActiveJob(row)
+    if not row then return nil end
+    return {
+        userId = row.user_id,
+        jobType = row.job_type,
+        companyKey = row.company_key,
+        contract = decodeJson(row.contract_data),
+        distance = number(row.distance),
+        reward = number(row.reward),
+        truckId = row.truck_id and number(row.truck_id) or nil,
+        payload = decodeJson(row.payload) or {},
+        startedAt = number(row.started_at),
+        earliestFinishAt = number(row.earliest_finish_at),
+        status = row.status,
+    }
+end
+
+local function loadActiveJob(userId, forceReload)
+    if not forceReload and activeJobs[userId] then return activeJobs[userId] end
+    local row = MySQL.single.await("SELECT * FROM trucker_active_jobs WHERE user_id = ? AND status = 'active'", { userId })
+    local job = hydrateActiveJob(row)
+    activeJobs[userId] = job
+    return job
+end
+
+local function persistActiveJob(job)
+    local inserted = MySQL.update.await([[
+        INSERT INTO trucker_active_jobs
+            (user_id, job_type, company_key, contract_data, distance, reward, truck_id, payload, started_at, earliest_finish_at, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+        ON DUPLICATE KEY UPDATE
+            job_type = VALUES(job_type), company_key = VALUES(company_key), contract_data = VALUES(contract_data),
+            distance = VALUES(distance), reward = VALUES(reward), truck_id = VALUES(truck_id), payload = VALUES(payload),
+            started_at = VALUES(started_at), earliest_finish_at = VALUES(earliest_finish_at), status = 'active'
+    ]], {
+        job.userId, job.jobType, job.companyKey, job.contract and json.encode(job.contract) or nil,
+        job.distance or 0, job.reward or 0, job.truckId, json.encode(job.payload or {}),
+        job.startedAt, job.earliestFinishAt
+    })
+    if inserted == nil then return false end
+    activeJobs[job.userId] = job
+    return true
+end
+
+local function clearActiveJob(userId)
+    activeJobs[userId] = nil
+    MySQL.update.await('DELETE FROM trucker_active_jobs WHERE user_id = ?', { userId })
+end
+
+local function claimActiveJob(userId, jobType)
+    local changed = MySQL.update.await([[
+        UPDATE trucker_active_jobs
+        SET status = 'completing'
+        WHERE user_id = ? AND job_type = ? AND status = 'active'
+    ]], { userId, jobType })
     return changed and changed > 0
 end
 
-local function companyCredit(userId, amount)
-    amount = positiveInteger(amount)
-    if not userId or not amount then return false end
-    local changed = MySQL.update.await(
-        'UPDATE trucker_users SET money = money + ?, total_earned = total_earned + ? WHERE user_id = ?',
-        { amount, amount, userId }
-    )
-    return changed and changed > 0
+local function minimumTravelSeconds(distanceKm, configuredMinimum)
+    local maxSpeed = math.max(1.0, number(Config.ServerValidation.maxValidationSpeedKmh))
+    return math.max(configuredMinimum, math.ceil((distanceKm / maxSpeed) * 3600.0))
+end
+
+local function isPlayerNear(source, coords, radius)
+    local ped = GetPlayerPed(source)
+    if not ped or ped <= 0 then return false end
+    local playerCoords = GetEntityCoords(ped)
+    return #(playerCoords - vector3(coords[1], coords[2], coords[3])) <= radius
+end
+
+local function sendActiveJob(source, userId, allowOwnedContract)
+    local job = loadActiveJob(userId, true)
+    if not job then return end
+    if job.jobType == 'contract' and job.contract then
+        local isRental = number(job.contract.contract_type) == 0
+        if not isRental and not allowOwnedContract then
+            TriggerClientEvent('cidade_tycoon_trucklogistics:activeJobAvailable', source, 'contract')
+            return
+        end
+        local truck = job.truckId and MySQL.single.await('SELECT * FROM trucker_trucks WHERE truck_id = ? AND user_id = ?', { job.truckId, userId }) or {}
+        TriggerClientEvent('cidade_tycoon_trucklogistics:startContract', source, job.contract, job.distance, job.reward, truck or {}, true, job.companyKey)
+    elseif job.jobType == 'fuel' then
+        if not allowOwnedContract then
+            TriggerClientEvent('cidade_tycoon_trucklogistics:activeJobAvailable', source, 'fuel')
+            return
+        end
+        local refinery = job.payload.refinery
+        if refinery then
+            TriggerClientEvent('cidade_tycoon_trucklogistics:startFuelMission', source, job.payload.liters, refinery, job.companyKey, true)
+        end
+    end
 end
 
 local function truckerLevel(exp)
@@ -359,7 +484,7 @@ CreateThread(function()
                                 end
                             end
                             if penaltyCost > 0 then
-                                companyDebit(driver.user_id, penaltyCost)
+                                companyDebit(driver.user_id, penaltyCost, 'npc_route_penalty')
                                 MySQL.update.await([[UPDATE trucker_drivers SET total_spent = total_spent + ? WHERE driver_id = ?]], { penaltyCost, driver.driver_id })
                             end
                             if nextStatus == 'WAITING_DECISION' then
@@ -387,7 +512,7 @@ CreateThread(function()
                                 usedDepotFuel = true
                             end
 
-                            if companyDebit(driver.user_id, driverWage) then
+                            if companyDebit(driver.user_id, driverWage, 'npc_driver_wage') then
                                 local coopBonusApplied = false
                                 if os.time() < CoopBonusTime then
                                     currentJobReward = math.floor(currentJobReward * 1.20)
@@ -400,7 +525,7 @@ CreateThread(function()
                                     tax = math.floor(netProfit * 0.70)
                                     netProfit = netProfit - tax
                                 end
-                                companyCredit(driver.user_id, currentJobReward - tax)
+                                companyCredit(driver.user_id, currentJobReward - tax, 'npc_route_reward', true)
                                 
                                 local brutoStr = formatCurrency(currentJobReward, Config)
                                 local custoStr = formatCurrency(driverWage, Config)
@@ -501,7 +626,7 @@ CreateThread(function()
         for _, loan in ipairs(loans) do
             if number(loan.timer) + Config.emprestimos.cooldown < os.time() then
                 local source = playerSourceByCitizenId(loan.user_id)
-                if companyDebit(loan.user_id, loan.day_cost) then
+                if companyDebit(loan.user_id, loan.day_cost, 'loan_daily_payment') then
                     local remaining = number(loan.remaining_amount) - number(loan.taxes_on_day)
                     if remaining > 0 then
                         MySQL.update.await('UPDATE trucker_loans SET remaining_amount = ?, timer = ? WHERE id = ?', { remaining, os.time(), loan.id })
@@ -522,9 +647,11 @@ end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:getData', function()
     local source = source
-    if not citizenId(source) then return end
+    local userId = citizenId(source)
+    if not userId then return end
     isOpen[source] = true
     openUI(source, false)
+    sendActiveJob(source, userId)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:closeUI', function()
@@ -536,11 +663,16 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data)
     withLock(source, function()
         local userId = citizenId(source)
         local contractId = type(data) == 'table' and integer(data.id, 1) or nil
-        if not userId or not contractId or activeJobs[source] then return end
+        if not userId or not contractId then return end
+        if loadActiveJob(userId, true) then
+            return notify(source, 'Voce ja possui um contrato ativo.', 'error')
+        end
         local contract = MySQL.single.await('SELECT * FROM trucker_available_contracts WHERE contract_id = ?', { contractId })
         if not contract then return notify(source, Lang[Config.lang].job_already_started, 'error') end
         local user = ensureUser(userId)
-        local distance = contractDistance(contract, type(data) == 'table' and tostring(data.empresa) or nil)
+        local companyKey = type(data) == 'table' and tostring(data.empresa or '') or ''
+        if not Config.empresas[companyKey] then companyKey = 'trucker_1' end
+        local distance = contractDistance(contract, companyKey)
         if not distance then return end
         if number(user.product_type) < number(contract.cargo_type) then return notify(source, Lang[Config.lang].no_skill_5, 'error') end
         if number(user.fragile) < number(contract.fragile) then return notify(source, Lang[Config.lang].no_skill_4, 'error') end
@@ -557,27 +689,57 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:startContract', function(data)
             return notify(source, Lang[Config.lang].job_already_started, 'error')
         end
         local reward = math.floor(distance * number(contract.price_per_km))
-        activeJobs[source] = { userId = userId, contract = contract, distance = distance, reward = reward, truck = truck, startedAt = os.time() }
-        TriggerClientEvent('cidade_tycoon_trucklogistics:startContract', source, contract, distance, reward, truck)
+        local startedAt = os.time()
+        local job = {
+            userId = userId,
+            jobType = 'contract',
+            companyKey = companyKey,
+            contract = contract,
+            distance = distance,
+            reward = reward,
+            truckId = truck.truck_id,
+            payload = {},
+            startedAt = startedAt,
+            earliestFinishAt = startedAt + minimumTravelSeconds(distance, Config.ServerValidation.minimumContractSeconds),
+            status = 'active',
+        }
+        if not persistActiveJob(job) then
+            MySQL.insert.await([[INSERT INTO trucker_available_contracts
+                (contract_type, contract_name, coords_index, price_per_km, cargo_type, fragile, valuable, fast, truck, trailer, coop)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]], {
+                contract.contract_type, contract.contract_name, contract.coords_index, contract.price_per_km,
+                contract.cargo_type, contract.fragile, contract.valuable, contract.fast,
+                contract.truck, contract.trailer, contract.coop or 0
+            })
+            return notify(source, 'Nao foi possivel reservar o contrato.', 'error')
+        end
+        TriggerClientEvent('cidade_tycoon_trucklogistics:startContract', source, contract, distance, reward, truck, false, companyKey)
         refreshOpenPlayers()
     end)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:trainDriver', function(driverId)
     local source = source
-    local userId = citizenId(source)
-    driverId = integer(driverId, 1)
-    if not userId or not driverId then return end
-    local driver = MySQL.single.await('SELECT * FROM trucker_drivers WHERE driver_id = ? AND user_id = ?', { driverId, userId })
-    if not driver then return end
-    if (driver.level or 1) >= 20 then return notify(source, "Nível máximo!", "error") end
-    local trainCost = math.floor(Config.motoristas.preco_min * 0.5 * (1.3 ^ (driver.level or 1)))
-    if companyDebit(userId, trainCost) then
-        MySQL.update.await('UPDATE trucker_drivers SET level = level + 1, total_spent = total_spent + ? WHERE driver_id = ?', { trainCost, driverId })
+    withLock(source, function()
+        local userId = citizenId(source)
+        driverId = integer(driverId, 1)
+        if not userId or not driverId then return end
+        local driver = MySQL.single.await('SELECT * FROM trucker_drivers WHERE driver_id = ? AND user_id = ?', { driverId, userId })
+        if not driver then return end
+        if (driver.level or 1) >= 20 then return notify(source, "Nível máximo!", "error") end
+        local trainCost = math.floor(Config.motoristas.preco_min * 0.5 * (1.3 ^ (driver.level or 1)))
+        if not companyDebit(userId, trainCost, 'driver_training') then
+            return notify(source, "Saldo insuficiente!", "error")
+        end
+        local changed = MySQL.update.await('UPDATE trucker_drivers SET level = level + 1, total_spent = total_spent + ? WHERE driver_id = ? AND user_id = ?', { trainCost, driverId, userId })
+        if not changed or changed < 1 then
+            companyCredit(userId, trainCost, 'driver_training_refund', false)
+            return notify(source, 'Nao foi possivel concluir o treinamento.', 'error')
+        end
         TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
         notify(source, ("Treinamento concluído! %s agora é Nível %d."):format(driver.name, (driver.level or 1) + 1), "success")
         openUI(source, true)
-    else notify(source, "Saldo insuficiente!", "error") end
+    end)
 end)
 
 local crisisOptions = {
@@ -706,7 +868,7 @@ resolveDriverCrisis = function(userId, driverId, option)
         elseif option == 'accept_smuggle' then
             if math.random(100) > 50 then
                 resultMessage = "🤫 CLANDESTINO: Entrega clandestina feita com sucesso! A empresa faturou um bônus extra de R$12.000 limpos!"
-                companyCredit(userId, 12000)
+                companyCredit(userId, 12000, 'crisis_contraband_bonus', true)
                 nextWait = 10 * 60
             else
                 resultMessage = "🚓 CLANDESTINO: O motorista caiu em uma blitz minuciosa. Carga ilegal apreendida, multa federal de R$25.000 e retenção de 50 min!"
@@ -747,7 +909,7 @@ resolveDriverCrisis = function(userId, driverId, option)
     end
     
     if penaltyCost > 0 then 
-        companyDebit(userId, penaltyCost) 
+        companyDebit(userId, penaltyCost, 'driver_crisis_penalty')
         MySQL.update.await('UPDATE trucker_drivers SET total_spent = total_spent + ? WHERE driver_id = ?', { penaltyCost, driverId }) 
     end
     
@@ -832,8 +994,12 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:repairTruck', function(item, useI
     else
         local amount = math.floor((100 - number(truck[item]) / 10) * number(Config.valor_reparo[item]))
         if amount <= 0 then return end
-        if not companyDebit(userId, amount) then return end
-        MySQL.update.await(('UPDATE trucker_trucks SET `%s` = 1000 WHERE truck_id = ? AND user_id = ?'):format(item), { truck.truck_id, userId })
+        if not companyDebit(userId, amount, 'truck_repair') then return end
+        local changed = MySQL.update.await(('UPDATE trucker_trucks SET `%s` = 1000 WHERE truck_id = ? AND user_id = ?'):format(item), { truck.truck_id, userId })
+        if not changed or changed < 1 then
+            companyCredit(userId, amount, 'truck_repair_refund', false)
+            return notify(source, 'Nao foi possivel concluir o reparo.', 'error')
+        end
         notify(source, ("Componente %s reparado por %s!"):format(item == 'body' and 'Lataria' or item == 'engine' and 'Motor' or item == 'transmission' and 'Transmissão' or 'Rodas', formatCurrency(amount, Config)), 'success')
         TriggerClientEvent('cidade_tycoon_tablet:client:showToast', source, '🔧 REPARO CONCLUÍDO', ("Caminhão reparado por %s."):format(formatCurrency(amount, Config)), 5000)
         TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
@@ -843,27 +1009,49 @@ end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:buyTruck', function(data)
     local source = source
-    local userId = citizenId(source)
-    local name = type(data) == 'table' and tostring(data.truck_name) or nil
-    if not userId or not Config.concessionaria[name] then return end
-    if companyDebit(userId, Config.concessionaria[name].price) then
-        MySQL.insert.await('INSERT INTO trucker_trucks (user_id, truck_name) VALUES (?, ?)', { userId, name })
+    withLock(source, function()
+        local userId = citizenId(source)
+        local name = type(data) == 'table' and tostring(data.truck_name) or nil
+        local offer = name and Config.concessionaria[name] or nil
+        if not userId or not offer then return end
+        if not companyDebit(userId, offer.price, 'truck_purchase') then return end
+        local truckId = MySQL.insert.await('INSERT INTO trucker_trucks (user_id, truck_name) VALUES (?, ?)', { userId, name })
+        if not truckId then
+            companyCredit(userId, offer.price, 'truck_purchase_refund', false)
+            return notify(source, 'Nao foi possivel registrar o caminhao.', 'error')
+        end
         openUI(source, true)
-    end
+    end)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:sellTruck', function(data)
     local source = source
-    local userId = citizenId(source)
-    local truckId = type(data) == 'table' and integer(data.truck_id, 1) or nil
-    if not userId or not truckId then return end
-    local truck = MySQL.single.await('SELECT * FROM trucker_trucks WHERE truck_id = ? AND user_id = ?', { truckId, userId })
-    if truck and (truck.driver == nil or number(truck.driver) == 0) then
-        local price = math.floor(Config.concessionaria[truck.truck_name].price * Config.multiplicador_venda)
-        MySQL.update.await('DELETE FROM trucker_trucks WHERE truck_id = ?', { truckId })
-        companyCredit(userId, price)
+    withLock(source, function()
+        local userId = citizenId(source)
+        local truckId = type(data) == 'table' and integer(data.truck_id, 1) or nil
+        if not userId or not truckId then return end
+        local truck = MySQL.single.await('SELECT * FROM trucker_trucks WHERE truck_id = ? AND user_id = ?', { truckId, userId })
+        local offer = truck and Config.concessionaria[truck.truck_name] or nil
+        if not truck or not offer or (truck.driver ~= nil and number(truck.driver) ~= 0) then return end
+        local price = math.floor(offer.price * Config.multiplicador_venda)
+        local completed = MySQL.transaction.await({
+            {
+                query = 'DELETE FROM trucker_trucks WHERE truck_id = ? AND user_id = ? AND (driver IS NULL OR driver = 0)',
+                values = { truckId, userId }
+            },
+            {
+                query = 'UPDATE trucker_users SET money = money + ? WHERE user_id = ?',
+                values = { price, userId }
+            },
+            {
+                query = [[INSERT INTO trucker_transactions (user_id, transaction_type, amount, reason, balance_after)
+                    SELECT user_id, 'credit', ?, 'truck_sale', money FROM trucker_users WHERE user_id = ?]],
+                values = { price, userId }
+            }
+        })
+        if not completed then return notify(source, 'Nao foi possivel concluir a venda.', 'error') end
         openUI(source, true)
-    end
+    end)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:hireDriver', function(driverId)
@@ -872,12 +1060,12 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:hireDriver', function(driverId)
     driverId = integer(driverId, 1)
     if not userId or not driverId then return end
     local driver = MySQL.single.await('SELECT * FROM trucker_drivers WHERE driver_id = ? AND user_id IS NULL', { driverId })
-    if driver and companyDebit(userId, driver.price) then
+    if driver and companyDebit(userId, driver.price, 'driver_hiring') then
         local changed = MySQL.update.await('UPDATE trucker_drivers SET user_id = ? WHERE driver_id = ? AND user_id IS NULL', { userId, driverId })
         if changed and changed > 0 then
             openUI(source, true)
         else
-            MySQL.update.await('UPDATE trucker_users SET money = money + ? WHERE user_id = ?', { driver.price, userId })
+            companyCredit(userId, driver.price, 'driver_hiring_refund', false)
             notify(source, 'Este motorista acabou de ser contratado por outra empresa.', 'error')
         end
     end
@@ -923,31 +1111,40 @@ end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:depositMoney', function(data)
     local source = source
-    local userId = citizenId(source)
-    local amount = type(data) == 'table' and integer(data.amount, 1) or nil
-    if not userId or not amount then return end
-    if exports.cidade_tycoon_core:RemoveMoney(source, 'bank', amount, 'trucker-company-deposit') then
-        companyCredit(userId, amount)
+    withLock(source, function()
+        local userId = citizenId(source)
+        local amount = type(data) == 'table' and integer(data.amount, 1, 1000000000) or nil
+        if not userId or not amount then return end
+        local player = corePlayer(source)
+        if not player or exports.cidade_tycoon_core:GetMoneyBalance(player, 'bank') < amount then
+            return notify(source, 'Saldo bancario insuficiente.', 'error')
+        end
+        if not exports.cidade_tycoon_core:RemoveMoney(player, 'bank', amount, 'trucker-company-deposit') then return end
+        if not companyCredit(userId, amount, 'bank_deposit', false) then
+            exports.cidade_tycoon_core:AddMoney(player, 'bank', amount, 'trucker-company-deposit-refund')
+            return notify(source, 'Falha no deposito. O valor foi estornado.', 'error')
+        end
         openUI(source, true)
-    end
+    end)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:withdrawMoney', function()
     local source = source
-    local userId = citizenId(source)
-    if not userId then return end
-    local user = ensureUser(userId)
-    local amount = number(user.money)
-    if amount > 0 then
-        local changed = MySQL.update.await('UPDATE trucker_users SET money = 0 WHERE user_id = ? AND money = ?', { userId, amount })
-        if changed and changed > 0 then
-            if not exports.cidade_tycoon_core:AddMoney(source, 'bank', amount, 'trucker-company-withdraw') then
-                MySQL.update.await('UPDATE trucker_users SET money = money + ? WHERE user_id = ?', { amount, userId })
+    withLock(source, function()
+        local userId = citizenId(source)
+        local player = corePlayer(source)
+        if not userId or not player then return end
+        local user = ensureUser(userId)
+        local amount = positiveInteger(user.money, 1000000000)
+        if not amount then return end
+        if companyDebit(userId, amount, 'bank_withdrawal') then
+            if not exports.cidade_tycoon_core:AddMoney(player, 'bank', amount, 'trucker-company-withdraw') then
+                companyCredit(userId, amount, 'bank_withdrawal_refund', false)
                 return notify(source, 'Nao foi possivel concluir o saque. O saldo foi restaurado.', 'error')
             end
             openUI(source, true)
         end
-    end
+    end)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:loan', function(data)
@@ -981,6 +1178,11 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:loan', function(data)
             {
                 query = 'UPDATE trucker_users SET money = money + ?, last_loan_at = ? WHERE user_id = ?',
                 values = { l[1], now, userId }
+            },
+            {
+                query = [[INSERT INTO trucker_transactions (user_id, transaction_type, amount, reason, balance_after)
+                    SELECT user_id, 'credit', ?, 'loan_disbursement', money FROM trucker_users WHERE user_id = ?]],
+                values = { l[1], userId }
             }
         })
         if not created then return notify(source, 'Nao foi possivel liberar o emprestimo.', 'error') end
@@ -995,33 +1197,76 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:payLoan', function(data)
         local id = type(data) == 'table' and positiveInteger(data.loan_id) or nil
         if not userId or not id then return end
         local loan = MySQL.single.await('SELECT * FROM trucker_loans WHERE id = ? AND user_id = ?', { id, userId })
-        if loan and companyDebit(userId, number(loan.remaining_amount)) then
-            MySQL.update.await('DELETE FROM trucker_loans WHERE id = ? AND user_id = ?', { id, userId })
+        if loan and companyDebit(userId, number(loan.remaining_amount), 'loan_early_payment') then
+            local changed = MySQL.update.await('DELETE FROM trucker_loans WHERE id = ? AND user_id = ?', { id, userId })
+            if not changed or changed < 1 then
+                companyCredit(userId, number(loan.remaining_amount), 'loan_early_payment_refund', false)
+                return notify(source, 'Nao foi possivel liquidar o emprestimo.', 'error')
+            end
             openUI(source, true)
         end
     end)
 end)
 
-RegisterNetEvent('cidade_tycoon_trucklogistics:finishJob', function(data, distance, reward, truckData, engineHealth, bodyHealth, trailerHealth)
+RegisterNetEvent('cidade_tycoon_trucklogistics:finishJob', function(engineHealth, bodyHealth)
     local source = source
     local userId = citizenId(source)
-    if not userId then return end
-    
-    local activeJob = activeJobs[source]
-    if not activeJob then return end
-    
-    activeJobs[source] = nil
-    
+    if not userId then return completionResult(source, 'contract', false, 'Jogador invalido para concluir a entrega.') end
+
+    local activeJob = loadActiveJob(userId, true)
+    if not activeJob or activeJob.jobType ~= 'contract' or not activeJob.contract then
+        return completionResult(source, 'contract', false, 'Nenhum contrato ativo foi encontrado.')
+    end
+    local destination = Config.locais_entrega[number(activeJob.contract.coords_index)]
+    if not destination then return completionResult(source, 'contract', false, 'Destino do contrato invalido.') end
+    if os.time() < activeJob.earliestFinishAt then
+        return completionResult(source, 'contract', false, 'A entrega ainda nao cumpriu o tempo minimo de rota.')
+    end
+    if not isPlayerNear(source, destination, Config.ServerValidation.deliveryRadius) then
+        return completionResult(source, 'contract', false, 'A entrega so pode ser concluida no destino registrado.')
+    end
+    if not claimActiveJob(userId, 'contract') then
+        return completionResult(source, 'contract', false, 'A entrega ja esta sendo processada.')
+    end
+
     local expGained = math.floor(activeJob.distance * 2)
-    companyCredit(userId, activeJob.reward)
-    
-    MySQL.update.await([[UPDATE trucker_users SET 
-        finished_deliveries = finished_deliveries + 1, 
-        traveled_distance = traveled_distance + ?,
-        exp = exp + ?
-        WHERE user_id = ?]], { activeJob.distance, expGained, userId })
+    local queries = {
+        {
+            query = [[UPDATE trucker_users SET
+                money = money + ?, total_earned = total_earned + ?,
+                finished_deliveries = finished_deliveries + 1,
+                traveled_distance = traveled_distance + ?, exp = exp + ?
+                WHERE user_id = ?]],
+            values = { activeJob.reward, activeJob.reward, activeJob.distance, expGained, userId }
+        },
+        {
+            query = [[INSERT INTO trucker_transactions (user_id, transaction_type, amount, reason, balance_after)
+                SELECT user_id, 'credit', ?, 'contract_reward', money FROM trucker_users WHERE user_id = ?]],
+            values = { activeJob.reward, userId }
+        },
+        {
+            query = "DELETE FROM trucker_active_jobs WHERE user_id = ? AND status = 'completing'",
+            values = { userId }
+        }
+    }
+
+    local engine = integer(engineHealth, 0, 1000)
+    local body = integer(bodyHealth, 0, 1000)
+    if activeJob.truckId and engine and body then
+        table.insert(queries, 2, {
+            query = 'UPDATE trucker_trucks SET engine = LEAST(engine, ?), body = LEAST(body, ?) WHERE truck_id = ? AND user_id = ?',
+            values = { engine, body, activeJob.truckId, userId }
+        })
+    end
+
+    local completed = MySQL.transaction.await(queries)
+    if not completed then
+        MySQL.update.await("UPDATE trucker_active_jobs SET status = 'active' WHERE user_id = ? AND status = 'completing'", { userId })
+        return completionResult(source, 'contract', false, 'Falha ao liquidar a entrega. Tente novamente.')
+    end
+    activeJobs[userId] = nil
         
-    local isCoop = activeJob.contract and activeJob.contract.coop == 1
+    local isCoop = activeJob.contract and number(activeJob.contract.coop) == 1
     if isCoop then
         CoopBonusTime = os.time() + 10 * 60
         local playerName = GetPlayerName(source)
@@ -1032,9 +1277,41 @@ RegisterNetEvent('cidade_tycoon_trucklogistics:finishJob', function(data, distan
         })
     end
     
-    notify(source, ("Você concluiu a entrega! Recompensa de %s creditada na empresa (+%d EXP)."):format(formatCurrency(activeJob.reward, Config), expGained), 'success')
+    completionResult(source, 'contract', true, ("Você concluiu a entrega! Recompensa de %s creditada na empresa (+%d EXP)."):format(formatCurrency(activeJob.reward, Config), expGained))
     TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
     openUI(source, true)
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:cancelContract', function()
+    local source = source
+    local userId = citizenId(source)
+    if not userId then return end
+    local job = loadActiveJob(userId, true)
+    if job and job.jobType == 'contract' then
+        clearActiveJob(userId)
+        notify(source, 'Contrato cancelado.', 'inform')
+        openUI(source, true)
+    end
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:requestActiveJob', function()
+    local source = source
+    local userId = citizenId(source)
+    if userId then sendActiveJob(source, userId, true) end
+end)
+
+RegisterNetEvent('cidade_tycoon_trucklogistics:updateTruckStatus', function(truckData, engineHealth, bodyHealth)
+    local source = source
+    local userId = citizenId(source)
+    local truckId = type(truckData) == 'table' and integer(truckData.truck_id, 1) or nil
+    local engine = integer(engineHealth, 0, 1000)
+    local body = integer(bodyHealth, 0, 1000)
+    if not userId or not truckId or not engine or not body then return end
+    MySQL.update.await([[
+        UPDATE trucker_trucks
+        SET engine = LEAST(engine, ?), body = LEAST(body, ?)
+        WHERE truck_id = ? AND user_id = ?
+    ]], { engine, body, truckId, userId })
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:openFuelMenu', function()
@@ -1067,78 +1344,143 @@ end)
 RegisterNetEvent('cidade_tycoon_trucklogistics:buyFuelBatch', function(liters, cost, deliver, empresaId)
     local source = source
     withLock(source, function()
-    local userId = citizenId(source)
-    if not userId then return end
-    
-    liters = positiveInteger(liters)
-    deliver = deliver == true
-    local batch = liters and Config.lotes_combustivel[liters] or nil
-    if not batch then
-        return notify(source, 'Lote de combustivel invalido.', 'error')
-    end
-    cost = deliver and batch.deliveryCost or batch.pickupCost
-    if not Config.empresas[empresaId] then empresaId = 'trucker_1' end
+        local userId = citizenId(source)
+        if not userId then return end
 
-    if activeJobs[source] then
-        notify(source, 'Você já possui uma missão ou contrato ativo!', 'error')
-        return
-    end
-    
-    if companyDebit(userId, cost) then
-        if deliver then
-            MySQL.update.await('UPDATE trucker_users SET fuel_stock = COALESCE(fuel_stock, 0) + ? WHERE user_id = ?', { liters, userId })
+        liters = positiveInteger(liters)
+        deliver = deliver == true
+        local batch = liters and Config.lotes_combustivel[liters] or nil
+        if not batch then
+            return notify(source, 'Lote de combustivel invalido.', 'error')
+        end
+        cost = deliver and batch.deliveryCost or batch.pickupCost
+        if not Config.empresas[empresaId] then empresaId = 'trucker_1' end
+
+        if loadActiveJob(userId, true) then
+            notify(source, 'Você já possui uma missão ou contrato ativo!', 'error')
+            return
+        end
+
+        if companyDebit(userId, cost, deliver and 'fuel_delivery_purchase' or 'fuel_pickup_purchase') then
+            if deliver then
+                local changed = MySQL.update.await('UPDATE trucker_users SET fuel_stock = COALESCE(fuel_stock, 0) + ? WHERE user_id = ?', { liters, userId })
+                if not changed or changed < 1 then
+                    companyCredit(userId, cost, 'fuel_delivery_purchase_refund', false)
+                    return notify(source, 'Nao foi possivel registrar o lote. O valor foi estornado.', 'error')
+                end
             notify(source, ('Você comprou um lote de %d litros de combustível por %s!'):format(liters, formatCurrency(cost, Config)), 'success')
             TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
             local user = ensureUser(userId)
             TriggerClientEvent('cidade_tycoon_trucklogistics:showFuelMenu', source, user.fuel_stock or 0, user.money or 0)
-        else
-            activeJobs[source] = { userId = userId, isFuelMission = true, liters = liters, cost = cost }
-            
+            else
             -- Pick refinery location based on company
             local refineryCoords = vector4(979.79, -2120.35, 31.47, 263.3) -- Default Refinery 1 (LS docks)
             if empresaId == 'trucker_3' then
                 refineryCoords = vector4(-2415.0, 3355.0, 32.8, 120.0) -- Refinery 3 (Paleto)
             end
-            
+
+            local companyCoords = Config.empresas[empresaId].coordenada_cargas[1]
+            local routeDistance = #(vector3(refineryCoords.x, refineryCoords.y, refineryCoords.z) - vector3(companyCoords[1], companyCoords[2], companyCoords[3])) * 2.0 / 1000.0
+            local startedAt = os.time()
+            local job = {
+                userId = userId,
+                jobType = 'fuel',
+                companyKey = empresaId,
+                distance = routeDistance,
+                reward = 0,
+                payload = {
+                    liters = liters,
+                    cost = cost,
+                    refinery = { x = refineryCoords.x, y = refineryCoords.y, z = refineryCoords.z, w = refineryCoords.w },
+                },
+                startedAt = startedAt,
+                earliestFinishAt = startedAt + minimumTravelSeconds(routeDistance, Config.ServerValidation.minimumFuelMissionSeconds),
+                status = 'active',
+            }
+            if not persistActiveJob(job) then
+                companyCredit(userId, cost, 'fuel_mission_reservation_refund', false)
+                return notify(source, 'Nao foi possivel registrar a missao. O valor foi estornado.', 'error')
+            end
+
             TriggerClientEvent('cidade_tycoon_trucklogistics:startFuelMission', source, liters, refineryCoords, empresaId)
+            end
+        else
+            notify(source, 'Saldo da empresa insuficiente!', 'error')
         end
-    else
-        notify(source, 'Saldo da empresa insuficiente!', 'error')
-    end
     end)
 end)
 
-RegisterNetEvent('cidade_tycoon_trucklogistics:finishFuelMission', function(liters)
+RegisterNetEvent('cidade_tycoon_trucklogistics:finishFuelMission', function()
     local source = source
     local userId = citizenId(source)
-    if not userId then return end
+    if not userId then return completionResult(source, 'fuel', false, 'Jogador invalido para concluir a missao.') end
     
-    local activeJob = activeJobs[source]
-    if not activeJob or not activeJob.isFuelMission then return end
-    
-    activeJobs[source] = nil
-    liters = activeJob.liters
-    
-    -- Add the fuel stock to database
-    MySQL.update.await('UPDATE trucker_users SET fuel_stock = fuel_stock + ? WHERE user_id = ?', { liters, userId })
-    
-    -- Give some EXP
+    local activeJob = loadActiveJob(userId, true)
+    if not activeJob or activeJob.jobType ~= 'fuel' then
+        return completionResult(source, 'fuel', false, 'Nenhuma missao de combustivel ativa foi encontrada.')
+    end
+    local company = Config.empresas[activeJob.companyKey]
+    if not company then return completionResult(source, 'fuel', false, 'Base da missao invalida.') end
+    if os.time() < activeJob.earliestFinishAt then
+        return completionResult(source, 'fuel', false, 'A missao ainda nao cumpriu o tempo minimo de rota.')
+    end
+    local nearDelivery = false
+    for _, coords in ipairs(company.coordenada_cargas) do
+        if isPlayerNear(source, coords, Config.ServerValidation.fuelDeliveryRadius) then
+            nearDelivery = true
+            break
+        end
+    end
+    if not nearDelivery then
+        return completionResult(source, 'fuel', false, 'O combustivel deve ser entregue na base registrada.')
+    end
+    if not claimActiveJob(userId, 'fuel') then
+        return completionResult(source, 'fuel', false, 'A missao ja esta sendo processada.')
+    end
+
+    liters = positiveInteger(activeJob.payload.liters, 100000)
+    if not liters then
+        MySQL.update.await("UPDATE trucker_active_jobs SET status = 'active' WHERE user_id = ? AND status = 'completing'", { userId })
+        return completionResult(source, 'fuel', false, 'Quantidade persistida de combustivel invalida.')
+    end
     local expGained = math.floor(liters * 0.1)
-    MySQL.update.await('UPDATE trucker_users SET exp = exp + ? WHERE user_id = ?', { expGained, userId })
+    local completed = MySQL.transaction.await({
+        {
+            query = 'UPDATE trucker_users SET fuel_stock = fuel_stock + ?, exp = exp + ? WHERE user_id = ?',
+            values = { liters, expGained, userId }
+        },
+        {
+            query = "DELETE FROM trucker_active_jobs WHERE user_id = ? AND status = 'completing'",
+            values = { userId }
+        }
+    })
+    if not completed then
+        MySQL.update.await("UPDATE trucker_active_jobs SET status = 'active' WHERE user_id = ? AND status = 'completing'", { userId })
+        return completionResult(source, 'fuel', false, 'Falha ao registrar a entrega de combustivel.')
+    end
+    activeJobs[userId] = nil
     
-    notify(source, ("Você descarregou o tanque de combustível na empresa! +%d Litros estocados (+%d EXP)."):format(liters, expGained), 'success')
+    completionResult(source, 'fuel', true, ("Você descarregou o tanque de combustível na empresa! +%d Litros estocados (+%d EXP)."):format(liters, expGained))
     TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
 end)
 
 RegisterNetEvent('cidade_tycoon_trucklogistics:cancelFuelMission', function()
     local source = source
-    activeJobs[source] = nil
+    local userId = citizenId(source)
+    if not userId then return end
+    local job = loadActiveJob(userId, true)
+    if job and job.jobType == 'fuel' then
+        clearActiveJob(userId)
+        notify(source, 'Missao de combustivel cancelada.', 'inform')
+    end
 end)
 
 AddEventHandler('playerDropped', function()
     isOpen[source] = nil
     eventLocks[source] = nil
-    activeJobs[source] = nil
+    local userId = sourceUsers[source]
+    if userId then activeJobs[userId] = nil end
+    sourceUsers[source] = nil
 end)
 
 AddEventHandler('qbx_core:server:onPlayerLoaded', function(source)
@@ -1256,28 +1598,34 @@ end)
 -- Player buys fuel from a specific station
 RegisterNetEvent('cidade_tycoon_trucklogistics:buyFromStation', function(stationId, liters)
     local source = source
-    local userId = citizenId(source)
-    if not userId then return end
-    stationId = positiveInteger(stationId, #Config.postos)
-    liters = positiveInteger(liters, 2000)
-    if not stationId or not liters then return end
-    local posto = Config.postos[stationId]
-    if not posto then return end
-    local state = stationState[stationId]
-    if not state or state.estoque < liters then
-        notify(source, 'Posto sem estoque suficiente!', 'error')
-        return
-    end
-    local totalCost = state.preco_atual * liters
-    state.estoque = state.estoque - liters
-    if companyDebit(userId, totalCost) then
-        MySQL.update.await('UPDATE trucker_users SET fuel_stock = COALESCE(fuel_stock, 0) + ? WHERE user_id = ?', { liters, userId })
+    withLock(source, function()
+        local userId = citizenId(source)
+        if not userId then return end
+        stationId = positiveInteger(stationId, #Config.postos)
+        liters = positiveInteger(liters, 2000)
+        if not stationId or not liters then return end
+        local posto = Config.postos[stationId]
+        if not posto then return end
+        local state = stationState[stationId]
+        if not state or state.estoque < liters then
+            notify(source, 'Posto sem estoque suficiente!', 'error')
+            return
+        end
+        local totalCost = state.preco_atual * liters
+        state.estoque = state.estoque - liters
+        if not companyDebit(userId, totalCost, 'fuel_station_purchase') then
+            state.estoque = state.estoque + liters
+            return notify(source, 'Saldo da empresa insuficiente!', 'error')
+        end
+        local changed = MySQL.update.await('UPDATE trucker_users SET fuel_stock = COALESCE(fuel_stock, 0) + ? WHERE user_id = ?', { liters, userId })
+        if not changed or changed < 1 then
+            state.estoque = state.estoque + liters
+            companyCredit(userId, totalCost, 'fuel_station_purchase_refund', false)
+            return notify(source, 'Nao foi possivel registrar a compra de combustivel.', 'error')
+        end
         notify(source, ('Comprou %d litros no %s por %s!'):format(liters, posto.nome, formatCurrency(totalCost, Config)), 'success')
         TriggerClientEvent('cidade_tycoon_trucklogistics:successSound', source)
         local user = ensureUser(userId)
         TriggerClientEvent('cidade_tycoon_trucklogistics:showFuelMenu', source, user.fuel_stock or 0, user.money or 0)
-    else
-        state.estoque = state.estoque + liters
-        notify(source, 'Saldo da empresa insuficiente!', 'error')
-    end
+    end)
 end)

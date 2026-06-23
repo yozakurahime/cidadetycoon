@@ -3,6 +3,10 @@ game 'gta5'
 
 ui_page "nui/index.html"
 
+shared_scripts {
+    '@ox_lib/init.lua'
+}
+
 client_scripts {
 	"config/config.lua",
 	"client.lua"
@@ -25,4 +29,5 @@ files {
 
 dependencies {
 	'qbx_core',
+	'cidade_tycoon_core',
 }

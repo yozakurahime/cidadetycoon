@@ -40,49 +40,9 @@ AddEventHandler('qbx_core:client:onVehicleEnter', function(veh, plate)
 end)
 
 -- ==========================================
--- WEAR TRACKING (Optimized)
+-- WEAR TRACKING
+-- (Desativado em favor do monitoramento unificado em client/wear_tear.lua)
 -- ==========================================
-local wearTracking = { activePlate = nil, sample = nil, lastFlushAt = 0 }
-
-local function resetWearTracking(plate)
-    wearTracking.activePlate = plate
-    wearTracking.sample = nil
-    wearTracking.lastFlushAt = GetGameTimer()
-end
-
-CreateThread(function()
-    while true do
-        local wait = 2000
-        local ped = PlayerPedId()
-        local veh = GetVehiclePedIsIn(ped, false)
-
-        if veh ~= 0 and GetPedInVehicleSeat(veh, -1) == ped then
-            wait = 500
-            local plate = GetVehicleNumberPlateText(veh)
-            
-            if wearTracking.activePlate ~= plate or not wearTracking.sample then
-                wearTracking.activePlate = plate
-                wearTracking.sample = { distanceKm = 0.0, lastCoords = GetEntityCoords(veh), startTime = GetGameTimer() }
-                wearTracking.lastFlushAt = GetGameTimer()
-            end
-
-            local curCoords = GetEntityCoords(veh)
-            local dist = #(curCoords - wearTracking.sample.lastCoords) / 1000.0
-            wearTracking.sample.distanceKm = wearTracking.sample.distanceKm + dist
-            wearTracking.sample.lastCoords = curCoords
-
-            -- Flush every 1km or 60s
-            if (GetGameTimer() - wearTracking.lastFlushAt > 60000) or (wearTracking.sample.distanceKm > 1.0) then
-                local timeDelta = (GetGameTimer() - wearTracking.sample.startTime) / 1000
-                TriggerServerEvent('cidade_tycoon_maintenance:server:flushWearSample', plate, wearTracking.sample.distanceKm, timeDelta)
-                resetWearTracking(plate)
-            end
-        else
-            if wearTracking.activePlate then resetWearTracking(nil) end
-        end
-        Wait(wait)
-    end
-end)
 
 -- Rest of Workshop UI Logic (Simplified for Audit Consolidation)
 function OpenWorkshopMenu()
@@ -109,7 +69,7 @@ function OpenRepairMenu(plate, subsystems, laborFee)
     for key, sub in pairs(subsystems) do
         table.insert(options, {
             title = sub.label,
-            description = ('Saúde: %d%% | Mão de Obra NPC: $%d'):format(math.floor(sub.condition), laborFee),
+            description = ('Saude: %d%% | Reparo paliativo ate 50%% | Mao de Obra NPC: $%d'):format(math.floor(sub.condition), laborFee),
             onSelect = function()
                 local res = lib.callback.await('cidade_tycoon_maintenance:server:repairSubsystem', false, plate, key)
                 notifyMaintenance(res.message, res.ok and 'success' or 'error')

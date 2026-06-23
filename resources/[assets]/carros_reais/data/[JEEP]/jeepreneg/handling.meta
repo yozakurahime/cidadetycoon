@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 
 <CHandlingDataMgr>
   <HandlingData>
@@ -15,7 +15,7 @@
     <Item type="CHandlingData">
       <handlingName>BERMK1</handlingName>
       <fMass value="1250.000000" />
-      <fInitialDragCoeff value="0.3700000" />
+      <fInitialDragCoeff value="1.800000" />
       <fPercentSubmerged value="85.000000" />
       <vecCentreOfMassOffset x="0.000000" y="0.300000" z="-0.150000" />
       <vecInertiaMultiplier x="1.000000" y="1.400000" z="1.800000" />

@@ -124,16 +124,6 @@
                 <span class="app-label">Finanças</span>
               </div>
               
-              <!-- App Empresa Logistica -->
-              <div class="app-icon-wrapper" data-app="business">
-                <div class="app-icon icon-business" style="background: linear-gradient(135deg, #8e44ad, #3498db);">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M8 10h2M14 10h2"/>
-                  </svg>
-                </div>
-                <span class="app-label">Empresa Logistica</span>
-              </div>
-
               <!-- App Producao Industrial -->
               <div class="app-icon-wrapper" data-app="production">
                 <div class="app-icon icon-production" style="background: linear-gradient(135deg, #FF9800, #F44336);">
@@ -177,6 +167,28 @@
                   </svg>
                 </div>
                 <span class="app-label">Ajustes</span>
+              </div>
+
+              <!-- App Oficina (Mechanic Orders) -->
+              <div class="app-icon-wrapper" data-app="mechanic-orders" id="mechanic-app-icon" style="display: none;">
+                <div class="app-icon icon-mechanic-orders" style="background: linear-gradient(135deg, #FF9800, #E65100); display: flex; align-items: center; justify-content: center; color: white;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                  </svg>
+                </div>
+                <span class="app-label">Oficina</span>
+              </div>
+
+              <!-- App Serviços (Client Orders) -->
+              <div class="app-icon-wrapper" data-app="client-orders" id="client-app-icon">
+                <div class="app-icon icon-client-orders" style="background: linear-gradient(135deg, #00BCD4, #0097A7); display: flex; align-items: center; justify-content: center; color: white;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <line x1="12" y1="4" x2="12" y2="20"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                  </svg>
+                </div>
+                <span class="app-label">Serviços</span>
               </div>
             </div>
           </section>
@@ -382,50 +394,6 @@
             </div>
           </section>
           
-          <!-- APP: EMPRESA (BUSINESS) -->
-          <section id="app-business" class="view-panel app-view hidden">
-            <header class="app-header">
-              <button class="back-home-btn">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-                </svg>
-              </button>
-              <div class="app-header-title">
-                <h1>Empresa Logistica</h1>
-                <p>Galpao, frota, equipe e rotas corporativas</p>
-              </div>
-            </header>
-            <div class="app-body">
-              <div id="business-setup-view" class="hidden">
-                <div class="os-card">
-                  <h3>Abra sua transportadora</h3>
-                  <p>Escolha um galpao para centralizar estoque, frota e operacoes.</p>
-                </div>
-                <div id="business-warehouse-list" class="warehouse-grid"></div>
-              </div>
-              <div id="business-main-view" class="hidden">
-                <div class="business-stats-grid">
-                  <div class="balance-card"><span>Caixa da Empresa</span><h2 id="business-vault-value">$ 0</h2></div>
-                  <div class="balance-card"><span>Nivel Operacional</span><h2 id="business-level-value">T 1</h2></div>
-                </div>
-                <div class="tab-container">
-                  <div class="tab-header">
-                    <button class="tab-btn active" data-tab="business-fleet-tab">Frota</button>
-                    <button class="tab-btn" data-tab="business-staff-tab">Equipe</button>
-                    <button class="tab-btn" data-tab="business-routes-tab">Rotas</button>
-                    <button class="tab-btn" data-tab="business-stock-tab">Estoque</button>
-                  </div>
-                  <div class="tab-content">
-                    <div id="business-fleet-tab" class="tab-pane active"><div id="business-fleet-list"></div></div>
-                    <div id="business-staff-tab" class="tab-pane"><div id="business-staff-list"></div></div>
-                    <div id="business-routes-tab" class="tab-pane"><div id="business-routes-list"></div></div>
-                    <div id="business-stock-tab" class="tab-pane"><div id="business-stock-list"></div></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <!-- APP: PRODUÇÃO (PRODUCTION BUSINESS) -->
           <section id="app-production" class="view-panel app-view hidden">
             <header class="app-header">
@@ -619,6 +587,48 @@
 
             <div class="app-body trucker-frame-body">
               <iframe id="trucker-iframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+          <!-- APP: OFICINA (PENDING MECHANIC ORDERS) -->
+          <section id="app-mechanic-orders" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Oficina - Ordens de Serviço</h1>
+                <p>Gerencie orçamentos pendentes enviados para clientes</p>
+              </div>
+            </header>
+            
+            <div class="app-body scrollable">
+              <div id="mechanic-orders-container" class="orders-list-grid">
+                <!-- Dynamic Content -->
+                <div class="empty-state">Nenhuma ordem de serviço pendente criada por você.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- APP: SERVIÇOS (PENDING CLIENT ORDERS) -->
+          <section id="app-client-orders" class="view-panel app-view hidden">
+            <header class="app-header">
+              <button class="back-home-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+              </button>
+              <div class="app-header-title">
+                <h1>Serviços e Modificações</h1>
+                <p>Pague e instale suas ordens de serviço pendentes</p>
+              </div>
+            </header>
+            
+            <div class="app-body scrollable">
+              <div id="client-orders-container" class="orders-list-grid">
+                <!-- Dynamic Content -->
+                <div class="empty-state">Nenhuma ordem de serviço pendente aguardando seu pagamento.</div>
+              </div>
             </div>
           </section>
 
